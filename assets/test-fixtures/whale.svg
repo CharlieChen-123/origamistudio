@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-220 -220 440 440" width="440" height="440">
+  <!-- Origami Crease Pattern — 22 lines — Export from CP Designer -->
+  <!-- Paper shape: square -->
+  <rect x="-200" y="-200" width="400" height="400" fill="#FAF8F2" stroke="#ccc" stroke-width="1"/>
+
+  <!-- Mountain folds (solid red) -->
+  <g stroke="#EF4444" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="none" fill="none">
+    <line x1="14.28" y1="-200.00" x2="90.44" y2="-154.62" data-lt="mountain"/>
+    <line x1="154.43" y1="-89.99" x2="200.14" y2="-14.03" data-lt="mountain"/>
+    <line x1="51.28" y1="159.05" x2="63.62" y2="200.00" data-lt="mountain"/>
+    <line x1="-158.85" y1="-51.17" x2="-199.92" y2="-63.14" data-lt="mountain"/>
+    <line x1="-175.00" y1="125.00" x2="-175.00" y2="175.00" data-lt="mountain"/>
+    <line x1="-175.00" y1="175.00" x2="-125.00" y2="175.00" data-lt="mountain"/>
+    <line x1="-200.00" y1="200.00" x2="-125.00" y2="125.00" data-lt="mountain"/>
+    <line x1="68.68" y1="-68.68" x2="200.00" y2="-200.00" data-lt="mountain"/>
+  </g>
+
+  <!-- Valley folds (dashed blue) -->
+  <g stroke="#3B82F6" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="8,4" fill="none">
+    <line x1="200.00" y1="-200.00" x2="-203.37" y2="-32.92" data-lt="valley"/>
+    <line x1="68.68" y1="-68.68" x2="90.44" y2="-154.62" data-lt="valley"/>
+    <line x1="200.00" y1="-200.00" x2="32.92" y2="203.37" data-lt="valley"/>
+    <line x1="68.68" y1="-68.68" x2="154.71" y2="-90.06" data-lt="valley"/>
+    <line x1="-25.00" y1="200.00" x2="51.28" y2="159.05" data-lt="valley"/>
+    <line x1="-200.00" y1="25.00" x2="-158.85" y2="-51.17" data-lt="valley"/>
+    <line x1="-200.00" y1="100.00" x2="-100.00" y2="200.00" data-lt="valley"/>
+    <line x1="-175.00" y1="125.00" x2="-125.00" y2="125.00" data-lt="valley"/>
+    <line x1="-125.00" y1="175.00" x2="-125.00" y2="125.00" data-lt="valley"/>
+    <line x1="-125.00" y1="125.00" x2="68.68" y2="-68.68" data-lt="valley"/>
+  </g>
+
+  <!-- Guide creases (dotted gray) -->
+  <g stroke="#8B8B8B" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="3,3" fill="none">
+    <line x1="-200.00" y1="-200.00" x2="200.00" y2="-200.00" data-lt="crease"/>
+    <line x1="200.00" y1="-200.00" x2="200.00" y2="200.00" data-lt="crease"/>
+    <line x1="200.00" y1="200.00" x2="-200.00" y2="200.00" data-lt="crease"/>
+    <line x1="-200.00" y1="-200.00" x2="-200.00" y2="200.00" data-lt="crease"/>
+  </g>
+</svg>

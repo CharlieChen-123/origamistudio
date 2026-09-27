@@ -1,0 +1,2025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Origami Crease Pattern Designer</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+:root{
+  --bg: #FAF9F6; --surface: #FFFFFF; --surface2: #F7F5F2;
+  --border: #E8E3DA; --border2: #D9D3C8;
+  --text: #1A1918; --text2: #6B6660; --text3: #A09990;
+  --accent: #2E3A8C; --accent-light: #E8EAFA; --accent-warm: #D94E34;
+  --fold-v: #3B82F6; --fold-m: #EF4444; --fold-c: #8B8B8B;
+  --r: 10px; --r-sm: 7px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.06);
+  --shadow-float: 0 2px 12px rgba(0,0,0,0.08);
+  font-size: 16px;
+}
+
+body{
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg); color: var(--text); height: 100vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ── */
+header{
+  height: 54px; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 22px; gap: 14px;
+  flex-shrink: 0; z-index: 10; box-shadow: var(--shadow-sm);
+}
+.brand{
+  display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px;
+  letter-spacing: -0.2px; flex-shrink: 0;
+}
+.brand-icon{
+  width: 32px; height: 32px; background: linear-gradient(135deg, #2E3A8C, #4C5DBF); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(46,58,140,0.2);
+}
+.brand-icon svg{ stroke: white; fill: none; }
+.header-export{
+  margin-left: auto;
+  display: flex; align-items: center; gap: 10px;
+}
+.exp-btn{
+  padding: 7px 16px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500;
+  color: var(--text2); transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.exp-btn:hover{ border-color: var(--text2); color: var(--text); }
+.exp-btn.primary{ background: var(--accent); color: #fff; border-color: var(--accent); }
+.exp-btn.primary:hover{ filter: brightness(1.1); }
+
+/* Export dropdown */
+.export-dropdown{ position: relative; display: inline-flex; }
+.exp-toggle{
+  padding: 7px 16px; border-radius: var(--r-sm); border: 1px solid var(--accent);
+  background: var(--accent); color: #fff; cursor: pointer; font-size: 14px; font-weight: 500;
+  transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.exp-toggle:hover{ filter: brightness(1.1); }
+.exp-toggle .arrow{ font-size: 10px; margin-left: 2px; transition: transform 0.2s; }
+.export-dropdown.open .exp-toggle .arrow{ transform: rotate(180deg); }
+
+.exp-menu{
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 500;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 6px; min-width: 180px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+  display: none; animation: fadeIn 0.12s ease;
+}
+.export-dropdown.open .exp-menu{ display: block; }
+
+.exp-menu-item{
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 9px 12px; border-radius: var(--r-sm);
+  border: none; background: transparent; cursor: pointer;
+  font-size: 14px; font-weight: 500; color: var(--text);
+  transition: background 0.1s; text-align: left; font-family: inherit;
+}
+.exp-menu-item:hover{ background: var(--bg); }
+.exp-menu-item .mi-icon{ width: 18px; text-align: center; flex-shrink: 0; }
+.exp-menu-item .mi-label{ flex: 1; }
+.exp-menu-item .mi-hint{ font-size: 12px; color: var(--text3); font-weight: 400; }
+.exp-menu-divider{ height: 1px; background: var(--border); margin: 4px 6px; }
+
+/* ── Layout ── */
+.app{ flex: 1; display: flex; overflow: hidden; }
+
+/* ── Sidebar ── */
+aside{
+  width: 260px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  box-shadow: var(--shadow-sm);
+}
+.sb-inner{ flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.sb-inner::-webkit-scrollbar{ width: 4px; }
+.sb-inner::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 2px; }
+
+/* Panel */
+.panel{
+  background: #FAFAF8; border: 1px solid #ECEAE4;
+  border-radius: var(--r); padding: 14px;
+}
+.ptitle{
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text3); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+}
+.ptitle::before{ content:''; width: 3px; height: 12px; border-radius: 2px; background: var(--accent); }
+
+/* Crease type buttons */
+.lt-grid{ display: flex; flex-direction: column; gap: 5px; }
+.lt-btn{
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface); cursor: pointer;
+  font-size: 14px; color: var(--text2); transition: all 0.15s; font-weight: 500;
+}
+.lt-btn:hover{ border-color: var(--accent); }
+.lt-btn.valley-active{ border-color: #3B82F6; background: #EFF6FF; color: #1D4ED8; }
+.lt-btn.mountain-active{ border-color: #EF4444; background: #FEF2F2; color: #991B1B; }
+.lt-btn.crease-active{ border-color: #8B8B8B; background: #F3F4F6; color: #6B7280; }
+.lt-swatch{ width: 24px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+.lt-swatch.valley{ height: 0; border-top: 3px dashed var(--fold-v); background: transparent; }
+.lt-swatch.mountain{ background: var(--fold-m); }
+.lt-swatch.crease{ background: var(--fold-c); }
+.lt-badge{ margin-left: auto; padding: 2px 7px; border-radius: 3px; font-size: 12px; font-weight: 700; }
+.lt-badge.v{ background: #EFF6FF; color: #1D4ED8; }
+.lt-badge.m{ background: #FEF2F2; color: #991B1B; }
+.lt-badge.c{ background: #F3F4F6; color: #6B7280; }
+
+/* Sliders */
+.srow{ display: flex; flex-direction: column; gap: 6px; }
+.slabel{ display: flex; justify-content: space-between; font-size: 13px; color: var(--text2); }
+.slabel .val{ font-weight: 600; color: var(--text); }
+input[type=range]{
+  width: 100%; height: 4px; border-radius: 2px; background: var(--border);
+  appearance: none; outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  appearance: none; width: 14px; height: 14px; background: var(--accent);
+  border-radius: 50%; box-shadow: 0 0 0 3px rgba(46,58,140,0.12); cursor: pointer;
+}
+select{
+  width: 100%; padding: 8px 10px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  background: var(--surface); font-size: 14px; color: var(--text); outline: none; cursor: pointer;
+}
+select:focus{ border-color: var(--accent); }
+
+/* Paper color swatches */
+.color-swatches{ display: grid; grid-template-columns: repeat(5, 30px); gap: 8px; }
+.color-swatch{
+  width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--border);
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.color-swatch:hover{ transform: scale(1.12); border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.color-swatch.active{ border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,58,140,0.18); transform: scale(1.08); }
+.color-swatch.custom{
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+  position: relative; overflow: hidden;
+}
+.color-swatch.custom::before{
+  content: ''; position: absolute; top: 50%; left: 50%; width: 2px; height: 12px;
+  background: #fff; border-radius: 1px; transform: translate(-50%, -50%);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+.color-swatch.custom::after{
+  content: ''; position: absolute; top: 50%; left: 50%; width: 12px; height: 2px;
+  background: #fff; border-radius: 1px; transform: translate(-50%, -50%);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+.color-swatch-input{ position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+
+/* Custom color picker dropdown */
+.cc-overlay{
+  position: fixed; inset: 0; z-index: 400;
+  display: none; pointer-events: none;
+}
+.cc-overlay.show{ display: block; pointer-events: auto; }
+.cc-popover{
+  position: fixed;
+  background: var(--surface); border-radius: 12px; padding: 14px 16px;
+  width: 230px; box-shadow: 0 12px 36px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06);
+  animation: fadeIn 0.15s ease; z-index: 401;
+}
+.cc-header{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cc-title{ font-size: 14px; font-weight: 700; color: var(--text); }
+.cc-close{
+  width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--bg); cursor: pointer; font-size: 16px; color: var(--text2);
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.cc-close:hover{ border-color: var(--text2); color: var(--text); }
+
+.cc-preview-clickable{
+  width: 100%;   height: 52px; border-radius: 8px; border: 2px solid var(--border);
+  cursor: pointer; margin-bottom: 8px; transition: all 0.15s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05); position: relative; overflow: hidden;
+}
+.cc-preview-clickable:hover{
+  transform: scale(1.02); border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
+.cc-preview-clickable:active{ transform: scale(0.98); }
+.cc-preview-clickable::after{
+  content: 'Click to pick color'; position: absolute; bottom: 4px; right: 4px;
+  font-size: 11px; color: #fff; font-weight: 500;
+  background: rgba(0,0,0,0.4);
+  padding: 3px 9px;
+  border-radius: 4px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.cc-preview-clickable:hover::after{ opacity: 1; }
+
+.cc-hex-row{ display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cc-hex-label{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text3); flex-shrink: 0; }
+.cc-hex-input{
+  flex: 1; padding: 7px 9px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  font-size: 13px; font-family: 'SF Mono', 'Consolas', monospace; color: var(--text);
+  outline: none; background: var(--bg); transition: border-color 0.15s;
+}
+.cc-hex-input:focus{ border-color: var(--accent); }
+
+.cc-recent{ margin-bottom: 8px; }
+.cc-recent-label{ font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text3); margin-bottom: 8px; }
+.cc-recent-swatches{ display: flex; gap: 8px; flex-wrap: wrap; }
+.cc-recent-swatch{
+  width: 26px; height: 26px; border-radius: 6px; border: 2px solid var(--border);
+  cursor: pointer; transition: all 0.12s;
+}
+.cc-recent-swatch:hover{ transform: scale(1.15); border-color: var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+
+.cc-actions{ display: flex; gap: 8px; justify-content: center; }
+.cc-confirm-btn{
+  padding: 8px 16px; border-radius: var(--r-sm); border: 1px solid var(--accent);
+  background: var(--accent); cursor: pointer; font-size: 13px; font-weight: 600;
+  color: #fff; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.cc-confirm-btn:hover{ filter: brightness(1.1); }
+
+/* Snap / Grid toggles — both green/red */
+.tg-row{ display: flex; gap: 6px; margin-top: 10px; }
+.tg-btn{
+  flex: 1; padding: 7px 8px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: all 0.15s; text-align: center;
+}
+.tg-btn.on{ color: #166534; background: #DCFCE7; border-color: #86EFAC; }
+.tg-btn.off{ color: #991B1B; background: #FEF2F2; border-color: #FECACA; }
+
+/* Presets button */
+.presets-btn{
+  width: 100%; padding: 10px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 600;
+  color: var(--text2); transition: all 0.15s; display: flex; align-items: center;
+  justify-content: center; gap: 6px;
+}
+.presets-btn:hover{ border-color: var(--accent); color: var(--accent); }
+
+/* Toast */
+.toast{
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: #fff; padding: 10px 22px; border-radius: 20px;
+  font-size: 15px; font-weight: 500; z-index: 300; opacity: 0; pointer-events: none;
+  transition: opacity 0.25s; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.toast.show{ opacity: 1; }
+
+/* Help button */
+.help-btn{
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 16px; font-weight: 700;
+  color: var(--text2); transition: all 0.15s; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; margin-left: 4px;
+}
+.help-btn:hover{ border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+/* Help popover */
+.help-popover{
+  position: fixed; top: 62px; right: 16px; z-index: 500;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px 22px; width: 310px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+  display: none; animation: fadeIn 0.15s ease;
+}
+.help-popover.show{ display: block; }
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
+.help-popover h4{
+  font-size: 15px; font-weight: 700; margin-bottom: 14px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border); color: var(--text);
+}
+.help-section{ margin-bottom: 12px; }
+.help-section-title{
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px;
+  color: var(--text3); margin-bottom: 7px;
+}
+.help-row{
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 0; font-size: 13px; color: var(--text2);
+}
+.help-row:not(:last-child){ border-bottom: 1px solid #F3F1EC; }
+.help-key{
+  background: #F7F5F2; border: 1px solid var(--border2);
+  border-radius: 5px; padding: 2px 8px; font-size: 12px; font-weight: 600;
+  color: var(--text); white-space: nowrap; flex-shrink: 0;
+  box-shadow: 0 1px 0 var(--border2);
+}
+.help-desc{ flex: 1; }
+.help-close-btn{
+  display: block; width: 100%; margin-top: 14px; padding: 8px;
+  border-radius: var(--r-sm); border: 1px solid var(--border);
+  background: var(--bg); cursor: pointer; font-size: 13px; font-weight: 500;
+  color: var(--text2); text-align: center; transition: all 0.15s;
+}
+.help-close-btn:hover{ border-color: var(--text2); color: var(--text); }
+
+/* ── Canvas Area ── */
+.canvas-wrap{ position: relative; overflow: hidden; background: var(--bg); flex: 1; }
+.canvas-wrap canvas{ position: absolute; top: 0; left: 0; cursor: crosshair; }
+
+/* Floating toolbar */
+.float-toolbar{
+  position: absolute; top: 14px; left: 14px; z-index: 20;
+  display: flex; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 6px 8px;
+  box-shadow: var(--shadow-float);
+}
+.ft-btn{
+  padding: 7px 14px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500;
+  color: var(--text2); transition: all 0.15s; display: flex; align-items: center; gap: 5px;
+}
+.ft-btn:hover{ border-color: var(--text2); color: var(--text); background: #FAFAF8; }
+.ft-btn.danger{ color: #DC2626; border-color: #FECACA; }
+.ft-btn.danger:hover{ background: #FEF2F2; border-color: #DC2626; }
+.ft-btn.on{ background: #FEF5F3; color: var(--accent-warm); border-color: var(--accent-warm); }
+.ft-div{ width: 1px; background: var(--border); margin: 4px 2px; }
+
+/* Zoom control */
+.zoom-ctrl{
+  position: absolute; bottom: 16px; right: 16px; z-index: 20;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  box-shadow: var(--shadow-float); display: flex; align-items: center; gap: 4px;
+  padding: 5px 6px;
+}
+.zc-btn{
+  width: 28px; height: 28px; border-radius: var(--r-sm); border: none;
+  background: transparent; cursor: pointer; font-size: 16px; font-weight: 600;
+  color: var(--text2); transition: all 0.15s; display: flex; align-items: center;
+  justify-content: center; line-height: 1;
+}
+.zc-btn:hover{ background: var(--bg); color: var(--text); }
+.zc-val{
+  font-size: 13px; font-weight: 600; color: var(--text); min-width: 36px;
+  text-align: center; user-select: none;
+}
+
+/* Status bar */
+.status-bar{
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: rgba(26,25,24,0.75); backdrop-filter: blur(10px); color: #fff;
+  font-size: 13px; padding: 6px 16px; border-radius: 16px; pointer-events: none;
+  white-space: nowrap; font-weight: 500; z-index: 20;
+}
+
+/* Snap dot */
+.snap-dot{
+  position: absolute; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent-warm); border: 2px solid #fff;
+  pointer-events: none; transform: translate(-50%,-50%); display: none;
+  box-shadow: 0 0 0 3px rgba(217,78,52,0.25); z-index: 10;
+}
+
+/* Anchor dot (first click) */
+.anchor-dot{
+  position: absolute; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff;
+  pointer-events: none; transform: translate(-50%,-50%); display: none;
+  box-shadow: 0 0 0 3px rgba(46,58,140,0.25); z-index: 10;
+}
+
+/* ── Import Modal ── */
+.modal-overlay{
+  position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 200;
+  display: none; align-items: center; justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.modal-overlay.show{ display: flex; }
+.modal{
+  background: var(--surface); border-radius: 14px; padding: 28px; width: 420px;
+  max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.modal h3{ font-size: 18px; margin-bottom: 6px; font-weight: 700; }
+.modal p{ font-size: 15px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
+.modal .drop-zone{
+  border: 2px dashed var(--border2); border-radius: 10px; padding: 28px;
+  text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 14px;
+}
+.modal .drop-zone:hover{ border-color: var(--accent); background: var(--accent-light); }
+.modal .drop-zone.dragover{ border-color: var(--accent); background: var(--accent-light); }
+.modal input[type=file]{ display: none; }
+.modal .btn-row{ display: flex; gap: 8px; justify-content: flex-end; }
+.modal .btn-row button{
+  padding: 8px 18px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500;
+  color: var(--text2); transition: all 0.15s;
+}
+.modal .btn-row button.primary{ background: var(--accent); color: #fff; border-color: var(--accent); }
+.modal .btn-row button.primary:hover{ filter: brightness(1.1); }
+.modal .btn-row button:hover{ border-color: var(--text2); }
+
+/* ── Presets Gallery Modal ── */
+.pg-overlay{
+  position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200;
+  display: none; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.pg-overlay.show{ display: flex; }
+.pg-modal{
+  background: var(--surface); border-radius: 16px; padding: 28px;
+  width: 760px; max-width: 92vw; max-height: 85vh;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.18);
+  display: flex; flex-direction: column;
+}
+.pg-modal h3{ font-size: 19px; margin-bottom: 4px; font-weight: 700; }
+.pg-modal .pg-sub{ font-size: 15px; color: var(--text2); margin-bottom: 20px; }
+.pg-grid{
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  overflow-y: auto; padding-right: 4px;
+}
+.pg-grid::-webkit-scrollbar{ width: 5px; }
+.pg-grid::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 3px; }
+.pg-card{
+  background: #FAFAF8; border: 1px solid #ECEAE4; border-radius: var(--r);
+  padding: 14px; cursor: pointer; transition: all 0.15s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.pg-card:hover{ border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.pg-card .pg-preview{
+  width: 100%; aspect-ratio: 1; background: var(--surface); border-radius: var(--r-sm);
+  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+  overflow: hidden; position: relative;
+}
+.pg-card .pg-preview svg{ width: 80%; height: 80%; }
+.pg-card .pg-preview img{ width: 88%; height: 88%; object-fit: contain; }
+.pg-card .pg-preview .source-preview{ width: 88%; height: 88%; display:block; }
+.pg-card .pg-preview .pg-loading{ font-size:12px; color:var(--text3); text-align:center; }
+.pg-card .pg-name{ font-size: 15px; font-weight: 600; color: var(--text); text-align: center; }
+.pg-card .pg-desc{ font-size: 13px; color: var(--text2); text-align: center; }
+.pg-close{
+  align-self: flex-end; margin-top: 16px;
+  padding: 8px 20px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500;
+  color: var(--text2); transition: all 0.15s;
+}
+.pg-close:hover{ border-color: var(--text2); }
+
+/* Toast */
+.toast{
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: #fff; padding: 10px 22px; border-radius: 20px;
+  font-size: 15px; font-weight: 500; z-index: 300; opacity: 0; pointer-events: none;
+  transition: opacity 0.25s; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.toast.show{ opacity: 1; }
+</style>
+<link rel="stylesheet" href="assets/designer-foldlab.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M3 8 L5 7"/>
+        <path d="M5 7 L7 14"/>
+        <path d="M7 14 L2 12"/>
+        <path d="M7 14 L9 18"/>
+        <path d="M9 18 L21 14"/>
+        <path d="M9 18 L18 3"/>
+        <path d="M7 14 L11 11 L9 18"/>
+      </svg>
+    </div>
+    Origami Studio
+  </div>
+  <div class="workflow-switch"><span class="current">Design</span></div>
+  <div class="header-export">
+    <button class="exp-btn" onclick="openImport()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Import SVG / FOLD / CP
+    </button>
+    <div class="export-dropdown" id="exportDropdown">
+      <button class="exp-toggle" id="expToggle" onclick="toggleExportMenu(event)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Export <span class="arrow">▾</span>
+      </button>
+      <div class="exp-menu">
+        <button class="exp-menu-item" onclick="exportPDF()">Export as A4 PDF</button>
+        <div class="exp-menu-divider"></div>
+        <button class="exp-menu-item" onclick="exportSVG()">Export as SVG</button>
+      </div>
+    </div>
+    <button class="help-btn" id="helpBtn" onclick="toggleHelp()" title="Help &amp; Shortcuts">?</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <aside>
+    <div class="sb-inner">
+
+      <!-- Crease Types -->
+      <div class="panel">
+        <div class="ptitle">Crease Type</div>
+        <div class="lt-grid">
+          <button class="lt-btn valley-active" id="lt-valley" onclick="setLineType('valley')">
+            <span class="lt-swatch valley"></span> Valley Fold
+            <span class="lt-badge v">V</span>
+          </button>
+          <button class="lt-btn" id="lt-mountain" onclick="setLineType('mountain')">
+            <span class="lt-swatch mountain"></span> Mountain Fold
+            <span class="lt-badge m">M</span>
+          </button>
+          <button class="lt-btn" id="lt-crease" onclick="setLineType('crease')">
+            <span class="lt-swatch crease"></span> Guide Crease
+            <span class="lt-badge c">G</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid & Snap -->
+      <div class="panel">
+        <div class="ptitle">Grid &amp; Snap</div>
+        <div class="srow">
+          <div class="slabel"><span>Grid Density</span><span class="val" id="gridVal">16</span></div>
+          <input type="range" id="gridRange" min="4" max="32" step="2" value="16" oninput="setGrid(this.value)">
+        </div>
+        <div class="tg-row">
+          <button class="tg-btn on" id="snapBtn" onclick="toggleSnap()">Snap: On</button>
+          <button class="tg-btn on" id="gridVisBtn" onclick="toggleGrid()">Grid: On</button>
+        </div>
+      </div>
+
+      <!-- Paper Settings -->
+      <div class="panel">
+        <div class="ptitle">Paper</div>
+        <div class="srow" style="gap:8px">
+          <select id="paperShape" onchange="setPaperShape(this.value)">
+            <option value="square">Square</option>
+            <option value="rect">Rectangle (2:1)</option>
+            <option value="hex">Hexagon</option>
+          </select>
+          <div class="slabel"><span>Paper Color</span><span class="val" id="paperColorLabel"></span></div>
+          <div class="color-swatches" id="colorSwatches">
+            <div class="color-swatch active" style="background:#FAF8F2" data-color="#FAF8F2" data-label="Washi" onclick="pickColor(this)" onmouseenter="previewColor(this)" onmouseleave="restoreColor()" title="Washi"></div>
+            <div class="color-swatch" style="background:#FFFFFF" data-color="#FFFFFF" data-label="White" onclick="pickColor(this)" onmouseenter="previewColor(this)" onmouseleave="restoreColor()" title="White"></div>
+            <div class="color-swatch" style="background:#F0F5EE" data-color="#F0F5EE" data-label="Sage" onclick="pickColor(this)" onmouseenter="previewColor(this)" onmouseleave="restoreColor()" title="Sage"></div>
+            <div class="color-swatch" style="background:#FFF0F0" data-color="#FFF0F0" data-label="Sakura" onclick="pickColor(this)" onmouseenter="previewColor(this)" onmouseleave="restoreColor()" title="Sakura"></div>
+            <div class="color-swatch" style="background:#F0F5FA" data-color="#F0F5FA" data-label="Sky" onclick="pickColor(this)" onmouseenter="previewColor(this)" onmouseleave="restoreColor()" title="Sky"></div>
+            <div class="color-swatch" style="background:#FFFBE6" data-color="#FFFBE6" data-label="Butter" onclick="pickColor(this)" onmouseenter="previewColor(this)" onmouseleave="restoreColor()" title="Butter"></div>
+            <div class="color-swatch" style="background:#E0F7FA" data-color="#E0F7FA" data-label="Ice" onclick="pickColor(this)" onmouseenter="previewColor(this)" onmouseleave="restoreColor()" title="Ice"></div>
+            <div class="color-swatch" style="background:#F5F0FF" data-color="#F5F0FF" data-label="Lavender" onclick="pickColor(this)" onmouseenter="previewColor(this)" onmouseleave="restoreColor()" title="Lavender"></div>
+            <div class="color-swatch" style="background:#FFF5F0" data-color="#FFF5F0" data-label="Peach" onclick="pickColor(this)" onmouseenter="previewColor(this)" onmouseleave="restoreColor()" title="Peach"></div>
+            <div class="color-swatch custom" onclick="openCustomColorPicker()" title="Custom color"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Presets -->
+      <div class="panel">
+        <div class="ptitle">Quick Presets</div>
+        <button class="presets-btn" onclick="openPresetsGallery()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Browse Presets
+        </button>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Canvas -->
+  <div class="canvas-wrap" id="canvasWrap">
+    <canvas id="cpCanvas"></canvas>
+    <div class="snap-dot" id="snapDot"></div>
+    <div class="anchor-dot" id="anchorDot"></div>
+
+    <!-- Floating toolbar -->
+    <div class="float-toolbar" id="floatToolbar">
+      <button class="ft-btn" onclick="cpUndo()" title="Undo (Ctrl+Z)">Undo</button>
+      <button class="ft-btn" onclick="cpRedo()" title="Redo (Ctrl+Y)">Redo</button>
+      <div class="ft-div"></div>
+      <button class="ft-btn" id="ftEraseBtn" onclick="toggleErase()" title="Erase Mode (E)">Erase</button>
+      <button class="ft-btn danger" onclick="cpClear()" title="Clear All">Clear</button>
+    </div>
+
+    <!-- Zoom control -->
+    <div class="zoom-ctrl">
+      <button class="zc-btn" onclick="zoomBy(-1)" title="Zoom Out">−</button>
+      <div class="zc-val" id="zoomVal">100%</div>
+      <button class="zc-btn" onclick="zoomBy(1)" title="Zoom In">+</button>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="cpBar">Ready — Drag or click to draw crease lines</div>
+  </div>
+
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h3>Import Crease Pattern</h3>
+    <p>Drop an SVG, FOLD, or CP file. Imported lines are checked before they replace the current pattern.</p>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px;color:var(--text3)">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <div style="font-size:13px;color:var(--text2)">Drop SVG, FOLD, or CP file here</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">or click to browse</div>
+    </div>
+    <input type="file" id="fileInput" accept=".svg,.fold,.cp,application/json,text/plain" onchange="handleFile(this.files[0])">
+    <div class="btn-row">
+      <button onclick="closeImport()">Cancel</button>
+      <button class="primary" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+    </div>
+  </div>
+</div>
+
+<!-- Presets Gallery Modal -->
+<div class="pg-overlay" id="presetsModal">
+  <div class="pg-modal">
+    <h3>Preset Crease Patterns</h3>
+    <div class="pg-sub">Choose a crease pattern. Fold Lab library patterns use the same source file in both tools.</div>
+    <div class="pg-grid" id="pgGrid"></div>
+    <button class="pg-close" onclick="closePresetsGallery()">Close</button>
+  </div>
+</div>
+
+<!-- Custom Color Picker Dropdown -->
+<div class="cc-overlay" id="ccOverlay" onclick="closeCustomColorPicker()">
+  <div class="cc-popover" id="ccPopover" onclick="event.stopPropagation()">
+    <div class="cc-header">
+      <span class="cc-title">Custom Color</span>
+      <button class="cc-close" onclick="closeCustomColorPicker()">&times;</button>
+    </div>
+    <div class="cc-preview-clickable" id="ccPreviewLarge" title="Click to pick a color">
+      <input type="color" id="ccNativeColor" value="#FAF8F2" oninput="onCCNativeChange(this.value)" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:none;margin:0;">
+    </div>
+    <div class="cc-hex-row">
+      <span class="cc-hex-label">Hex</span>
+      <input type="text" class="cc-hex-input" id="ccHexInput" value="#FAF8F2" maxlength="7" oninput="onCCHexInput(this.value)">
+    </div>
+    <div class="cc-recent" id="ccRecentSection">
+      <div class="cc-recent-label">Recent</div>
+      <div class="cc-recent-swatches" id="ccRecent"></div>
+    </div>
+    <div class="cc-actions">
+      <button class="cc-confirm-btn" onclick="confirmCustomColor()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Help Popover -->
+<div class="help-popover" id="helpPopover">
+  <h4>Controls &amp; Shortcuts</h4>
+
+  <div class="help-section">
+    <div class="help-section-title">Drawing</div>
+    <div class="help-row"><span class="help-key">Left drag</span><span class="help-desc">Draw crease line</span></div>
+    <div class="help-row"><span class="help-key">Click → Click</span><span class="help-desc">Place two points to draw</span></div>
+    <div class="help-row"><span class="help-key">Shift</span><span class="help-desc">Lock to 45° angles</span></div>
+    <div class="help-row"><span class="help-key">Esc</span><span class="help-desc">Cancel anchor point</span></div>
+  </div>
+
+  <div class="help-section">
+    <div class="help-section-title">Navigation</div>
+    <div class="help-row"><span class="help-key">Right drag</span><span class="help-desc">Pan canvas</span></div>
+    <div class="help-row"><span class="help-key">Scroll</span><span class="help-desc">Zoom in / out</span></div>
+  </div>
+
+  <div class="help-section">
+    <div class="help-section-title">Keyboard</div>
+    <div class="help-row"><span class="help-key">1 / 2 / 3</span><span class="help-desc">Switch crease type</span></div>
+    <div class="help-row"><span class="help-key">E</span><span class="help-desc">Toggle erase mode</span></div>
+    <div class="help-row"><span class="help-key">Ctrl Z</span><span class="help-desc">Undo</span></div>
+    <div class="help-row"><span class="help-key">Ctrl Y</span><span class="help-desc">Redo</span></div>
+  </div>
+
+  <div class="help-section">
+    <div class="help-section-title">Import SVG Color Mapping</div>
+    <div class="help-row"><span class="help-key" style="color:#3B82F6">Blue</span><span class="help-desc">→ Valley fold</span></div>
+    <div class="help-row"><span class="help-key" style="color:#EF4444">Red</span><span class="help-desc">→ Mountain fold</span></div>
+    <div class="help-row"><span class="help-key" style="color:#8B8B8B">Grey</span><span class="help-desc">→ Guide crease</span></div>
+  </div>
+
+  <button class="help-close-btn" onclick="toggleHelp()">Close</button>
+</div>
+
+<script src="assets/preset-library.js"></script>
+<script src="assets/crease-render.js"></script>
+<script>
+// ─────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────
+const cp = {
+  lines: [], nodes: [], hist: [], redoStack: [],
+  lineType: 'valley',
+  eraseMode: false,
+  paperShape: 'square', paperAspect: 1, paperColor: '#FAF8F2',
+  gridN: 16, snap: true, gridVis: true,
+  zoom: 1, px: 0, py: 0,
+  dragging: false, dragStart: null, dragEnd: null, dragMoved: false,
+  panning: false, panBase: null,
+  // Click-to-place mode
+  anchor: null,
+  SIZE: 400,
+  sourcePreset: null
+};
+
+const LINE_STYLES = {
+  valley:   { color: '#2563EB', dash: [11, 8], width: 2.4 },
+  mountain: { color: '#EF4444', dash: [],     width: 1.8 },
+  crease:   { color: '#8B8B8B', dash: [3, 3],  width: 1.2 }
+};
+
+// ─────────────────────────────────────────
+//  LUMINANCE helper — detect dark paper
+// ─────────────────────────────────────────
+function getLuminance(hex){
+  const r = parseInt(hex.slice(1,3), 16) / 255;
+  const g = parseInt(hex.slice(3,5), 16) / 255;
+  const b = parseInt(hex.slice(5,7), 16) / 255;
+  const srgb = x => x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+  return 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b);
+}
+function isDarkPaper(){
+  return getLuminance(cp.paperColor) < 0.35;
+}
+
+// ─────────────────────────────────────────
+//  DOM REFS
+// ─────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const canvas = $('cpCanvas');
+const ctx = canvas.getContext('2d');
+
+// ─────────────────────────────────────────
+//  RESIZE
+// ─────────────────────────────────────────
+function resize(){
+  const wrap = $('canvasWrap');
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  render();
+}
+window.addEventListener('resize', resize);
+
+// ─────────────────────────────────────────
+//  COORDINATE TRANSFORMS
+// ─────────────────────────────────────────
+function screenToWorld(sx, sy){
+  const cx = canvas.width / 2 + cp.px;
+  const cy = canvas.height / 2 + cp.py;
+  return { x: (sx - cx) / cp.zoom, y: (sy - cy) / cp.zoom };
+}
+function worldToScreen(wx, wy){
+  const cx = canvas.width / 2 + cp.px;
+  const cy = canvas.height / 2 + cp.py;
+  return { x: wx * cp.zoom + cx, y: wy * cp.zoom + cy };
+}
+
+function paperDimensions(){
+  if (cp.paperShape === 'rect'){
+    const aspect = Math.max(0.15, Math.min(8, Number(cp.paperAspect) || 2));
+    return aspect >= 1 ? {w:cp.SIZE,h:cp.SIZE/aspect} : {w:cp.SIZE*aspect,h:cp.SIZE};
+  }
+  if (cp.paperShape === 'hex') return {w:cp.SIZE,h:cp.SIZE*0.8660254};
+  return {w:cp.SIZE,h:cp.SIZE};
+}
+
+function syncPaperChooser(){
+  const chooser = $('paperShape'); if (!chooser) return;
+  const rect = chooser.querySelector('option[value="rect"]');
+  if (rect) rect.textContent = cp.paperShape === 'rect' ? `Rectangle (${(cp.paperAspect || 2).toFixed(2)}:1)` : 'Rectangle (2:1)';
+  chooser.value = cp.paperShape;
+}
+
+// ─────────────────────────────────────────
+//  SNAP
+// ─────────────────────────────────────────
+function lineIntersect(ax, ay, bx, by, cx, cy, dx, dy){
+  const d1x = bx - ax, d1y = by - ay;
+  const d2x = dx - cx, d2y = dy - cy;
+  const denom = d1x * d2y - d1y * d2x;
+  if (Math.abs(denom) < 1e-9) return null;
+  const t = ((cx - ax) * d2y - (cy - ay) * d2x) / denom;
+  return { x: ax + t * d1x, y: ay + t * d1y };
+}
+
+function getSnapCandidates(){
+  const cands = [];
+  const dims=paperDimensions(), halfX=dims.w/2, halfY=dims.h/2;
+  const cellX = dims.w / cp.gridN, cellY = dims.h / cp.gridN;
+  for (let i = 0; i <= cp.gridN; i++)
+    for (let j = 0; j <= cp.gridN; j++)
+      cands.push({ x: -halfX + i * cellX, y: -halfY + j * cellY });
+  for (let i = 0; i < cp.lines.length; i++){
+    const a = cp.lines[i];
+    for (let j = i + 1; j < cp.lines.length; j++){
+      const b = cp.lines[j];
+      const pt = lineIntersect(a.p1.x, a.p1.y, a.p2.x, a.p2.y, b.p1.x, b.p1.y, b.p2.x, b.p2.y);
+      if (pt && Math.abs(pt.x) <= halfX + 1 && Math.abs(pt.y) <= halfY + 1) cands.push(pt);
+    }
+  }
+  cp.lines.forEach(l => { cands.push(l.p1); cands.push(l.p2); });
+  return cands;
+}
+
+function snapPoint(wx, wy){
+  if (!cp.snap) return { x: wx, y: wy };
+  const dims=paperDimensions(), halfX=dims.w/2, halfY=dims.h/2;
+  const cellX = dims.w / cp.gridN, cellY = dims.h / cp.gridN;
+  const gx = Math.max(-halfX, Math.min(halfX, Math.round(wx / cellX) * cellX));
+  const gy = Math.max(-halfY, Math.min(halfY, Math.round(wy / cellY) * cellY));
+  let best = { x: gx, y: gy };
+  let bestD = Math.hypot(wx - gx, wy - gy);
+  const snapR = 10 / cp.zoom;
+  for (const p of getSnapCandidates()){
+    const d = Math.hypot(wx - p.x, wy - p.y);
+    if (d < bestD && d < snapR){ bestD = d; best = { x: p.x, y: p.y }; }
+  }
+  return best;
+}
+
+// ─────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────
+function drawGrid(){
+  if (!cp.gridVis) return;
+  const wx = canvas.width, wy = canvas.height;
+  const dims=paperDimensions(), cellX=(dims.w/cp.gridN)*cp.zoom, cellY=(dims.h/cp.gridN)*cp.zoom;
+  const ox = wx / 2 + cp.px;
+  const oy = wy / 2 + cp.py;
+  const halfX=(dims.w/2)*cp.zoom, halfY=(dims.h/2)*cp.zoom;
+
+  ctx.beginPath();
+  ctx.strokeStyle = isDarkPaper() ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= cp.gridN; i++){
+    const x = ox - halfX + i * cellX;
+    const y = oy - halfY + i * cellY;
+    if (i !== cp.gridN / 2){ ctx.moveTo(x, oy - halfY); ctx.lineTo(x, oy + halfY); }
+    if (i !== cp.gridN / 2){ ctx.moveTo(ox - halfX, y); ctx.lineTo(ox + halfX, y); }
+  }
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.strokeStyle = isDarkPaper() ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.12)';
+  ctx.lineWidth = 1.5;
+  ctx.moveTo(ox, oy - halfY); ctx.lineTo(ox, oy + halfY);
+  ctx.moveTo(ox - halfX, oy); ctx.lineTo(ox + halfX, oy);
+  ctx.stroke();
+}
+
+function drawPaper(){
+  const s = cp.SIZE / 2, dims=paperDimensions();
+  const ox = canvas.width / 2 + cp.px;
+  const oy = canvas.height / 2 + cp.py;
+
+  ctx.save(); ctx.translate(ox, oy); ctx.scale(cp.zoom, cp.zoom);
+  ctx.beginPath();
+  if (cp.paperShape === 'square'){ ctx.rect(-s, -s, s * 2, s * 2); }
+  else if (cp.paperShape === 'rect'){ ctx.rect(-dims.w/2, -dims.h/2, dims.w, dims.h); }
+  else if (cp.paperShape === 'hex'){
+    for (let i = 0; i < 6; i++){ const a = Math.PI / 6 + i * Math.PI / 3; i ? ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s) : ctx.moveTo(Math.cos(a) * s, Math.sin(a) * s); }
+    ctx.closePath();
+  }
+  ctx.restore();
+}
+
+function render(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Paper shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.08)';
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 4;
+  drawPaper(); ctx.fillStyle = cp.paperColor; ctx.fill();
+  ctx.restore();
+
+  // Paper fill and stroke
+  drawPaper(); ctx.fillStyle = cp.paperColor; ctx.fill();
+  drawPaper(); ctx.strokeStyle = isDarkPaper() ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Grid on top of paper (clipped to paper shape)
+  ctx.save();
+  const _s = cp.SIZE / 2, _dims=paperDimensions();
+  const _ox = canvas.width / 2 + cp.px;
+  const _oy = canvas.height / 2 + cp.py;
+  ctx.beginPath();
+  if (cp.paperShape === 'square'){ ctx.rect(_ox - _s * cp.zoom, _oy - _s * cp.zoom, _s * 2 * cp.zoom, _s * 2 * cp.zoom); }
+  else if (cp.paperShape === 'rect'){ ctx.rect(_ox-_dims.w/2*cp.zoom,_oy-_dims.h/2*cp.zoom,_dims.w*cp.zoom,_dims.h*cp.zoom); }
+  else if (cp.paperShape === 'hex'){
+    for (let i = 0; i < 6; i++){
+      const a = Math.PI / 6 + i * Math.PI / 3;
+      const hx = _ox + Math.cos(a) * _s * cp.zoom;
+      const hy = _oy + Math.sin(a) * _s * cp.zoom;
+      i ? ctx.lineTo(hx, hy) : ctx.moveTo(hx, hy);
+    }
+    ctx.closePath();
+  }
+  ctx.clip();
+  drawGrid();
+  ctx.restore();
+
+  // Crease lines
+  const ox = canvas.width / 2 + cp.px;
+  const oy = canvas.height / 2 + cp.py;
+  ctx.save(); ctx.translate(ox, oy); ctx.scale(cp.zoom, cp.zoom);
+
+  OrigamiCreaseRender.mergeValleys(cp.lines).forEach(l => drawLine(l));
+
+  // Live drag preview
+  if (cp.dragging && cp.dragStart && cp.dragEnd){
+    const s = snapPoint(...Object.values(screenToWorld(cp.dragStart.x, cp.dragStart.y)));
+    const e = snapPoint(...Object.values(screenToWorld(cp.dragEnd.x, cp.dragEnd.y)));
+    drawLine({ p1: s, p2: e, lt: cp.lineType }, 0.5);
+  }
+
+  // Click-to-place anchor preview
+  if (cp.anchor && cp._hover && !cp.dragging && !cp.eraseMode){
+    const aW = screenToWorld(cp.anchor.x, cp.anchor.y);
+    const as = snapPoint(aW.x, aW.y);
+    const hW = screenToWorld(cp._hover.x, cp._hover.y);
+    const hs = snapPoint(hW.x, hW.y);
+    drawLine({ p1: as, p2: hs, lt: cp.lineType }, 0.4);
+  }
+
+  ctx.fillStyle = '#D94E34';
+  cp.nodes.forEach(n => {
+    ctx.beginPath(); ctx.arc(n.x, n.y, 4 / cp.zoom, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.restore();
+
+  // Erase cursor visual
+  if (cp.eraseMode && cp._hover){
+    ctx.beginPath();
+    ctx.arc(cp._hover.x, cp._hover.y, 12, 0, Math.PI * 2);
+    ctx.strokeStyle = '#D94E34'; ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // Snap dot
+  const sd = $('snapDot');
+  if (cp._hover && cp.snap && !cp.eraseMode){
+    // Color based on crease type
+    if (cp.lineType === 'valley') { sd.style.background = '#3B82F6'; sd.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.35)'; sd.style.borderColor = '#fff'; }
+    else if (cp.lineType === 'mountain') { sd.style.background = '#EF4444'; sd.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.35)'; sd.style.borderColor = '#fff'; }
+    else { sd.style.background = '#8B8B8B'; sd.style.boxShadow = '0 0 0 3px rgba(139,139,139,0.35)'; sd.style.borderColor = '#fff'; }
+    const w = screenToWorld(cp._hover.x, cp._hover.y);
+    const sn = snapPoint(w.x, w.y);
+    const sc = worldToScreen(sn.x, sn.y);
+    const sdDist = Math.hypot(sc.x - cp._hover.x, sc.y - cp._hover.y);
+    if (sdDist < 20){
+      sd.style.display = 'block'; sd.style.left = sc.x + 'px'; sd.style.top = sc.y + 'px';
+    } else { sd.style.display = 'none'; }
+  } else { sd.style.display = 'none'; }
+
+  // Anchor dot
+  const ad = $('anchorDot');
+  if (cp.anchor && !cp.eraseMode){
+    const aW = screenToWorld(cp.anchor.x, cp.anchor.y);
+    const as = snapPoint(aW.x, aW.y);
+    const asc = worldToScreen(as.x, as.y);
+    ad.style.display = 'block'; ad.style.left = asc.x + 'px'; ad.style.top = asc.y + 'px';
+  } else { ad.style.display = 'none'; }
+
+  // Status
+  const count = cp.lines.length;
+  const typeName = cp.lineType === 'valley' ? 'Valley' : cp.lineType === 'mountain' ? 'Mountain' : 'Guide';
+  $('cpBar').textContent = cp.eraseMode ? `Erase Mode — ${count} crease lines` : `${typeName} Fold — ${count} crease lines`;
+
+  // Zoom
+  $('zoomVal').textContent = Math.round(cp.zoom * 100) + '%';
+}
+
+function drawLine(l, alpha = 1){
+  const st = LINE_STYLES[l.lt] || LINE_STYLES.valley;
+  let color = st.color;
+  if (l.lt === 'crease' && isDarkPaper()) color = '#B8B8B8';
+  const z = cp.zoom;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if(l.lt==='valley'){
+    OrigamiCreaseRender.stroke(ctx,l,{scale:z,color,widthPx:st.width,dashPx:st.dash[0],gapPx:st.dash[1]});
+    ctx.restore();
+    return;
+  }
+  ctx.beginPath();
+  ctx.moveTo(l.p1.x, l.p1.y);
+  ctx.lineTo(l.p2.x, l.p2.y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = st.width / z;
+  ctx.setLineDash(st.dash.map(d => d / z));
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+// ─────────────────────────────────────────
+//  MOUSE / INTERACTION
+// ─────────────────────────────────────────
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  cp.zoom = Math.max(0.12, Math.min(6, cp.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
+  render();
+}, { passive: false });
+
+canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  if (e.button === 2 || e.altKey){
+    cp.panning = true;
+    cp.panBase = { x: pos.x - cp.px, y: pos.y - cp.py };
+    return;
+  }
+  if (e.button === 1){
+    cp.panning = true;
+    cp.panBase = { x: pos.x - cp.px, y: pos.y - cp.py };
+    return;
+  }
+  if (cp.eraseMode){
+    eraseNear(pos);
+    return;
+  }
+  cp.dragging = true;
+  cp.dragStart = pos;
+  cp.dragEnd = pos;
+  cp.dragMoved = false;
+});
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  cp._hover = pos;
+
+  if (cp.panning){
+    cp.px = pos.x - cp.panBase.x;
+    cp.py = pos.y - cp.panBase.y;
+    render();
+    return;
+  }
+  if (cp.eraseMode && e.buttons === 1){
+    eraseNear(pos);
+    render(); // always re-render so red circle follows
+    return;
+  }
+  if (cp.dragging){
+    if (Math.hypot(pos.x - cp.dragStart.x, pos.y - cp.dragStart.y) > 3) cp.dragMoved = true;
+    if (e.shiftKey){
+      const sw = screenToWorld(cp.dragStart.x, cp.dragStart.y);
+      const ew = screenToWorld(pos.x, pos.y);
+      const dx = ew.x - sw.x, dy = ew.y - sw.y;
+      const a = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+      const len = Math.hypot(dx, dy);
+      const sc = worldToScreen(sw.x + Math.cos(a) * len, sw.y + Math.sin(a) * len);
+      cp.dragEnd = sc;
+    } else {
+      cp.dragEnd = pos;
+    }
+    render();
+    return;
+  }
+  render();
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (cp.panning){ cp.panning = false; return; }
+
+  if (cp.dragging){
+    if (cp.dragMoved){
+      // Was a drag — commit the line
+      const s = snapPoint(...Object.values(screenToWorld(cp.dragStart.x, cp.dragStart.y)));
+      const en = snapPoint(...Object.values(screenToWorld(cp.dragEnd.x, cp.dragEnd.y)));
+      if (Math.hypot(s.x - en.x, s.y - en.y) > 2 / cp.zoom){
+        const l = { p1: s, p2: en, lt: cp.lineType };
+        cp.lines.push(l);
+        cp.hist.push([l]);
+        cp.redoStack = [];
+        saveToLocal();
+      }
+    } else {
+      // Was a click (no significant drag)
+      if (!cp.anchor){
+        // First click — set anchor
+        cp.anchor = { x: cp.dragStart.x, y: cp.dragStart.y };
+      } else {
+        // Second click — complete line
+        const aW = screenToWorld(cp.anchor.x, cp.anchor.y);
+        const as = snapPoint(aW.x, aW.y);
+        const rect = canvas.getBoundingClientRect();
+        const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const hW = screenToWorld(pos.x, pos.y);
+        const hs = snapPoint(hW.x, hW.y);
+        if (Math.hypot(as.x - hs.x, as.y - hs.y) > 2 / cp.zoom){
+          const l = { p1: as, p2: hs, lt: cp.lineType };
+          cp.lines.push(l);
+          cp.hist.push([l]);
+          cp.redoStack = [];
+          saveToLocal();
+        }
+        cp.anchor = null;
+      }
+    }
+    cp.dragging = false;
+    cp.dragStart = cp.dragEnd = null;
+    render();
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  cp._hover = null;
+  if (cp.dragging){
+    const s = snapPoint(...Object.values(screenToWorld(cp.dragStart.x, cp.dragStart.y)));
+    const en = snapPoint(...Object.values(screenToWorld(cp.dragEnd.x, cp.dragEnd.y)));
+    if (Math.hypot(s.x - en.x, s.y - en.y) > 2 / cp.zoom){
+      cp.lines.push({ p1: s, p2: en, lt: cp.lineType });
+      cp.hist.push([{ p1: s, p2: en, lt: cp.lineType }]);
+      cp.redoStack = [];
+      saveToLocal();
+    }
+    cp.dragging = false;
+    cp.dragStart = cp.dragEnd = null;
+  }
+  $('snapDot').style.display = 'none';
+  render();
+});
+
+function eraseNear(pos){
+  const w = screenToWorld(pos.x, pos.y);
+  const thr = 12 / cp.zoom;
+  const before = cp.lines.length;
+  cp.lines = cp.lines.filter(l => {
+    const dx = l.p2.x - l.p1.x, dy = l.p2.y - l.p1.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) return Math.hypot(l.p1.x - w.x, l.p1.y - w.y) > thr;
+    const t = Math.max(0, Math.min(1, ((w.x - l.p1.x) * dx + (w.y - l.p1.y) * dy) / len2));
+    return Math.hypot(w.x - (l.p1.x + t * dx), w.y - (l.p1.y + t * dy)) > thr;
+  });
+  if (cp.lines.length !== before){ saveToLocal(); render(); }
+}
+
+// ─────────────────────────────────────────
+//  ACTIONS
+// ─────────────────────────────────────────
+function setLineType(t){
+  cp.lineType = t;
+  const btns = document.querySelectorAll('.lt-btn');
+  btns.forEach(b => {
+    b.classList.remove('valley-active','mountain-active','crease-active');
+  });
+  $('lt-' + t).classList.add(t + '-active');
+  if (cp.eraseMode){ toggleErase(); }
+  cp.anchor = null;
+  render();
+}
+
+function toggleErase(){
+  cp.eraseMode = !cp.eraseMode;
+  const tbBtn = $('ftEraseBtn');
+  if (tbBtn) tbBtn.classList.toggle('on', cp.eraseMode);
+  canvas.style.cursor = cp.eraseMode ? 'cell' : 'crosshair';
+  if (tbBtn) tbBtn.textContent = cp.eraseMode ? 'Erase: ON' : 'Erase';
+  if (cp.eraseMode){ cp.dragging = false; cp.dragStart = cp.dragEnd = null; cp.anchor = null; }
+  render();
+}
+
+function setGrid(v){
+  cp.gridN = +v;
+  $('gridVal').textContent = v;
+  render();
+}
+
+function toggleSnap(){
+  cp.snap = !cp.snap;
+  const btn = $('snapBtn');
+  btn.textContent = 'Snap: ' + (cp.snap ? 'On' : 'Off');
+  btn.className = 'tg-btn ' + (cp.snap ? 'on' : 'off');
+}
+
+function toggleGrid(){
+  cp.gridVis = !cp.gridVis;
+  const btn = $('gridVisBtn');
+  btn.textContent = 'Grid: ' + (cp.gridVis ? 'On' : 'Off');
+  btn.className = 'tg-btn ' + (cp.gridVis ? 'on' : 'off');
+  render();
+}
+
+function setPaperShape(v){ cp.paperShape=v; cp.paperAspect=v==='rect'?2:1; cp.sourcePreset=null; syncPaperChooser(); saveToLocal(); render(); }
+function setPaperColor(v,l){ cp.paperColor = v; $('paperColorLabel').textContent = ''; render(); }
+function pickColor(el){
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  _committedColor = el.dataset.color;
+  setPaperColor(el.dataset.color, '');
+}
+// Hover preview for preset swatches
+let _committedColor = '#FAF8F2';
+function previewColor(el){
+  if (!el.classList.contains('active')){
+    cp.paperColor = el.dataset.color;
+    render();
+  }
+}
+function restoreColor(){
+  const active = document.querySelector('.color-swatch.active');
+  cp.paperColor = active ? active.dataset.color : _committedColor;
+  render();
+}
+// ── Custom Color Picker ──
+let ccTempColor = '#FAF8F2';
+let ccOriginalColor = '#FAF8F2';
+const ccRecent = [];
+function openCustomColorPicker(){
+  ccOriginalColor = cp.paperColor;
+  ccTempColor = cp.paperColor;
+  $('ccPreviewLarge').style.background = ccTempColor;
+  $('ccHexInput').value = ccTempColor;
+  $('ccNativeColor').value = ccTempColor;
+  renderCCRecent();
+  $('ccOverlay').classList.add('show');
+
+  // Position popover next to the custom swatch
+  setTimeout(() => {
+    const swatch = document.querySelector('.color-swatch.custom');
+    if (!swatch) return;
+    const sr = swatch.getBoundingClientRect();
+    const popover = $('ccPopover');
+    const pw = popover.offsetWidth;
+    const ph = popover.offsetHeight;
+    const gap = 8;
+
+    // Try right first, then left, then below
+    let left = sr.right + gap;
+    let top = sr.top - 8;
+    if (left + pw > window.innerWidth - 12){
+      left = sr.left - pw - gap;
+      if (left < 12){ left = sr.left; top = sr.bottom + gap; }
+    }
+    if (top + ph > window.innerHeight - 12) top = window.innerHeight - ph - 12;
+    if (top < 12) top = 12;
+
+    popover.style.left = left + 'px';
+    popover.style.top = top + 'px';
+  }, 20);
+
+  setTimeout(() => $('ccHexInput').focus(), 120);
+}
+function closeCustomColorPicker(){
+  $('ccOverlay').classList.remove('show');
+  cp.paperColor = ccOriginalColor;
+  render();
+}
+function onCCHexInput(v){
+  v = v.replace(/[^0-9a-fA-F#]/g,'');
+  if (!v.startsWith('#')) v = '#' + v;
+  if (v.length > 7) v = v.slice(0, 7);
+  $('ccHexInput').value = v;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)){
+    ccTempColor = v;
+    $('ccPreviewLarge').style.background = v;
+    $('ccNativeColor').value = v;
+    cp.paperColor = v; render();
+  }
+}
+function onCCNativeChange(v){
+  ccTempColor = v;
+  $('ccPreviewLarge').style.background = v;
+  $('ccHexInput').value = v;
+  cp.paperColor = v; render();
+}
+function confirmCustomColor(){
+  const v = ccTempColor;
+  if (!/^#[0-9a-fA-F]{6}$/.test(v)) return;
+  _committedColor = v;
+  setPaperColor(v, '');
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  // Update custom swatch background to confirmed color, keep the +
+  const customSwatch = document.querySelector('.color-swatch.custom');
+  if (customSwatch){
+    customSwatch.style.background = v;
+    customSwatch.classList.add('active');
+  }
+  // Add to recent
+  const idx = ccRecent.indexOf(v);
+  if (idx >= 0) ccRecent.splice(idx, 1);
+  ccRecent.unshift(v);
+  if (ccRecent.length > 8) ccRecent.pop();
+  // Close without restoring original (skip closeCustomColorPicker which reverts)
+  $('ccOverlay').classList.remove('show');
+}
+function renderCCRecent(){
+  const container = $('ccRecent');
+  const section = $('ccRecentSection');
+  if (ccRecent.length === 0){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  container.innerHTML = ccRecent.map(c => 
+    `<div class="cc-recent-swatch" style="background:${c}" onclick="ccTempColor='${c}';$('ccPreviewLarge').style.background='${c}';$('ccHexInput').value='${c}';$('ccNativeColor').value='${c}';cp.paperColor='${c}';render()" title="${c}"></div>`
+  ).join('');
+}
+// ─────────────────────────────────────────
+//  UNDO / REDO
+// ─────────────────────────────────────────
+function cpUndo(){
+  if (cp.hist.length){
+    const h = cp.hist.pop();
+    cp.redoStack.push(h);
+    if (Array.isArray(h)) cp.lines.splice(cp.lines.length - h.length);
+    else if (h.act === 'snapshot') cp.lines = h.before.map(l => ({...l,p1:{...l.p1},p2:{...l.p2}}));
+    cp.anchor = null;
+    saveToLocal();
+    render();
+    window.dispatchEvent(new CustomEvent('cp:history-changed'));
+  }
+}
+
+function cpRedo(){
+  if (cp.redoStack.length){
+    const h = cp.redoStack.pop();
+    if (Array.isArray(h)) cp.lines.push(...h);
+    else if (h.act === 'snapshot') cp.lines = h.after.map(l => ({...l,p1:{...l.p1},p2:{...l.p2}}));
+    cp.hist.push(h);
+    cp.anchor = null;
+    saveToLocal();
+    render();
+    window.dispatchEvent(new CustomEvent('cp:history-changed'));
+  }
+}
+
+function cpClear(){
+  cp.redoStack = [];
+  cp.lines = []; cp.nodes = []; cp.hist = [];
+  cp.anchor = null;
+  saveToLocal();
+  render();
+}
+
+// ─────────────────────────────────────────
+//  ZOOM
+// ─────────────────────────────────────────
+function zoomBy(dir){
+  const old = cp.zoom;
+  cp.zoom = Math.max(0.12, Math.min(6, cp.zoom * (dir > 0 ? 1.25 : 1 / 1.25)));
+  // Zoom toward center of canvas
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const ratio = cp.zoom / old;
+  cp.px = (cp.px - cx + canvas.width / 2) * ratio - (canvas.width / 2 - cx);
+  cp.py = (cp.py - cy + canvas.height / 2) * ratio - (canvas.height / 2 - cy);
+  render();
+}
+
+// ─────────────────────────────────────────
+//  PRESETS
+// ─────────────────────────────────────────
+const PRESET_DATA = {
+  bird: {
+    name: 'Bird Base',
+    desc: 'Traditional bird base with 8 lines',
+    lines: (s) => [
+      {p1:{x:-s,y:-s},p2:{x:s,y:s},lt:'crease'},{p1:{x:s,y:-s},p2:{x:-s,y:s},lt:'crease'},
+      {p1:{x:0,y:-s},p2:{x:0,y:s},lt:'valley'},{p1:{x:-s,y:0},p2:{x:s,y:0},lt:'valley'},
+      {p1:{x:-s,y:-s},p2:{x:0,y:0},lt:'mountain'},{p1:{x:s,y:-s},p2:{x:0,y:0},lt:'mountain'},
+      {p1:{x:s,y:s},p2:{x:0,y:0},lt:'mountain'},{p1:{x:-s,y:s},p2:{x:0,y:0},lt:'mountain'},
+    ]
+  },
+  waterbomb: {
+    name: 'Waterbomb',
+    desc: 'Classic waterbomb base',
+    lines: (s) => [
+      {p1:{x:-s,y:-s},p2:{x:s,y:s},lt:'valley'},{p1:{x:s,y:-s},p2:{x:-s,y:s},lt:'valley'},
+      {p1:{x:-s,y:0},p2:{x:s,y:0},lt:'mountain'},{p1:{x:0,y:-s},p2:{x:0,y:s},lt:'mountain'},
+    ]
+  },
+  fish: {
+    name: 'Fish Base',
+    desc: 'Simple fish base pattern',
+    lines: (s) => [
+      {p1:{x:0,y:-s},p2:{x:-s,y:s},lt:'valley'},{p1:{x:0,y:-s},p2:{x:s,y:s},lt:'valley'},
+      {p1:{x:-s,y:s},p2:{x:s,y:s},lt:'valley'},{p1:{x:0,y:-s},p2:{x:0,y:s*0.3},lt:'mountain'},
+      {p1:{x:-s*0.6,y:0},p2:{x:0,y:s*0.3},lt:'crease'},{p1:{x:s*0.6,y:0},p2:{x:0,y:s*0.3},lt:'crease'},
+    ]
+  },
+  frog: {
+    name: 'Frog Base',
+    desc: 'Traditional frog base',
+    lines: (s) => [
+      {p1:{x:-s,y:-s},p2:{x:s,y:s},lt:'crease'},{p1:{x:s,y:-s},p2:{x:-s,y:s},lt:'crease'},
+      {p1:{x:-s,y:0},p2:{x:s,y:0},lt:'mountain'},{p1:{x:0,y:-s},p2:{x:0,y:s},lt:'mountain'},
+      {p1:{x:-s,y:-s},p2:{x:0,y:0},lt:'valley'},{p1:{x:s,y:-s},p2:{x:0,y:0},lt:'valley'},
+      {p1:{x:s,y:s},p2:{x:0,y:0},lt:'valley'},{p1:{x:-s,y:s},p2:{x:0,y:0},lt:'valley'},
+      {p1:{x:-s/2,y:-s},p2:{x:-s,y:-s/2},lt:'crease'},{p1:{x:s/2,y:-s},p2:{x:s,y:-s/2},lt:'crease'},
+      {p1:{x:s/2,y:s},p2:{x:s,y:s/2},lt:'crease'},{p1:{x:-s/2,y:s},p2:{x:-s,y:s/2},lt:'crease'},
+    ]
+  },
+  diagonal: {
+    name: 'Diagonal',
+    desc: 'Single diagonal crease',
+    lines: (s) => [
+      {p1:{x:-s,y:-s},p2:{x:s,y:s},lt:'valley'},
+    ]
+  },
+  blintz: {
+    name: 'Blintz',
+    desc: 'Blintz fold foundation',
+    lines: (s) => [
+      {p1:{x:-s,y:-s},p2:{x:s,y:s},lt:'crease'},{p1:{x:s,y:-s},p2:{x:-s,y:s},lt:'crease'},
+      {p1:{x:0,y:-s},p2:{x:0,y:s},lt:'crease'},{p1:{x:-s,y:0},p2:{x:s,y:0},lt:'crease'},
+      {p1:{x:-s/2,y:-s},p2:{x:-s/2,y:s},lt:'valley'},{p1:{x:s/2,y:-s},p2:{x:s/2,y:s},lt:'valley'},
+      {p1:{x:-s,y:-s/2},p2:{x:s,y:-s/2},lt:'valley'},{p1:{x:-s,y:s/2},p2:{x:s,y:s/2},lt:'valley'},
+    ]
+  },
+};
+
+const FOLD_LAB_PRESETS = window.ORIGAMI_PRESETS || [];
+
+function sourcePresetLines(svgText){
+  const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+  const raw = [];
+  const typeFor = el => {
+    const classes = (el.getAttribute('class') || '').toLowerCase();
+    if (classes.includes('mountain')) return 'mountain';
+    if (classes.includes('valley')) return 'valley';
+    if (classes.includes('paper')) return 'boundary';
+    const stroke = (el.getAttribute('stroke') || '').toLowerCase();
+    if (stroke === '#ff0000' || stroke === '#f00' || stroke === 'red' || stroke === '#c0392b') return 'mountain';
+    if (stroke === '#0000ff' || stroke === '#00f' || stroke === 'blue' || stroke === '#2980b9') return 'valley';
+    if (stroke === '#ffff00') return 'facet';
+    if (stroke === '#00ff00') return 'cut';
+    if (stroke === '#ff00ff') return 'hinge';
+    if (stroke === '#000000' || stroke === '#000' || stroke === '#333') return 'boundary';
+    return 'other';
+  };
+  const opacityFor = el => {
+    const opacity = Number(el.getAttribute('opacity') ?? 1), strokeOpacity = Number(el.getAttribute('stroke-opacity') ?? 1);
+    return Number.isFinite(opacity * strokeOpacity) ? Math.max(0, Math.min(1, opacity * strokeOpacity)) : 1;
+  };
+  const add = (p1, p2, lt, opacity = 1) => { if (Number.isFinite(p1.x) && Number.isFinite(p1.y) && Number.isFinite(p2.x) && Number.isFinite(p2.y)) raw.push({p1,p2,lt,opacity}); };
+  const probe = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  probe.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden;overflow:hidden';
+  document.body.appendChild(probe);
+  const addPath = (d, lt, opacity) => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    probe.appendChild(path);
+    let length = 0;
+    try { length = path.getTotalLength(); } catch (_) { path.remove(); return; }
+    const count = Math.max(1, Math.min(160, Math.ceil(length / 5)));
+    let previous = path.getPointAtLength(0);
+    for (let i = 1; i <= count; i++){
+      const next = path.getPointAtLength(length * i / count);
+      if (Math.hypot(next.x - previous.x, next.y - previous.y) > 0.01) add(previous,next,lt,opacity);
+      previous = next;
+    }
+    path.remove();
+  };
+  doc.querySelectorAll('line').forEach(el => {
+    const lt = typeFor(el); if (lt === 'other') return;
+    add({x:+el.getAttribute('x1'),y:+el.getAttribute('y1')},{x:+el.getAttribute('x2'),y:+el.getAttribute('y2')},lt,opacityFor(el));
+  });
+  doc.querySelectorAll('rect').forEach(el => {
+    const lt = typeFor(el); if (lt !== 'boundary') return;
+    const x=+el.getAttribute('x')||0, y=+el.getAttribute('y')||0, w=+el.getAttribute('width')||0, h=+el.getAttribute('height')||0;
+    add({x,y},{x:x+w,y},lt,opacityFor(el)); add({x:x+w,y},{x:x+w,y:y+h},lt,opacityFor(el)); add({x:x+w,y:y+h},{x,y:y+h},lt,opacityFor(el)); add({x,y:y+h},{x,y},lt,opacityFor(el));
+  });
+  doc.querySelectorAll('polyline,polygon').forEach(el => {
+    const lt = typeFor(el); if (lt === 'other') return;
+    const nums = (el.getAttribute('points') || '').match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/gi)?.map(Number) || [];
+    const pts = []; for(let i=0;i+1<nums.length;i+=2) pts.push({x:nums[i],y:nums[i+1]});
+    for(let i=1;i<pts.length;i++) add(pts[i-1],pts[i],lt,opacityFor(el));
+    if (el.tagName.toLowerCase() === 'polygon' && pts.length > 2) add(pts.at(-1),pts[0],lt,opacityFor(el));
+  });
+  doc.querySelectorAll('path').forEach(el => {
+    const lt = typeFor(el); if (lt === 'other') return;
+    ((el.getAttribute('d') || '').match(/[Mm][^Mm]*/g) || []).forEach(part => addPath(part,lt,opacityFor(el)));
+  });
+  probe.remove();
+  const domain = raw.filter(l => l.lt === 'boundary');
+  const measuring = domain.length ? domain : raw.filter(l => l.lt === 'mountain' || l.lt === 'valley');
+  const points = measuring.flatMap(l => [l.p1,l.p2]);
+  if (!points.length) return [];
+  const minX=Math.min(...points.map(p=>p.x)), maxX=Math.max(...points.map(p=>p.x)), minY=Math.min(...points.map(p=>p.y)), maxY=Math.max(...points.map(p=>p.y));
+  const scale = cp.SIZE / Math.max(maxX-minX,maxY-minY,1), cx=(minX+maxX)/2, cy=(minY+maxY)/2;
+  const point = p => ({x:(p.x-cx)*scale,y:(p.y-cy)*scale});
+  const lines=raw.filter(l=>l.lt==='mountain'||l.lt==='valley').map(l=>({p1:point(l.p1),p2:point(l.p2),lt:l.lt,opacity:l.opacity}));
+  const colors={boundary:'#000000',facet:'#ffff00',cut:'#00ff00',hinge:'#ff00ff'};
+  lines.support=raw.filter(l=>colors[l.lt]).map(l=>({p1:point(l.p1),p2:point(l.p2),color:colors[l.lt],opacity:l.opacity}));
+  return lines;
+}
+
+function cloneSourceLines(lines){ return lines.map(l => ({p1:{...l.p1},p2:{...l.p2},lt:l.lt,opacity:l.opacity ?? 1})); }
+function orientPresetLines(lines,preset){
+  if (!preset.rotate90) return lines;
+  const rotate = p => ({x:-p.y,y:p.x});
+  lines.forEach(l => { l.p1=rotate(l.p1); l.p2=rotate(l.p2); });
+  (lines.support || []).forEach(l => { l.p1=rotate(l.p1); l.p2=rotate(l.p2); });
+  return lines;
+}
+function sourcePaperAspect(lines){
+  const source=(lines.support&&lines.support.length?lines.support:lines).flatMap(l=>[l.p1,l.p2]);
+  if(!source.length)return 1;
+  const xs=source.map(p=>p.x),ys=source.map(p=>p.y),w=Math.max(...xs)-Math.min(...xs),h=Math.max(...ys)-Math.min(...ys);
+  return h>1e-7?Math.max(.15,Math.min(8,w/h)):1;
+}
+function matchingSourcePreset(){
+  const source = cp.sourcePreset;
+  if (!source || cp.paperShape !== source.paper || Math.abs((cp.paperAspect||1)-(source.aspect||1))>1e-7 || cp.lines.length !== source.lines.length) return null;
+  const same = (a,b) => Math.abs(a-b) < 1e-7;
+  return cp.lines.every((line,index) => { const saved=source.lines[index]; return saved && line.lt===saved.lt && same(line.opacity ?? 1,saved.opacity ?? 1) && same(line.p1.x,saved.p1.x) && same(line.p1.y,saved.p1.y) && same(line.p2.x,saved.p2.x) && same(line.p2.y,saved.p2.y); }) ? source : null;
+}
+window.CPDesignerPreset = {matchingSourcePreset};
+
+function sourcePreview(lines){
+  const support=lines.support||[], all=[...support,...lines],pts=all.flatMap(l=>[l.p1,l.p2]);
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),pad=Math.max(maxX-minX,maxY-minY)*.04||8;
+  const frame=support.map(l=>`<line x1="${l.p1.x}" y1="${l.p1.y}" x2="${l.p2.x}" y2="${l.p2.y}" stroke="${l.color}" stroke-width="1.2" opacity="${l.opacity??1}"/>`).join('');
+  const swatch = lines.map(l => `<line x1="${l.p1.x}" y1="${l.p1.y}" x2="${l.p2.x}" y2="${l.p2.y}" stroke="${l.lt==='mountain'?'#ef4444':'#3b82f6'}" stroke-width="1.6" ${l.lt==='valley'?'stroke-dasharray="7 4"':''} opacity="${l.opacity ?? 1}"/>`).join('');
+  return `<svg class="source-preview" viewBox="${minX-pad} ${minY-pad} ${maxX-minX+pad*2} ${maxY-minY+pad*2}" aria-hidden="true">${frame}${swatch}</svg>`;
+}
+async function renderSourcePreview(preview, preset){
+  preview.innerHTML = '<span class="pg-loading">Loading preview…</span>';
+  try { const response=await fetch(preset.url); if(!response.ok) throw Error(); const lines=orientPresetLines(sourcePresetLines(await response.text()),preset); preview.innerHTML=lines.length ? sourcePreview(lines) : '<span class="pg-loading">Preview unavailable</span>'; }
+  catch (_) { preview.innerHTML = '<span class="pg-loading">Preview unavailable</span>'; }
+}
+
+async function loadSourcePreset(preset){
+  try {
+    toastMsg('Loading ' + preset.name + '…');
+    const response = await fetch(preset.url);
+    if (!response.ok) throw Error('source file was not found');
+    const sourceText = await response.text();
+    const lines = orientPresetLines(sourcePresetLines(sourceText),preset);
+    if (!lines.length) throw Error('no red or blue folds were found');
+    cp.lines = lines; cp.nodes = []; cp.hist = []; cp.redoStack = []; cp.anchor = null;
+    const aspect=sourcePaperAspect(lines), useSource=preset.paper==='source';
+    cp.paperShape=useSource&&Math.abs(aspect-1)>.04?'rect':(useSource?'square':(preset.paper||'square'));
+    cp.paperAspect=cp.paperShape==='rect'?aspect:1;
+    cp.sourcePreset = {name:preset.name,url:preset.url,paper:cp.paperShape,aspect:cp.paperAspect,lines:cloneSourceLines(lines),support:lines.support};
+    syncPaperChooser(); cp.zoom=1; cp.px=0; cp.py=0;
+    saveToLocal(); closePresetsGallery(); render();
+    toastMsg('Loaded: ' + preset.name);
+  } catch (error) { toastMsg('Could not load ' + preset.name + ': ' + error.message); }
+}
+
+function buildPresetGallery(){
+  const grid = $('pgGrid');
+  grid.innerHTML = '';
+  const s = cp.SIZE / 2;
+  const difficultyLabel=n=>['','Starter','Easy','Intermediate','Advanced','Expert'][n]||'Intermediate';
+  const sharedNames=new Set(FOLD_LAB_PRESETS.map(p=>p.name));
+  const localDifficulty={diagonal:1,waterbomb:1,blintz:2,fish:2,bird:2,frog:3};
+  const jobs=[
+    ...Object.entries(PRESET_DATA).filter(([,data])=>!sharedNames.has(data.name)).map(([key,data],i)=>({kind:'local',key,data,difficulty:localDifficulty[key]||2,order:i})),
+    ...FOLD_LAB_PRESETS.map((data,i)=>({kind:'source',data,difficulty:data.difficulty||3,order:100+i}))
+  ].sort((a,b)=>a.difficulty-b.difficulty||a.order-b.order);
+  jobs.forEach(job=>{
+    const {data}=job;
+    if(job.kind==='source'){
+      const card=document.createElement('div');card.className='pg-card';card.onclick=()=>loadSourcePreset(data);
+      card.innerHTML=`<div class="pg-preview" aria-label="${data.name} crease pattern"></div><div class="pg-meta"><span>Level ${job.difficulty}</span><span>${difficultyLabel(job.difficulty)}</span></div><div class="pg-name">${data.name}</div><div class="pg-desc">${data.desc}</div>`;
+      renderSourcePreview(card.querySelector('.pg-preview'),data);grid.appendChild(card);return;
+    }
+    const key=job.key;
+    const lines = data.lines(s);
+    const card = document.createElement('div');
+    card.className = 'pg-card';
+    card.onclick = () => { loadPreset(key); closePresetsGallery(); };
+
+    const min = -s - 10, max = s + 10;
+    const range = max - min;
+    const size = 120;
+    const scale = size / range;
+    let svgContent = '';
+    lines.forEach(l => {
+      const st = LINE_STYLES[l.lt];
+      const dashAttr = st.dash.length ? `stroke-dasharray="${st.dash.join(' ')}"` : '';
+      svgContent += `<line x1="${(l.p1.x - min) * scale}" y1="${(l.p1.y - min) * scale}" x2="${(l.p2.x - min) * scale}" y2="${(l.p2.y - min) * scale}" stroke="${st.color}" stroke-width="1.5" ${dashAttr}/>`;
+    });
+
+    card.innerHTML = `
+      <div class="pg-preview">
+        <svg viewBox="0 0 ${size} ${size}">${svgContent}</svg>
+      </div>
+      <div class="pg-meta"><span>Level ${job.difficulty}</span><span>${difficultyLabel(job.difficulty)}</span></div>
+      <div class="pg-name">${data.name}</div>
+      <div class="pg-desc">${data.desc}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function openPresetsGallery(){
+  buildPresetGallery();
+  $('presetsModal').classList.add('show');
+}
+function closePresetsGallery(){
+  $('presetsModal').classList.remove('show');
+}
+
+function loadPreset(name){
+  cp.lines = []; cp.nodes = []; cp.hist = []; cp.redoStack = []; cp.anchor = null;
+  cp.sourcePreset = null;
+  const s = cp.SIZE / 2;
+  const data = PRESET_DATA[name];
+  if (data) {
+    cp.lines = data.lines(s);
+    saveToLocal();
+    toastMsg('Loaded: ' + data.name);
+  }
+  render();
+}
+
+// ─────────────────────────────────────────
+//  IMPORT SVG
+// ─────────────────────────────────────────
+function openImport(){ $('importModal').classList.add('show'); }
+function closeImport(){ $('importModal').classList.remove('show'); }
+
+const dropZone = $('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file){
+  if (!file || !file.name.endsWith('.svg')){ toastMsg('Please select an SVG file'); return; }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result, 'image/svg+xml');
+      const lines = [];
+
+      let vb = { x: -200, y: -200, w: 400, h: 400 };
+      const svgEl = doc.querySelector('svg');
+      if (svgEl){
+        const vbStr = svgEl.getAttribute('viewBox');
+        if (vbStr){
+          const parts = vbStr.split(/[\s,]+/).map(Number);
+          if (parts.length === 4) vb = { x: parts[0], y: parts[1], w: parts[2], h: parts[3] };
+        }
+      }
+
+      const svgSize = Math.max(vb.w, vb.h);
+      const scale = cp.SIZE / svgSize;
+      const offsetX = -vb.x - vb.w / 2;
+      const offsetY = -vb.y - vb.h / 2;
+
+      doc.querySelectorAll('line').forEach(el => {
+        const x1 = parseFloat(el.getAttribute('x1')) || 0;
+        const y1 = parseFloat(el.getAttribute('y1')) || 0;
+        const x2 = parseFloat(el.getAttribute('x2')) || 0;
+        const y2 = parseFloat(el.getAttribute('y2')) || 0;
+        const stroke = (el.getAttribute('stroke') || '#000').toLowerCase();
+
+        let lt = 'crease';
+        if (stroke.includes('3b82f6') || stroke.includes('blue') || stroke === '#00f' || stroke === 'blue') lt = 'valley';
+        else if (stroke.includes('ef4444') || stroke.includes('red') || stroke === '#f00' || stroke === 'red') lt = 'mountain';
+        else if (stroke.includes('000') || stroke.includes('1f29') || stroke.includes('333')) lt = 'crease';
+
+        lines.push({
+          p1: { x: (x1 + offsetX) * scale, y: (y1 + offsetY) * scale },
+          p2: { x: (x2 + offsetX) * scale, y: (y2 + offsetY) * scale },
+          lt
+        });
+      });
+
+      doc.querySelectorAll('path').forEach(el => {
+        const d = el.getAttribute('d') || '';
+        const stroke = (el.getAttribute('stroke') || '#000').toLowerCase();
+        let lt = 'crease';
+        if (stroke.includes('3b82f6') || stroke.includes('blue')) lt = 'valley';
+        else if (stroke.includes('ef4444') || stroke.includes('red')) lt = 'mountain';
+
+        const pts = [];
+        const matches = d.match(/[ML]\s*([\d.-]+)[,\s]+([\d.-]+)/gi);
+        if (matches){
+          matches.forEach(m => {
+            const nums = m.match(/([\d.-]+)/g);
+            if (nums && nums.length >= 2) pts.push({ x: parseFloat(nums[0]), y: parseFloat(nums[1]) });
+          });
+          for (let i = 1; i < pts.length; i++){
+            lines.push({
+              p1: { x: (pts[i-1].x + offsetX) * scale, y: (pts[i-1].y + offsetY) * scale },
+              p2: { x: (pts[i].x + offsetX) * scale, y: (pts[i].y + offsetY) * scale },
+              lt
+            });
+          }
+        }
+      });
+
+      if (lines.length === 0){ toastMsg('No crease lines found in SVG'); return; }
+
+      cp.lines = [...cp.lines, ...lines]; cp.sourcePreset = null;
+      cp.hist.push(lines);
+      cp.redoStack = [];
+      saveToLocal();
+      closeImport();
+      toastMsg(`Imported ${lines.length} crease lines`);
+      render();
+    } catch (err){
+      toastMsg('Failed to parse SVG: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────
+//  EXPORT A4 PDF
+// ─────────────────────────────────────────
+function exportPDF(){
+  // A4 at 300 DPI: 2480 × 3508
+  const a4w = 2480, a4h = 3508;
+  const margin = 60;  // ~5mm margin for breathing room
+  const drawW = a4w - margin * 2;
+  const drawH = a4h - margin * 2;
+
+  // Maximize: fill the smaller of drawW/drawH for square, use full width for rect
+  const paper=paperDimensions();
+  const scale=Math.min(drawW/paper.w,drawH/paper.h);
+
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = a4w;
+  offCanvas.height = a4h;
+  const offCtx = offCanvas.getContext('2d');
+
+  // Pure white background
+  offCtx.fillStyle = '#FFFFFF';
+  offCtx.fillRect(0, 0, a4w, a4h);
+
+  const ox = a4w / 2, oy = a4h / 2;
+  const half = cp.SIZE / 2;
+
+  // Helper: draw paper path for current shape
+  function paperPath(ctx, x, y){
+    ctx.beginPath();
+    if (cp.paperShape === 'square') ctx.rect(x - half, y - half, cp.SIZE, cp.SIZE);
+    else if (cp.paperShape === 'rect') ctx.rect(x-paper.w/2,y-paper.h/2,paper.w,paper.h);
+    else if (cp.paperShape === 'hex'){
+      for (let i = 0; i < 6; i++){
+        const a = Math.PI / 6 + i * Math.PI / 3;
+        i ? ctx.lineTo(x + Math.cos(a) * half, y + Math.sin(a) * half)
+          : ctx.moveTo(x + Math.cos(a) * half, y + Math.sin(a) * half);
+      }
+      ctx.closePath();
+    }
+  }
+
+  // Shadow — very light for print
+  offCtx.save();
+  offCtx.translate(ox, oy);
+  offCtx.scale(scale, scale);
+  offCtx.shadowColor = 'rgba(0,0,0,0.04)';
+  offCtx.shadowBlur = 8 / scale;
+  offCtx.shadowOffsetY = 2 / scale;
+  paperPath(offCtx, 0, 0);
+  offCtx.fillStyle = cp.paperColor;
+  offCtx.fill();
+  offCtx.restore();
+
+  // Paper border (sharp, thin)
+  offCtx.save();
+  offCtx.translate(ox, oy);
+  offCtx.scale(scale, scale);
+  paperPath(offCtx, 0, 0);
+  offCtx.strokeStyle = 'rgba(0,0,0,0.18)';
+  offCtx.lineWidth = 1.2 / scale;
+  offCtx.stroke();
+  offCtx.restore();
+
+  // Crease lines — rendered at high resolution
+  offCtx.save();
+  offCtx.translate(ox, oy);
+  offCtx.scale(scale, scale);
+
+  const PRINT_STYLES = {
+    mountain: { color:'#EF4444', width:5.5, dash:null },
+    valley:   { color:'#2563EB', width:4.6, dash:[34,18] },
+    crease:   { color:'#777777', width:2.2, dash:[4,12] }
+  };
+  OrigamiCreaseRender.mergeValleys(cp.lines).forEach(l => {
+    const st=PRINT_STYLES[l.lt]||PRINT_STYLES.crease;
+    OrigamiCreaseRender.stroke(offCtx,l,{scale,color:st.color,widthPx:st.width,dashPx:st.dash?.[0],gapPx:st.dash?.[1]});
+  });
+  offCtx.restore();
+
+  // Color is preserved; line patterns keep the legend readable in grayscale too.
+  offCtx.save();
+  offCtx.fillStyle = '#333333'; offCtx.font = '20px Inter, sans-serif'; offCtx.textAlign = 'left';
+  offCtx.strokeStyle='#EF4444';offCtx.lineWidth=5.5;offCtx.setLineDash([]);offCtx.beginPath();offCtx.moveTo(120,32);offCtx.lineTo(220,32);offCtx.stroke();offCtx.fillText('MOUNTAIN · RED SOLID',238,39);
+  offCtx.strokeStyle='#2563EB';offCtx.lineWidth=4.6;offCtx.setLineDash([34,18]);offCtx.lineCap='butt';offCtx.beginPath();offCtx.moveTo(600,32);offCtx.lineTo(720,32);offCtx.stroke();offCtx.setLineDash([]);offCtx.fillText('VALLEY · BLUE DASHED',738,39);
+  offCtx.restore();
+
+  // Footer
+  offCtx.fillStyle = '#B0B0B0';
+  offCtx.font = '20px Inter, sans-serif';
+  offCtx.textAlign = 'center';
+  offCtx.fillText('Origami Crease Pattern — ' + cp.lines.length + ' lines', a4w / 2, a4h - 34);
+
+  // Enable image smoothing for anti-aliased output
+  offCtx.imageSmoothingEnabled = true;
+  offCtx.imageSmoothingQuality = 'high';
+
+  const dataUrl = offCanvas.toDataURL('image/png', 1.0);
+  const printWin = window.open('', '_blank', 'width=900,height=700');
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html><head><meta charset="UTF-8"><title>Origami CP - Print</title>
+    <style>
+      @page { size: A4; margin: 0; }
+      * { margin: 0; padding: 0; }
+      html, body { width: 210mm; height: 297mm; overflow: hidden; background: #fff; }
+      img { width: 210mm; height: 297mm; object-fit: contain; image-rendering: auto; }
+    </style></head>
+    <body><img src="${dataUrl}" onload="setTimeout(()=>window.print(),400)"></body></html>
+  `);
+  printWin.document.close();
+
+  toastMsg('A4 print dialog opened');
+}
+
+// ─────────────────────────────────────────
+//  EXPORT DROPDOWN MENU
+// ─────────────────────────────────────────
+function toggleExportMenu(e){
+  e.stopPropagation();
+  document.getElementById('exportDropdown').classList.toggle('open');
+}
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  const dd = document.getElementById('exportDropdown');
+  if (dd && dd.classList.contains('open') && !dd.contains(e.target)){
+    dd.classList.remove('open');
+  }
+});
+
+// ─────────────────────────────────────────
+//  EXPORT SVG
+// ─────────────────────────────────────────
+function exportSVG(){
+  const size = cp.SIZE;
+  const half = size / 2;
+  const paper=paperDimensions(), pad = 20;
+  const vbX=-paper.w/2-pad,vbY=-paper.h/2-pad,vbW=paper.w+pad*2,vbH=paper.h+pad*2;
+
+  let svg = '';
+  svg += `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  svg += `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" width="${vbW}" height="${vbH}">\n`;
+  svg += `  <!-- Origami Crease Pattern — ${cp.lines.length} lines — Export from CP Designer -->\n`;
+
+  // Paper outline
+  svg += `  <!-- Paper shape: ${cp.paperShape} -->\n`;
+  if (cp.paperShape === 'square'){
+    svg += `  <rect x="${-half}" y="${-half}" width="${size}" height="${size}" fill="${cp.paperColor}" stroke="#000000" stroke-width="1"/>\n`;
+  } else if (cp.paperShape === 'rect'){
+    svg += `  <rect x="${-paper.w/2}" y="${-paper.h/2}" width="${paper.w}" height="${paper.h}" fill="${cp.paperColor}" stroke="#000000" stroke-width="1"/>\n`;
+  } else if (cp.paperShape === 'hex'){
+    let pts = '';
+    for (let i = 0; i < 6; i++){
+      const a = Math.PI / 6 + i * Math.PI / 3;
+      pts += `${(Math.cos(a)*half).toFixed(2)},${(Math.sin(a)*half).toFixed(2)} `;
+    }
+    svg += `  <polygon points="${pts.trim()}" fill="${cp.paperColor}" stroke="#000000" stroke-width="1"/>\n`;
+  }
+
+  // Group lines by type
+  const groups = {
+    mountain: { label: 'Mountain folds (solid red)',  dash: 'none',  color: '#ff0000', width: '1.8', lines: [] },
+    valley:   { label: 'Valley folds (dashed blue)',  dash: '8,4',   color: '#0000ff', width: '1.8', lines: [] },
+    crease:   { label: 'Guide creases (dotted gray)',  dash: '3,3', color: '#8B8B8B', width: '1.2', lines: [] }
+  };
+
+  cp.lines.forEach(l => {
+    if (groups[l.lt]) groups[l.lt].lines.push(l);
+  });
+
+  ['mountain', 'valley', 'crease'].forEach(type => {
+    const g = groups[type];
+    if (g.lines.length === 0) return;
+    svg += `\n  <!-- ${g.label} -->\n`;
+    svg += `  <g stroke="${g.color}" stroke-width="${g.width}" stroke-linecap="round" stroke-dasharray="${g.dash}" fill="none">\n`;
+    g.lines.forEach(l => {
+      const opacity = Number.isFinite(l.opacity) ? Math.max(0, Math.min(1, l.opacity)) : 1;
+      svg += `    <line x1="${l.p1.x.toFixed(2)}" y1="${l.p1.y.toFixed(2)}" x2="${l.p2.x.toFixed(2)}" y2="${l.p2.y.toFixed(2)}" opacity="${opacity}"/>\n`;
+    });
+    svg += `  </g>\n`;
+  });
+
+  svg += `</svg>\n`;
+
+  // Download
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'crease-pattern.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  document.getElementById('exportDropdown').classList.remove('open');
+  toastMsg('SVG exported — ' + cp.lines.length + ' lines');
+}
+
+// ─────────────────────────────────────────
+//  KEYBOARD SHORTCUTS
+// ─────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')){ e.preventDefault(); cpUndo(); }
+  if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')){ e.preventDefault(); cpRedo(); }
+  if (e.key === 'e' && !e.ctrlKey && !e.metaKey && document.activeElement === document.body){
+    e.preventDefault(); toggleErase();
+  }
+  if (!e.ctrlKey && !e.metaKey && document.activeElement === document.body){
+    if (e.key === '1'){ setLineType('valley'); }
+    if (e.key === '2'){ setLineType('mountain'); }
+    if (e.key === '3'){ setLineType('crease'); }
+  }
+  if (e.key === 'Escape'){ closeImport(); closePresetsGallery(); closeCustomColorPicker(); $('helpPopover').classList.remove('show'); $('exportDropdown').classList.remove('open'); cp.anchor = null; render(); }
+});
+
+// ─────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────
+let toastTimer;
+function toastMsg(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ─────────────────────────────────────────
+//  HELP
+// ─────────────────────────────────────────
+function toggleHelp(){
+  const p = $('helpPopover');
+  p.classList.toggle('show');
+}
+// Click outside to close
+document.addEventListener('click', e => {
+  const p = $('helpPopover');
+  const btn = $('helpBtn');
+  if (p.classList.contains('show') && !p.contains(e.target) && e.target !== btn){
+    p.classList.remove('show');
+  }
+});
+
+// ─────────────────────────────────────────
+//  LOCAL STORAGE
+// ─────────────────────────────────────────
+const STORAGE_KEY = 'cp-designer-lines';
+
+function saveToLocal(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({version:3,lines:cp.lines,paperShape:cp.paperShape,paperAspect:cp.paperAspect,sourcePreset:cp.sourcePreset})); } catch(e){}
+}
+
+function loadFromLocal(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw){
+      const saved = JSON.parse(raw);
+      const lines = Array.isArray(saved) ? saved : saved.lines;
+      if (Array.isArray(lines) && lines.length > 0){
+        cp.lines = lines;
+        if (!Array.isArray(saved) && ['square','rect','hex'].includes(saved.paperShape)) { cp.paperShape=saved.paperShape; cp.paperAspect=Number(saved.paperAspect)||(cp.paperShape==='rect'?2:1); syncPaperChooser(); }
+        cp.sourcePreset = Array.isArray(saved) ? null : (saved.sourcePreset || null);
+        cp.hist = [];
+        cp.redoStack = [];
+        return true;
+      }
+    }
+  } catch(e){}
+  return false;
+}
+
+// ─────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  resize();
+  if (!loadFromLocal()){
+    loadPreset('diagonal');
+  }
+  render();
+});
+window.CPDesignerRuntime = { cp, canvas, render, screenToWorld, worldToScreen, paperDimensions, saveToLocal, toastMsg };
+</script>
+
+<script src="assets/cp-import.js"></script>
+<script src="assets/designer-simulation.js"></script>
+<script src="assets/designer-pro-tools.js"></script>
+</body>
+</html>

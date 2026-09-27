@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><base href="../../">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fold Lab · Version 1 tutorial editor</title>
+<!--
+  L1 模拟器：把 OrigamiSimulator（MIT，Amanda Ghassaei）的 GPU 动态求解器装进本站。
+  数据流：折痕图 SVG（黑=边界 / 红=山折 / 蓝=谷折）→ 三角网格 → 每帧 GPU 求解 → 3D 渲染。
+  "折叠百分比"滑杆就是动画：0% 平整 → 100% 完全折叠。
+
+  ⚠️ 本文件由 tools/build-origami3d.mjs 从 tools/origami3d.template.html + 上游着色器生成，
+     直接改本文件后再重新生成会被覆盖；请改模板后重跑生成脚本。
+-->
+<style>
+:root{
+  --bg:#F3F0EA; --surface:#FFFFFF; --surface2:#F7F5F2; --border:#E2DED6;
+  --text:#2B2B2B; --text-dim:#8A857C; --accent:#2E3A8C; --accent-soft:#E8EAFA;
+  --radius:10px; --shadow:0 2px 10px rgba(0,0,0,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);}
+
+/* three.js 视口占住"面板右侧 + 底栏上方"的区域，模型才会居中在可见区里 */
+#threeContainer{position:absolute;left:302px;right:16px;top:70px;bottom:92px;z-index:1;
+  background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+#threeContainer canvas{display:block;}
+#gpuMathCanvas{display:none;}
+[hidden]{display:none !important;}
+
+header{position:absolute;top:0;left:0;right:0;height:54px;z-index:5;
+  display:flex;align-items:center;gap:12px;padding:0 16px;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;}
+.brand-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#3D5AFE 0%,#2E3A8C 100%);}
+.brand-icon svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.badge{margin-left:6px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);
+  color:var(--accent);font-size:12px;font-weight:600;}
+header nav{margin-left:auto;display:flex;gap:14px;font-size:13px;}
+header nav a{color:var(--text-dim);text-decoration:none;}
+header nav a:hover{color:var(--accent);}
+
+/* 左侧面板 */
+#panel{position:absolute;top:70px;left:16px;bottom:96px;width:270px;z-index:4;
+  display:flex;flex-direction:column;gap:10px;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(6px);
+  border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;overflow-y:auto;}
+.panel-title{font-size:12px;font-weight:700;color:var(--text-dim);letter-spacing:.4px;text-transform:uppercase;}
+#modelGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;overflow-y:auto;flex:1 0 120px;max-height:220px;padding-right:2px;}
+.model-btn{display:flex;align-items:center;gap:6px;padding:7px 8px;border:1px solid var(--border);
+  border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text);
+  font-family:inherit;text-align:left;line-height:1.25;white-space:normal;min-width:0;}
+.model-btn:hover{border-color:#C9C2B6;background:#fff;}
+.model-btn.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600;}
+.model-btn .ico{font-size:14px;flex:0 0 auto;}
+
+/* 折痕图预览（上游代码会把生成的 CP 塞进 #svgViewer） */
+#cpBox{flex:0 0 auto;height:190px;border:1px solid var(--border);border-radius:8px;
+  background:var(--surface2);position:relative;overflow:hidden;}
+#svgViewer{position:absolute;inset:8px;width:auto;height:auto;z-index:1;}
+#svgViewer svg{width:100%;height:100%;display:block;}
+.cp-hint{position:absolute;bottom:4px;left:8px;font-size:11px;color:var(--text-dim);z-index:2;}
+
+/* 底部控制条 */
+#bar{position:absolute;left:16px;right:16px;bottom:16px;z-index:4;height:64px;
+  display:flex;align-items:center;gap:14px;padding:0 16px;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(6px);
+  border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);}
+.fold-wrap{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0;}
+.fold-wrap label{font-size:12.5px;color:var(--text-dim);white-space:nowrap;}
+#foldRange{flex:1 1 auto;min-width:120px;accent-color:var(--accent);height:4px;}
+#foldPct{font-size:12.5px;font-weight:700;color:var(--accent);min-width:52px;text-align:right;}
+button{font-family:inherit;font-size:12.5px;padding:8px 12px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface2);color:var(--text);white-space:nowrap;}
+button:hover{border-color:#C9C2B6;background:#fff;}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+button.primary:hover{background:#3D4BB0;}
+button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600;}
+
+#status{margin-left:auto;font-size:12px;color:var(--text-dim);max-width:280px;text-align:right;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#err{position:absolute;left:50%;top:70px;transform:translateX(-50%);z-index:9;max-width:620px;max-height:50vh;overflow:auto;white-space:pre-wrap;
+  background:#fff;border:1px solid #E4C7C7;border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:18px 20px;font-size:13px;line-height:1.6;color:#8A2B2B;display:none;}
+#err code{background:#F6F1F1;padding:1px 4px;border-radius:4px;font-size:12px;}
+.hint{font-size:12px;line-height:1.6;color:var(--text-dim);flex-shrink:0;}
+.hint a{color:var(--accent);}
+#notice{color:#83551f;white-space:pre-wrap;}
+#modelName{font-size:13px;font-weight:600;overflow-wrap:anywhere;}
+.import-button{display:block;text-align:center;border:1px dashed var(--accent);border-radius:8px;padding:12px;background:var(--accent-soft);color:var(--accent);cursor:pointer;font-size:13px;}
+button:disabled{opacity:.45;cursor:wait;}
+body.dragover #threeContainer{outline:3px dashed var(--accent);}
+body.embedded header nav{display:none;}
+#foldRange{min-width:60px;}
+#bar{flex-wrap:wrap;height:auto;min-height:64px;padding:12px;gap:8px;}
+#bar button{padding:8px;}
+@media(max-width:1100px){#status{display:none;}#bar .fold-wrap{flex-basis:100%;}#panel{bottom:130px;}#threeContainer{bottom:130px;}}
+@media(max-width:600px){
+  header{padding:0 10px;}header .badge,header nav{display:none;}
+  #panel{left:8px;top:62px;bottom:136px;width:160px;padding:8px;gap:8px;}
+  #threeContainer{left:176px;top:62px;right:8px;bottom:136px;}
+  #modelGrid{grid-template-columns:1fr;}#cpBox{height:130px;}
+  #bar{left:8px;right:8px;bottom:8px;}#bar button{font-size:11px;}
+}
+
+/* Fold Lab interface — purpose-built for the simulator rather than the upstream demo. */
+:root{--bg:#e9e7e1;--surface:#fdfdfb;--surface2:#f4f3ef;--border:#d9d7cf;--text:#171717;--text-dim:#686761;--accent:#2643c4;--accent-soft:#e8edff;--radius:0;--shadow:none;}
+body{font-family:Inter,"Helvetica Neue",Arial,sans-serif;letter-spacing:-.01em;background:var(--bg);}
+header{height:62px;padding:0 28px;background:rgba(253,253,251,.94);border-bottom:1px solid var(--border);backdrop-filter:blur(18px);}
+.brand{gap:12px;font-size:16px;font-weight:750;letter-spacing:-.04em;text-transform:uppercase;}.brand::before{content:"";display:block;width:8px;height:8px;background:var(--accent);}.brand-icon{display:none;}.badge{margin:0;padding:0;background:none;color:var(--text-dim);font-size:11px;font-weight:600;letter-spacing:.08em;}
+header nav{gap:20px;font-size:12px;font-weight:650;letter-spacing:.02em;}header nav a{color:var(--text);}header nav a:hover{color:var(--accent);}
+#panel{top:62px;left:0;bottom:0;width:318px;padding:28px 24px 126px;gap:22px;border:0;border-right:1px solid var(--border);border-radius:0;background:var(--surface);box-shadow:none;backdrop-filter:none;}
+#threeContainer{left:318px;right:0;top:62px;bottom:0;border:0;border-radius:0;background:radial-gradient(circle at 50% 42%,#fff 0,#f7f7f4 42%,#e8e7e2 100%);}
+#threeContainer::after{content:"DRAG TO ORBIT  ·  SCROLL TO ZOOM";position:absolute;right:24px;top:20px;color:#888780;font-size:10px;font-weight:700;letter-spacing:.12em;pointer-events:none;}
+.panel-title{padding-top:18px;border-top:1px solid var(--border);font-size:10px;font-weight:750;letter-spacing:.13em;color:#77766f;}
+.import-button{border:1px solid var(--text);border-radius:0;padding:13px 12px;background:var(--text);color:#fff;font-size:12px;font-weight:700;letter-spacing:.02em;transition:background .18s,border-color .18s;}.import-button:hover{background:var(--accent);border-color:var(--accent);}.hint{font-size:11px;line-height:1.55;color:var(--text-dim);}.hint a{color:var(--accent);text-decoration:none;}.hint a:hover{text-decoration:underline;}
+#modelName{font-size:13px;font-weight:700;color:var(--text);overflow-wrap:anywhere;margin-top:-12px;}#notice{font-size:11px;color:#a44b1f;margin-top:-16px;}#mergeTolerance{margin-left:4px;border:0;border-bottom:1px solid var(--text);border-radius:0;background:transparent;padding:2px;font:inherit;color:var(--text);}
+#modelGrid{display:grid;grid-template-columns:1fr;gap:0;max-height:246px;overflow-y:auto;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;}.model-btn{position:relative;padding:10px 3px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;font-size:12px;font-weight:600;color:var(--text);}.model-btn:last-child{border-bottom:0}.model-btn:hover{padding-left:9px;border-color:var(--border);background:transparent;color:var(--accent);}.model-btn.active{padding-left:12px;border-color:var(--border);background:transparent;color:var(--accent);font-weight:750;}.model-btn.active::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;background:var(--accent);}.model-btn .ico{display:none;}
+#cpBox{height:164px;border:1px solid var(--border);border-radius:0;background:#fafaf8;}#svgViewer{inset:12px}.cp-hint{bottom:8px;left:10px;padding:3px 5px;background:rgba(250,250,248,.9);font-size:9px;font-weight:700;letter-spacing:.04em;color:#77766f;}
+#bar{left:342px;right:24px;bottom:24px;min-height:78px;height:auto;padding:18px 20px;gap:12px;border:1px solid var(--border);border-radius:0;background:rgba(253,253,251,.95);box-shadow:0 18px 50px rgba(27,27,22,.12);backdrop-filter:blur(18px);}.fold-wrap{gap:12px}.fold-wrap label{font-size:11px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--text);}.fold-wrap span{font-size:10px!important;font-weight:600;color:var(--text-dim)!important;}#foldRange{height:2px;accent-color:var(--accent)}#foldPct{font-size:14px!important;font-weight:750!important;letter-spacing:-.03em;color:var(--accent)!important;}
+button{border:1px solid var(--border);border-radius:0;background:#fff;padding:9px 11px;font-size:11px;font-weight:700;letter-spacing:.01em;transition:color .18s,border-color .18s,background .18s;}button:hover{border-color:var(--text);background:var(--surface2)}button.primary{background:var(--accent);border-color:var(--accent)}button.primary:hover{background:#18329d;border-color:#18329d;}button.on{background:var(--text);border-color:var(--text);color:#fff;}
+#status{font-size:10px;font-weight:650;letter-spacing:.02em;}#err{top:84px;border-radius:0;border-color:#bc5a5a;box-shadow:0 16px 40px rgba(70,20,20,.15);font-size:12px;}body.dragover #threeContainer{outline:3px solid var(--accent);outline-offset:-3px;}
+.tutorial-launch{width:100%;text-align:left;background:var(--accent-soft);border-color:#cbd4ff;color:var(--accent);}
+.tutorial-launch.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+#stepStudio{display:none;border-top:1px solid var(--border);padding-top:17px;margin-top:-4px;gap:12px;flex-direction:column;}
+#stepStudio.active{display:flex;}
+.tutorial-title{width:100%;border:0;border-bottom:1px solid var(--border);padding:6px 0;background:transparent;font:700 13px/1.3 inherit;color:var(--text);}
+.tutorial-title:focus{outline:none;border-color:var(--accent);}
+.tutorial-help{font-size:11px;line-height:1.55;color:var(--text-dim);}
+.author-progress{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;counter-reset:author-step;}.author-progress span{border-top:2px solid var(--border);padding-top:6px;font-size:9px;font-weight:750;letter-spacing:.04em;color:var(--text-dim);}.author-progress span.active{border-color:var(--accent);color:var(--accent);}.author-progress span.done{border-color:var(--text);color:var(--text);}
+.author-stage{display:none;gap:10px;flex-direction:column;padding:12px;background:var(--surface2);border:1px solid var(--border);}.author-stage.active{display:flex;}.author-stage h3{font-size:12px;letter-spacing:-.01em;}.author-stage p{font-size:11px;line-height:1.45;color:var(--text-dim);}.author-stage .stage-actions{display:flex;gap:7px;align-items:center;}.author-stage .stage-actions button:last-child{margin-left:auto;}
+.selection-callout{padding:8px 9px;background:#fff;border-left:3px solid var(--accent);font-size:11px;line-height:1.45;color:var(--text-dim);}.selection-callout strong{display:block;color:var(--text);font-size:12px;margin-bottom:2px;}
+.review-summary{font-size:11px;line-height:1.55;padding:8px 9px;background:#fff;border-left:3px solid var(--text);white-space:pre-line;}
+#stepPicker{height:160px;background:#fafaf8;border:1px solid var(--border);padding:8px;}
+#stepPicker svg{width:100%;height:100%;display:block;}
+.step-picker-line{cursor:pointer;stroke-linecap:round;transition:stroke-width .12s,opacity .12s;}
+.step-picker-line:hover{stroke-width:3!important;}.step-picker-line.selected{stroke:#2643c4!important;stroke-width:4!important;opacity:1!important;}
+.step-selected{min-height:18px;font-size:10px;font-weight:650;color:var(--text-dim);}
+.step-form{display:grid;grid-template-columns:1fr 74px;gap:8px;}.step-form input,.step-form select,.step-caption{width:100%;border:1px solid var(--border);border-radius:0;background:#fff;padding:8px;font:11px inherit;color:var(--text);}
+.step-caption{height:58px;resize:vertical;grid-column:1/-1;}.step-form label{font-size:9px;font-weight:750;letter-spacing:.08em;color:var(--text-dim);display:grid;gap:4px;}.step-form .wide{grid-column:1/-1;}
+.tutorial-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;}.tutorial-actions button{padding:8px 6px;font-size:10px;}
+#stepList{display:grid;gap:0;border-top:1px solid var(--border);}.step-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--border);}.step-row.active .step-row-name{color:var(--accent);}.step-row-name{border:0;padding:0;background:transparent;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 11px inherit;color:var(--text);}.step-row button{padding:4px 6px;font-size:9px;}.step-empty{font-size:11px;line-height:1.55;color:var(--text-dim);padding:8px 0;}
+#tutorialBar{display:none;align-items:center;gap:10px;flex:1;min-width:0;}body.tutorial-mode #simulationControls,body.tutorial-mode #simulationButtons{display:none;}body.tutorial-mode #tutorialBar{display:flex;}#tutorialStepLabel{min-width:0;flex:1;font-size:12px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}#tutorialCaption{font-size:10px;color:var(--text-dim);max-width:310px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}#tutorialProgress{font-size:11px;color:var(--accent);font-weight:750;white-space:nowrap;}
+@media(max-width:1100px){#panel{width:280px;bottom:0;}#threeContainer{left:280px;bottom:0;}#bar{left:304px;}}
+@media(max-width:600px){header{padding:0 16px;}header .badge,header nav{display:none;}#panel{width:176px;left:0;top:62px;bottom:0;padding:18px 14px 128px;gap:15px;}#threeContainer{left:176px;top:62px;right:0;bottom:168px;}.import-button{font-size:10px;padding:10px 5px;}#modelGrid{grid-template-columns:1fr;max-height:185px;}#cpBox{height:120px;}#bar{left:190px;right:12px;bottom:12px;min-height:110px;padding:12px;gap:7px;}#bar button{font-size:10px;padding:7px;}.fold-wrap{flex-basis:100%;}body.tutorial-mode #panel{width:100%;right:0;bottom:0;padding:18px 16px 142px;z-index:6;}body.tutorial-mode #threeContainer{left:0;right:0;bottom:0;opacity:.18;}body.tutorial-mode #bar{left:8px;right:8px;z-index:7;min-height:70px;}body.tutorial-mode #stepPicker{height:190px;}body.tutorial-mode #tutorialBar{gap:6px;}body.tutorial-mode #tutorialCaption{display:none;}}
+
+/* Workspace redesign: the pattern is the work; tools stay in calm side drawers. */
+:root{--ink:#172036;--canvas:#eef2f8;--line:#dce2ec;--blue:#3158d4;--blue-wash:#edf1ff;--muted:#667085;}
+body{background:var(--canvas);color:var(--ink);}
+header{height:64px;padding:0 22px;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);box-shadow:none;gap:16px;}
+.brand{font-size:15px;letter-spacing:-.03em;white-space:nowrap;}.brand::before{width:9px;height:9px;background:var(--blue);}.badge{font-size:10px;color:var(--muted);}
+.workspace-name{min-width:0;max-width:350px;border-left:1px solid var(--line);padding-left:16px;font-size:12px;font-weight:650;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.workspace-name strong{color:var(--ink);font-weight:750;}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}.header-actions button{padding:9px 12px;font-size:10px;border-radius:7px;}.header-actions .tutorial-launch{width:auto;text-align:center;background:var(--blue-wash);border-color:#cbd5ff;color:var(--blue);}.header-actions .tutorial-launch.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+header nav{margin-left:0;gap:12px;}header nav a{font-size:10px;color:var(--muted);}
+#panel{top:64px;width:300px;padding:22px 20px 100px;gap:16px;background:#fff;border-right:1px solid var(--line);}
+#threeContainer{left:300px;top:64px;right:0;bottom:0;background:radial-gradient(circle at 50% 45%,#fff 0,#f4f6fa 48%,#e6ebf3 100%);}
+#threeContainer::after{top:18px;right:22px;color:#8b94a5;}
+#tutorialCanvasGuide{display:none;position:absolute;z-index:3;left:calc(300px + (100vw - 300px)/2);top:46%;transform:translate(-50%,-50%);width:min(360px,72%);padding:22px 24px;background:rgba(255,255,255,.88);border:1px solid var(--line);border-radius:10px;text-align:center;box-shadow:0 16px 36px rgba(34,51,82,.09);pointer-events:none;}.tutorial-mode #tutorialCanvasGuide.visible{display:block;}#tutorialCanvasGuide strong{display:block;font-size:16px;margin-bottom:8px;letter-spacing:-.02em;}#tutorialCanvasGuide span{display:block;font-size:12px;line-height:1.5;color:var(--muted);}
+.panel-title{padding-top:14px;border-color:var(--line);color:#8791a2;}.import-button{border-radius:7px;background:var(--ink);border-color:var(--ink);}.import-button:hover{background:var(--blue);border-color:var(--blue);}
+#modelGrid{max-height:205px;border-color:var(--line);}.model-btn{padding:9px 4px;border-color:var(--line);}.model-btn.active::before{background:var(--blue);}.model-btn.active{color:var(--blue);}
+#cpBox{height:176px;border-radius:8px;border-color:var(--line);background:#f8fafc;}.cp-hint{border-radius:4px;background:rgba(248,250,252,.94);}
+#panel>.tutorial-launch{display:none;}
+#stepStudio{position:fixed;z-index:8;top:64px;right:0;bottom:0;width:390px;margin:0;padding:24px 22px 108px;background:#fff;border:0;border-left:1px solid var(--line);overflow-y:auto;box-shadow:-18px 0 42px rgba(26,42,72,.08);gap:15px;}
+#stepStudio.active{display:flex;}.tutorial-title{font-size:17px;padding:8px 0;border-color:var(--line);}.author-progress{margin:2px 0 2px;}.author-progress span{font-size:10px;border-color:var(--line);}.author-progress span.active{border-color:var(--blue);color:var(--blue);}.author-stage{padding:14px;border-radius:9px;border-color:var(--line);background:#f7f9fc;gap:12px;}.author-stage h3{font-size:14px;}.author-stage p,.selection-callout{font-size:12px;}.selection-callout{border-radius:5px;border-left-color:var(--blue);}.review-summary{border-left-color:var(--blue);border-radius:5px;font-size:12px;}.step-form input,.step-form select,.step-caption{font-size:12px;border-radius:5px;border-color:#d7deea;padding:9px;}.step-form label{font-size:9px;}.tutorial-actions{padding-top:4px;}.tutorial-actions .import-button{background:#fff;color:var(--ink);border-color:#d7deea;border-radius:5px;}
+#stepPicker{height:220px;padding:10px;border-radius:7px;border-color:#d7deea;background:#fff;}.step-picker-line{stroke-linecap:round;pointer-events:none;transition:stroke-width .12s,opacity .12s;}.step-picker-line.dimmed{opacity:.25;}.step-picker-line.focused{stroke-width:4!important;opacity:1!important;}.step-picker-hit{cursor:pointer;stroke:transparent;stroke-linecap:round;}.step-picker-label{fill:#172036;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;font:700 10px system-ui,sans-serif;pointer-events:none;}.step-empty{font-size:12px;}.step-row{border-color:var(--line);}.step-row button{border-radius:5px;}
+.crease-picker-tools{display:grid;grid-template-columns:minmax(0,1fr) 102px;gap:7px;}.crease-picker-tools input,.crease-picker-tools select{width:100%;min-width:0;border:1px solid #d7deea;border-radius:5px;background:#fff;padding:8px;font:11px inherit;color:var(--text);}.crease-picker-tools input:focus,.crease-picker-tools select:focus{outline:2px solid rgba(49,88,212,.16);border-color:var(--blue);}.crease-list-heading{display:flex;align-items:center;justify-content:space-between;margin-top:2px;font-size:10px;font-weight:750;letter-spacing:.04em;color:var(--muted);}.crease-list{display:grid;gap:3px;max-height:150px;overflow:auto;padding:3px;border:1px solid #d7deea;border-radius:6px;background:#fff;}.crease-list-item{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:7px;width:100%;padding:7px 8px;border:0;border-radius:4px;background:transparent;text-align:left;font-size:11px;letter-spacing:0;}.crease-list-item:hover,.crease-list-item.focused{background:var(--blue-wash);border-color:transparent;color:var(--ink);}.crease-list-item.selected{background:#dce5ff;color:#183ca6;}.crease-list-code{font-weight:800;letter-spacing:.04em;}.crease-list-code.mountain{color:#b84a45;}.crease-list-code.valley{color:#2866bf;}.crease-list-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:10px;font-weight:600;}.selection-callout{display:flex;align-items:flex-start;gap:8px;}.selection-callout button{margin-left:auto;flex:0 0 auto;padding:5px 7px;font-size:9px;}.selection-copy{min-width:0;}
+body.tutorial-mode #threeContainer{right:390px;}body.tutorial-mode #tutorialCanvasGuide{left:calc(300px + (100vw - 690px)/2);}body.tutorial-mode #bar{right:412px;}body.tutorial-mode #panel{padding-bottom:28px;}body.tutorial-mode #panel>.hint:last-child,body.tutorial-mode #panel>.hint:nth-last-child(2){display:none;}
+#bar{left:322px;right:22px;bottom:20px;min-height:68px;padding:13px 16px;border-radius:10px;border-color:var(--line);background:rgba(255,255,255,.94);box-shadow:0 12px 34px rgba(30,46,75,.12);}.fold-wrap label{color:var(--muted);}.fold-wrap{gap:10px;}#simulationButtons{display:flex;gap:6px;}button{border-radius:6px;border-color:#d7deea;padding:9px 10px;color:var(--ink);}.primary{background:var(--blue)!important;border-color:var(--blue)!important;}button.primary:hover{background:#2348bc!important;border-color:#2348bc!important;}#tutorialBar{gap:8px;}#tutorialCaption{max-width:220px;}
+body.tutorial-mode #status{display:none;}
+@media(max-width:1050px){.workspace-name{display:none;}#panel{width:260px;}#threeContainer{left:260px;}#tutorialCanvasGuide{left:calc(260px + (100vw - 260px)/2);}#bar{left:282px;}#stepStudio{width:350px;}body.tutorial-mode #threeContainer{right:350px;}body.tutorial-mode #tutorialCanvasGuide{left:calc(260px + (100vw - 610px)/2);}body.tutorial-mode #bar{right:372px;}}
+@media(max-width:700px){header{padding:0 14px;}.badge,header nav{display:none;}.header-actions{margin-left:auto;}#panel{width:210px;top:64px;padding:16px 13px;}#threeContainer{left:210px;top:64px;}#tutorialCanvasGuide{left:calc(210px + (100vw - 210px)/2);}#bar{left:222px;right:10px;bottom:10px;}.header-actions button{padding:8px;font-size:9px;}body.tutorial-mode #stepStudio{top:64px;width:100%;padding:18px 16px 96px;}body.tutorial-mode #threeContainer{left:0;right:0;opacity:.16;}body.tutorial-mode #tutorialCanvasGuide{left:50%;z-index:8;}body.tutorial-mode #bar{left:8px;right:8px;z-index:9;}.workspace-name{display:none;}}
+</style>
+</head>
+<body>
+
+<div id="threeContainer"></div>
+<div id="tutorialCanvasGuide" aria-live="polite"><strong>Start with one fold</strong><span>Select a red or blue crease in the tutorial panel to define Step 1.</span></div>
+<canvas id="gpuMathCanvas"></canvas>
+
+<!-- 上游模块会用到的隐藏节点（缺了其中一些会在特定路径上报错） -->
+<div id="stopRecord" hidden><span></span></div>
+<div id="deltaT" hidden></div>
+<div id="globalError" hidden></div>
+<div id="warningModal" hidden><div id="warningMessage"></div></div>
+<div id="noSupportModal" hidden></div>
+<div id="aboutCorner" hidden></div>
+<ul hidden>
+  <li id="navSimulation"><a href="#">sim</a></li>
+  <li id="navPattern"><a href="#">pattern</a></li>
+</ul>
+<div hidden>
+  <span id="numMtns"></span><span id="numValleys"></span><span id="numFacets"></span>
+  <span id="numBoundary"></span><span id="numPassive"></span>
+</div>
+
+<header>
+  <div class="brand">
+    Fold Lab
+    <span class="badge">SIMULTANEOUS FOLDING</span>
+  </div>
+  <div class="workspace-name"><strong>WORKSPACE</strong> · <span id="headerPatternName">No pattern loaded</span></div>
+  <div class="header-actions"><button id="tutorialToggle" class="tutorial-launch">CREATE TUTORIAL</button></div>
+  <nav>
+    <a href="cp-designer.html">CP DESIGNER</a>
+    <a href="docs/folding-steps.md" target="_blank">SEQUENCE PLAN</a>
+  </nav>
+</header>
+
+<aside id="panel">
+  <label class="import-button" for="cpFile">IMPORT SVG OR FOLD</label>
+  <input id="cpFile" type="file" accept=".svg,.fold" hidden>
+  <div class="hint">Drop a file anywhere. Red: mountain. Blue: valley. Black: boundary. Grey guides are ignored.</div>
+  <label class="hint">MERGE TOLERANCE (% OF PAPER) <input id="mergeTolerance" type="number" min="0.001" max="1" step="0.01" value="0.2" style="width:58px" title="Larger values merge nearby vertices more aggressively; small creases can be lost."></label>
+  <div id="modelName">No pattern loaded</div>
+  <div id="notice" class="hint" role="status" aria-live="polite"></div>
+  <div class="panel-title">Example patterns</div>
+  <div id="modelGrid"></div>
+  <div class="panel-title">Crease pattern</div>
+  <div id="cpBox">
+    <div id="svgViewer"></div>
+    <div class="cp-hint">RED MOUNTAIN · BLUE VALLEY · BLACK BOUNDARY</div>
+  </div>
+  <section id="stepStudio" aria-label="Tutorial editor">
+    <div class="panel-title">Tutorial editor</div>
+    <input id="tutorialTitle" class="tutorial-title" value="Untitled folding tutorial" aria-label="Tutorial title">
+    <div class="author-progress" aria-label="Tutorial authoring progress"><span id="authorProgress1" class="active">1 SELECT</span><span id="authorProgress2">2 EXPLAIN</span><span id="authorProgress3">3 PREVIEW</span></div>
+    <div id="authorStageSelect" class="author-stage active">
+      <h3>Choose the crease for this action</h3>
+      <p>Choose directly on the diagram, or find a crease in the list and hover it to see its exact location. Click several lines only when they should fold together.</p>
+      <div class="crease-picker-tools"><input id="creaseSearch" type="search" placeholder="Find a crease number…" aria-label="Find a crease by number"><select id="creaseFilter" aria-label="Filter creases"><option value="all">All folds</option><option value="M">Mountain</option><option value="V">Valley</option></select></div>
+      <div id="stepPicker" aria-label="Select creases for the next step"></div>
+      <div class="crease-list-heading"><span>CREASE LIST</span><span id="creaseListCount"></span></div>
+      <div id="creaseList" class="crease-list" aria-label="Available creases"></div>
+      <div id="stepSelected" class="selection-callout"><div class="selection-copy"><strong>No crease selected</strong>Start by clicking a red or blue line above.</div><button id="clearCreaseSelection" disabled>CLEAR</button></div>
+      <div class="stage-actions"><span class="tutorial-help">This will become Step <span id="nextStepNumber">1</span>.</span><button id="continueToDescription" class="primary" disabled>CONTINUE</button></div>
+    </div>
+    <div id="authorStageDescribe" class="author-stage">
+      <h3>Explain what the learner should do</h3>
+      <p>Use a short action sentence. The selected crease remains highlighted while you write.</p>
+      <div class="step-form">
+        <label>STEP TITLE<input id="stepTitle" placeholder="Fold the centre crease"></label>
+        <label>ANGLE<input id="stepAngle" type="number" min="1" max="180" value="180"></label>
+        <label class="wide">FOLD DIRECTION<select id="stepDirection"><option value="pattern">Use pattern direction</option><option value="M">Mountain fold</option><option value="V">Valley fold</option></select></label>
+        <label class="wide">INSTRUCTION FOR THE LEARNER<textarea id="stepCaption" class="step-caption" placeholder="For example: Bring the left edge over to meet the right edge."></textarea></label>
+        <label class="wide">ANIMATION (SECONDS)<input id="stepDuration" type="number" min="0.3" max="12" step="0.1" value="1.8"></label>
+      </div>
+      <div class="stage-actions"><button id="backToSelection">BACK</button><button id="continueToPreview" class="primary">PREVIEW THIS STEP</button></div>
+    </div>
+    <div id="authorStagePreview" class="author-stage">
+      <h3>Check this step before adding it</h3>
+      <div id="stepReviewSummary" class="review-summary"></div>
+      <p>Use the bottom player to replay the draft. If it looks right, add it to the tutorial.</p>
+      <div class="stage-actions"><button id="backToDescription">EDIT</button><button id="addTutorialStep" class="primary">ADD STEP <span id="addStepNumber">1</span></button></div>
+    </div>
+    <div id="stepList"></div>
+    <div class="tutorial-actions"><button id="saveTutorial">SAVE TUTORIAL</button><label for="openTutorial" class="import-button" style="padding:8px 5px;background:#fff;color:var(--text);border-style:solid">OPEN TUTORIAL</label></div>
+    <input id="openTutorial" type="file" accept=".json,.origami-tutorial.json" hidden>
+  </section>
+  <div class="hint">This is a simultaneous-fold shape simulation. Some patterns can self-intersect or fail to converge; it is not a step-by-step folding tutorial.</div>
+  <div class="hint">Solver: <a href="https://github.com/amandaghassaei/OrigamiSimulator" target="_blank" rel="noopener">Amanda Ghassaei · OrigamiSimulator</a><br>Research: Ghassaei, Demaine, Gershenfeld<br><a href="vendor/origamisimulator/LICENSE" target="_blank">MIT License</a> · <a href="THIRD_PARTY_NOTICES.md" target="_blank">credits &amp; sources</a></div>
+</aside>
+
+<footer id="bar">
+  <div id="simulationControls" class="fold-wrap">
+    <label for="foldRange">FOLD</label>
+    <span style="font-size:12px;color:var(--text-dim)">FLAT</span>
+    <input id="foldRange" type="range" min="-100" max="100" step="1" value="0">
+    <span style="font-size:12px;color:var(--text-dim)">FOLDED</span>
+    <span id="foldPct">0%</span>
+  </div>
+  <div id="simulationButtons"><button id="btnPlay" class="primary">PLAY FOLD</button>
+  <button id="btnFlat">FLAT</button><button id="btnFolded">FULL FOLD</button><button id="btnReverse">REVERSE</button><button id="btnReset">RESET</button></div>
+  <div id="tutorialBar"><button id="tutorialPrevious">PREVIOUS</button><button id="tutorialPlay" class="primary">PLAY STEP</button><button id="tutorialNext">NEXT</button><span id="tutorialStepLabel">No steps yet</span><span id="tutorialCaption"></span><span id="tutorialProgress">0 / 0</span><button id="tutorialExit">EXIT TUTORIAL</button></div>
+  <div id="status">Starting simulator…</div>
+</footer>
+
+<div id="err" role="alert" tabindex="0" title="Click to dismiss"></div>
+
+<!-- ═══ 上游 GPU 求解器的着色器（由生成脚本从 vendor 原样抽取） ═══ -->
+<script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        void main() {
+           gl_Position = vec4(a_position, 0, 1);
+        }
+    </script>
+<script id="packToBytesShader" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec2 u_floatTextureDim;
+        uniform sampler2D u_floatTexture;
+        uniform float u_vectorLength;
+        float shift_right (float v, float amt) {
+            v = floor(v) + 0.5;
+            return floor(v / exp2(amt));
+        }
+        float shift_left (float v, float amt) {
+            return floor(v * exp2(amt) + 0.5);
+        }
+        float mask_last (float v, float bits) {
+            return mod(v, shift_left(1.0, bits));
+        }
+        float extract_bits (float num, float from, float to) {
+            from = floor(from + 0.5); to = floor(to + 0.5);
+            return mask_last(shift_right(num, from), to - from);
+        }
+        vec4 encode_float (float val) {
+            if (val == 0.0) return vec4(0, 0, 0, 0);
+            float sign = val > 0.0 ? 0.0 : 1.0;
+            val = abs(val);
+            float exponent = floor(log2(val));
+            float biased_exponent = exponent + 127.0;
+            float fraction = ((val / exp2(exponent)) - 1.0) * 8388608.0;
+            float t = biased_exponent / 2.0;
+            float last_bit_of_biased_exponent = fract(t) * 2.0;
+            float remaining_bits_of_biased_exponent = floor(t);
+            float byte4 = extract_bits(fraction, 0.0, 8.0) / 255.0;
+            float byte3 = extract_bits(fraction, 8.0, 16.0) / 255.0;
+            float byte2 = (last_bit_of_biased_exponent * 128.0 + extract_bits(fraction, 16.0, 23.0)) / 255.0;
+            float byte1 = (sign * 128.0 + remaining_bits_of_biased_exponent) / 255.0;
+            return vec4(byte4, byte3, byte2, byte1);
+        }
+        void main(){
+            vec2 fragCoord = gl_FragCoord.xy;
+            float textureXcoord = floor((fragCoord.x - 0.5)/u_vectorLength+0.0001) + 0.5;
+            vec4 data = texture2D(u_floatTexture, vec2(textureXcoord, fragCoord.y)/u_floatTextureDim);
+            int textureIndex = int(floor(mod(fragCoord.x-0.5+0.0001, u_vectorLength)));
+            if (textureIndex == 0) gl_FragColor = encode_float(data[0]);
+            else if (textureIndex == 1) gl_FragColor = encode_float(data[1]);
+            else if (textureIndex == 2) gl_FragColor = encode_float(data[2]);
+            else if (textureIndex == 3) gl_FragColor = encode_float(data[3]);
+        }
+    </script>
+<script id="zeroTexture" type="x-shader/x-fragment">
+        precision mediump float;
+        void main(){
+            gl_FragColor = vec4(0.0);
+        }
+    </script>
+<script id="zeroThetaTexture" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform sampler2D u_theta;
+        uniform vec2 u_textureDimCreases;
+        void main(){
+            vec2 fragCoord = gl_FragCoord.xy;
+            vec2 scaledFragCoord = fragCoord/u_textureDimCreases;
+            vec4 theta = texture2D(u_theta, scaledFragCoord);
+            gl_FragColor = vec4(0.0, 0.0, theta[2], theta[3]);
+        }
+    </script>
+<script id="centerTexture" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform sampler2D u_lastPosition;
+        uniform vec2 u_textureDim;
+        uniform vec3 u_center;
+        void main(){
+            vec2 fragCoord = gl_FragCoord.xy;
+            vec2 scaledFragCoord = fragCoord/u_textureDim;
+            vec3 position = texture2D(u_lastPosition, scaledFragCoord).xyz;
+            gl_FragColor = vec4(position-u_center, 0.0);
+        }
+    </script>
+<script id="copyTexture" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform sampler2D u_orig;
+        uniform vec2 u_textureDim;
+        void main(){
+            gl_FragColor = texture2D(u_orig, gl_FragCoord.xy/u_textureDim);
+        }
+    </script>
+<script id="positionCalcShader" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec2 u_textureDim;
+        uniform float u_dt;
+        uniform sampler2D u_lastPosition;
+        uniform sampler2D u_velocity;
+        uniform sampler2D u_mass;
+
+        void main(){
+            vec2 fragCoord = gl_FragCoord.xy;
+            vec2 scaledFragCoord = fragCoord/u_textureDim;
+
+            vec3 lastPosition = texture2D(u_lastPosition, scaledFragCoord).xyz;
+
+            float isFixed = texture2D(u_mass, scaledFragCoord).y;
+            if (isFixed == 1.0){
+                gl_FragColor = vec4(lastPosition, 0.0);
+                return;
+            }
+
+            vec4 velocityData = texture2D(u_velocity, scaledFragCoord);
+            vec3 position = velocityData.xyz*u_dt + lastPosition;
+            gl_FragColor = vec4(position, velocityData.a);//velocity.a has error info
+        }
+    </script>
+<script id="velocityCalcVerletShader" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec2 u_textureDim;
+        uniform float u_dt;
+        uniform sampler2D u_position;
+        uniform sampler2D u_lastPosition;
+        uniform sampler2D u_mass;
+
+        void main(){
+            vec2 fragCoord = gl_FragCoord.xy;
+            vec2 scaledFragCoord = fragCoord/u_textureDim;
+
+            float isFixed = texture2D(u_mass, scaledFragCoord).y;
+            if (isFixed == 1.0){
+                gl_FragColor = vec4(0.0);
+                return;
+            }
+
+            vec3 position = texture2D(u_position, scaledFragCoord).xyz;
+            vec3 lastPosition = texture2D(u_lastPosition, scaledFragCoord).xyz;
+            gl_FragColor = vec4((position-lastPosition)/u_dt,0.0);
+        }
+    </script>
+<script id="velocityCalcShader" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec2 u_textureDim;
+        uniform vec2 u_textureDimEdges;
+        uniform vec2 u_textureDimFaces;
+        uniform vec2 u_textureDimCreases;
+        uniform vec2 u_textureDimNodeCreases;
+        uniform vec2 u_textureDimNodeFaces;
+        uniform float u_creasePercent;
+        uniform float u_dt;
+        uniform float u_axialStiffness;
+        uniform float u_faceStiffness;
+        uniform sampler2D u_lastPosition;
+        uniform sampler2D u_lastVelocity;
+        uniform sampler2D u_originalPosition;
+        uniform sampler2D u_externalForces;
+        uniform sampler2D u_mass;
+        uniform sampler2D u_meta;//[beamsIndex, numBeam, nodeCreaseMetaIndex, numCreases]
+        uniform sampler2D u_beamMeta;//[k, d, length, otherNodeIndex]
+        uniform sampler2D u_creaseMeta;//[k, d, targetTheta]
+        uniform sampler2D u_nodeCreaseMeta;//[creaseIndex, nodeIndex, -, -]
+        uniform sampler2D u_normals;
+        uniform sampler2D u_theta;//[theta, z, normal1Index, normal2Index]
+        uniform sampler2D u_creaseGeo;//[h1, h2, coef1, coef2]
+        uniform sampler2D u_meta2;//[nodesFaceIndex, numFaces]
+        uniform sampler2D u_nodeFaceMeta;//[faceIndex, a, b, c]
+        uniform sampler2D u_nominalTriangles;//[angleA, angleB, angleC]
+        uniform bool u_calcFaceStrain;
+
+        vec4 getFromArray(float index1D, vec2 dimensions, sampler2D tex){
+            vec2 index = vec2(mod(index1D, dimensions.x)+0.5, floor(index1D/dimensions.x)+0.5);
+            vec2 scaledIndex = index/dimensions;
+            return texture2D(tex, scaledIndex);
+        }
+
+        vec3 getPosition(float index1D){
+            vec2 index = vec2(mod(index1D, u_textureDim.x)+0.5, floor(index1D/u_textureDim.x)+0.5);
+            vec2 scaledIndex = index/u_textureDim;
+            return texture2D(u_lastPosition, scaledIndex).xyz + texture2D(u_originalPosition, scaledIndex).xyz;
+        }
+
+        void main(){
+            vec2 fragCoord = gl_FragCoord.xy;
+            vec2 scaledFragCoord = fragCoord/u_textureDim;
+
+            vec2 mass = texture2D(u_mass, scaledFragCoord).xy;
+            if (mass[1] == 1.0){//fixed
+                gl_FragColor = vec4(0.0);
+                return;
+            }
+            vec3 force = texture2D(u_externalForces, scaledFragCoord).xyz;
+            vec3 lastPosition = texture2D(u_lastPosition, scaledFragCoord).xyz;
+            vec3 lastVelocity = texture2D(u_lastVelocity, scaledFragCoord).xyz;
+            vec3 originalPosition = texture2D(u_originalPosition, scaledFragCoord).xyz;
+
+            vec4 neighborIndices = texture2D(u_meta, scaledFragCoord);
+            vec4 meta = texture2D(u_meta, scaledFragCoord);
+            vec2 meta2 = texture2D(u_meta2, scaledFragCoord).xy;
+
+            float nodeError = 0.0;
+
+            for (int j=0;j<100;j++){//for all beams (up to 100, had to put a const int in here)
+                if (j >= int(meta[1])) break;
+
+                vec4 beamMeta = getFromArray(meta[0]+float(j), u_textureDimEdges, u_beamMeta);
+
+                float neighborIndex1D = beamMeta[3];
+                vec2 neighborIndex = vec2(mod(neighborIndex1D, u_textureDim.x)+0.5, floor(neighborIndex1D/u_textureDim.x)+0.5);
+                vec2 scaledNeighborIndex = neighborIndex/u_textureDim;
+                vec3 neighborLastPosition = texture2D(u_lastPosition, scaledNeighborIndex).xyz;
+                vec3 neighborLastVelocity = texture2D(u_lastVelocity, scaledNeighborIndex).xyz;
+                vec3 neighborOriginalPosition = texture2D(u_originalPosition, scaledNeighborIndex).xyz;
+
+                vec3 nominalDist = neighborOriginalPosition-originalPosition;
+                vec3 deltaP = neighborLastPosition-lastPosition+nominalDist;
+                float deltaPLength = length(deltaP);
+                deltaP -= deltaP*(beamMeta[2]/deltaPLength);
+                if (!u_calcFaceStrain) nodeError += abs(deltaPLength/length(nominalDist) - 1.0);
+                vec3 deltaV = neighborLastVelocity-lastVelocity;
+
+                vec3 _force = deltaP*beamMeta[0] + deltaV*beamMeta[1];
+                force += _force;
+            }
+            if (!u_calcFaceStrain) nodeError /= meta[1];
+
+            for (int j=0;j<100;j++){//for all creases (up to 100, had to put a const int in here)
+                if (j >= int(meta[3])) break;
+
+                vec4 nodeCreaseMeta = getFromArray(meta[2]+float(j), u_textureDimNodeCreases, u_nodeCreaseMeta);
+
+                float creaseIndex1D = nodeCreaseMeta[0];
+                vec2 creaseIndex = vec2(mod(creaseIndex1D, u_textureDimCreases.x)+0.5, floor(creaseIndex1D/u_textureDimCreases.x)+0.5);
+                vec2 scaledCreaseIndex = creaseIndex/u_textureDimCreases;
+
+                vec4 thetas = texture2D(u_theta, scaledCreaseIndex);
+                vec3 creaseMeta = texture2D(u_creaseMeta, scaledCreaseIndex).xyz;//[k, d, targetTheta]
+                vec4 creaseGeo = texture2D(u_creaseGeo, scaledCreaseIndex);//[h1, h2, coef1, coef2]
+                if (creaseGeo[0]< 0.0) continue;//crease disabled bc it has collapsed too much
+
+                float targetTheta = creaseMeta[2] * u_creasePercent;
+                float angForce = creaseMeta[0]*(targetTheta-thetas[0]);// + creaseMeta[1]*thetas[1];
+
+                float nodeNum = nodeCreaseMeta[1];//1, 2, 3, 4
+
+                if (nodeNum > 2.0){//crease reaction, node is on a crease
+
+                    //node #1
+                    vec3 normal1 = getFromArray(thetas[2], u_textureDimFaces, u_normals).xyz;
+
+                    //node #2
+                    vec3 normal2 = getFromArray(thetas[3], u_textureDimFaces, u_normals).xyz;
+
+                    float coef1 = creaseGeo[2];
+                    float coef2 = creaseGeo[3];
+
+                    if (nodeNum == 3.0){
+                        coef1 = 1.0-coef1;
+                        coef2 = 1.0-coef2;
+                    }
+
+                    vec3 _force = -angForce*(coef1/creaseGeo[0]*normal1 + coef2/creaseGeo[1]*normal2);
+                    force += _force;
+
+                } else {
+
+                    float normalIndex1D = thetas[2];//node #1
+                    float momentArm = creaseGeo[0];//node #1
+                    if (nodeNum == 2.0) {
+                        normalIndex1D = thetas[3];//node #2
+                        momentArm = creaseGeo[1];//node #2
+                    }
+
+                    vec3 normal = getFromArray(normalIndex1D, u_textureDimFaces, u_normals).xyz;
+
+                    vec3 _force = angForce/momentArm*normal;
+                    force += _force;
+                }
+            }
+
+            for (int j=0;j<100;j++){//for all faces (up to 100, had to put a const int in here)
+                if (j >= int(meta2[1])) break;
+
+                vec4 faceMeta = getFromArray(meta2[0]+float(j), u_textureDimNodeFaces, u_nodeFaceMeta);//[face index, a, b, c]
+                vec3 nominalAngles = getFromArray(faceMeta[0], u_textureDimFaces, u_nominalTriangles).xyz;//[angA, angB, angC]
+
+                int faceIndex = 0;
+                if (faceMeta[2] < 0.0) faceIndex = 1;
+                if (faceMeta[3] < 0.0) faceIndex = 2;
+
+                //get node positions
+                vec3 a = faceIndex == 0 ? lastPosition+originalPosition : getPosition(faceMeta[1]);
+                vec3 b = faceIndex == 1 ? lastPosition+originalPosition : getPosition(faceMeta[2]);
+                vec3 c = faceIndex == 2 ? lastPosition+originalPosition : getPosition(faceMeta[3]);
+
+                //calc angles
+                vec3 ab = b-a;
+                vec3 ac = c-a;
+                vec3 bc = c-b;
+
+                float lengthAB = length(ab);
+                float lengthAC = length(ac);
+                float lengthBC = length(bc);
+
+                float tol = 0.0000001;
+                if (abs(lengthAB) < tol || abs(lengthBC) < tol || abs(lengthAC) < tol) continue;
+
+                ab /= lengthAB;
+                ac /= lengthAC;
+                bc /= lengthBC;
+
+                vec3 angles = vec3(acos(dot(ab, ac)),
+                    acos(-1.0*dot(ab, bc)),
+                    acos(dot(ac, bc)));
+                vec3 anglesDiff = nominalAngles-angles;
+
+                vec3 normal = getFromArray(faceMeta[0], u_textureDimFaces, u_normals).xyz;
+
+                //calc forces
+                anglesDiff *= u_faceStiffness;
+                if (faceIndex == 0){//a
+                    vec3 normalCrossAC = cross(normal, ac)/lengthAC;
+                    vec3 normalCrossAB = cross(normal, ab)/lengthAB;
+                    force -= anglesDiff[0]*(normalCrossAC - normalCrossAB);
+                    if (u_calcFaceStrain) nodeError += abs((nominalAngles[0]-angles[0])/nominalAngles[0]);
+                    force -= anglesDiff[1]*normalCrossAB;
+                    force += anglesDiff[2]*normalCrossAC;
+                } else if (faceIndex == 1){
+                    vec3 normalCrossAB = cross(normal, ab)/lengthAB;
+                    vec3 normalCrossBC = cross(normal, bc)/lengthBC;
+                    force -= anglesDiff[0]*normalCrossAB;
+                    force += anglesDiff[1]*(normalCrossAB + normalCrossBC);
+                    if (u_calcFaceStrain) nodeError += abs((nominalAngles[1]-angles[1])/nominalAngles[1]);
+                    force -= anglesDiff[2]*normalCrossBC;
+                } else if (faceIndex == 2){
+                    vec3 normalCrossAC = cross(normal, ac)/lengthAC;
+                    vec3 normalCrossBC = cross(normal, bc)/lengthBC;
+                    force += anglesDiff[0]*normalCrossAC;
+                    force -= anglesDiff[1]*normalCrossBC;
+                    force += anglesDiff[2]*(normalCrossBC - normalCrossAC);
+                    if (u_calcFaceStrain) nodeError += abs((nominalAngles[2]-angles[2])/nominalAngles[2]);
+                }
+
+            }
+            if (u_calcFaceStrain) nodeError /= meta2[1];
+
+            vec3 velocity = force*u_dt/mass[0] + lastVelocity;
+            gl_FragColor = vec4(velocity,nodeError);
+        }
+    </script>
+<script id="positionCalcVerletShader" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec2 u_textureDim;
+        uniform vec2 u_textureDimEdges;
+        uniform vec2 u_textureDimFaces;
+        uniform vec2 u_textureDimCreases;
+        uniform vec2 u_textureDimNodeCreases;
+        uniform vec2 u_textureDimNodeFaces;
+        uniform float u_creasePercent;
+        uniform float u_dt;
+        uniform float u_axialStiffness;
+        uniform float u_faceStiffness;
+        uniform sampler2D u_lastPosition;
+        uniform sampler2D u_lastLastPosition;
+        uniform sampler2D u_lastVelocity;
+        uniform sampler2D u_originalPosition;
+        uniform sampler2D u_externalForces;
+        uniform sampler2D u_mass;
+        uniform sampler2D u_meta;//[beamsIndex, numBeam, nodeCreaseMetaIndex, numCreases]
+        uniform sampler2D u_beamMeta;//[k, d, length, otherNodeIndex]
+        uniform sampler2D u_creaseMeta;//[k, d, targetTheta]
+        uniform sampler2D u_nodeCreaseMeta;//[creaseIndex, nodeIndex, -, -]
+        uniform sampler2D u_normals;
+        uniform sampler2D u_theta;//[theta, z, normal1Index, normal2Index]
+        uniform sampler2D u_creaseGeo;//[h1, h2, coef1, coef2]
+        uniform sampler2D u_meta2;//[nodesFaceIndex, numFaces]
+        uniform sampler2D u_nodeFaceMeta;//[faceIndex, a, b, c]
+        uniform sampler2D u_nominalTriangles;//[angleA, angleB, angleC]
+
+        vec4 getFromArray(float index1D, vec2 dimensions, sampler2D tex){
+            vec2 index = vec2(mod(index1D, dimensions.x)+0.5, floor(index1D/dimensions.x)+0.5);
+            vec2 scaledIndex = index/dimensions;
+            return texture2D(tex, scaledIndex);
+        }
+
+        vec3 getPosition(float index1D){
+            vec2 index = vec2(mod(index1D, u_textureDim.x)+0.5, floor(index1D/u_textureDim.x)+0.5);
+            vec2 scaledIndex = index/u_textureDim;
+            return texture2D(u_lastPosition, scaledIndex).xyz + texture2D(u_originalPosition, scaledIndex).xyz;
+        }
+
+        void main(){
+            vec2 fragCoord = gl_FragCoord.xy;
+            vec2 scaledFragCoord = fragCoord/u_textureDim;
+
+            vec3 lastPosition = texture2D(u_lastPosition, scaledFragCoord).xyz;
+
+            vec2 mass = texture2D(u_mass, scaledFragCoord).xy;
+            if (mass[1] == 1.0){//fixed
+                gl_FragColor = vec4(lastPosition, 0.0);
+                return;
+            }
+            vec3 force = texture2D(u_externalForces, scaledFragCoord).xyz;
+            vec3 lastLastPosition = texture2D(u_lastLastPosition, scaledFragCoord).xyz;
+            vec3 lastVelocity = texture2D(u_lastVelocity, scaledFragCoord).xyz;
+            vec3 originalPosition = texture2D(u_originalPosition, scaledFragCoord).xyz;
+
+            vec4 neighborIndices = texture2D(u_meta, scaledFragCoord);
+            vec4 meta = texture2D(u_meta, scaledFragCoord);
+            vec2 meta2 = texture2D(u_meta2, scaledFragCoord).xy;
+
+            float nodeError = 0.0;
+
+            for (int j=0;j<100;j++){//for all beams (up to 100, had to put a const int in here)
+                if (j >= int(meta[1])) break;
+
+                vec4 beamMeta = getFromArray(meta[0]+float(j), u_textureDimEdges, u_beamMeta);
+
+                float neighborIndex1D = beamMeta[3];
+                vec2 neighborIndex = vec2(mod(neighborIndex1D, u_textureDim.x)+0.5, floor(neighborIndex1D/u_textureDim.x)+0.5);
+                vec2 scaledNeighborIndex = neighborIndex/u_textureDim;
+                vec3 neighborLastPosition = texture2D(u_lastPosition, scaledNeighborIndex).xyz;
+                vec3 neighborLastVelocity = texture2D(u_lastVelocity, scaledNeighborIndex).xyz;
+                vec3 neighborOriginalPosition = texture2D(u_originalPosition, scaledNeighborIndex).xyz;
+
+                vec3 deltaP = neighborLastPosition+neighborOriginalPosition-lastPosition-originalPosition;
+                float deltaPLength = length(deltaP);
+                float nominalLength = beamMeta[2];
+                deltaP *= (1.0-nominalLength/deltaPLength);
+                nodeError += abs(deltaPLength/nominalLength - 1.0);
+                vec3 deltaV = neighborLastVelocity-lastVelocity;
+
+                vec3 _force = deltaP*beamMeta[0] + deltaV*beamMeta[1];
+                force += _force;
+            }
+            nodeError /= meta[1];
+
+            for (int j=0;j<100;j++){//for all creases (up to 100, had to put a const int in here)
+                if (j >= int(meta[3])) break;
+
+                vec4 nodeCreaseMeta = getFromArray(meta[2]+float(j), u_textureDimNodeCreases, u_nodeCreaseMeta);
+
+                float creaseIndex1D = nodeCreaseMeta[0];
+                vec2 creaseIndex = vec2(mod(creaseIndex1D, u_textureDimCreases.x)+0.5, floor(creaseIndex1D/u_textureDimCreases.x)+0.5);
+                vec2 scaledCreaseIndex = creaseIndex/u_textureDimCreases;
+
+                vec4 thetas = texture2D(u_theta, scaledCreaseIndex);
+                vec3 creaseMeta = texture2D(u_creaseMeta, scaledCreaseIndex).xyz;//[k, d, targetTheta]
+                vec4 creaseGeo = texture2D(u_creaseGeo, scaledCreaseIndex);//[h1, h2, coef1, coef2]
+                if (creaseGeo[0]< 0.0) continue;//crease disabled bc it has collapsed too much
+
+                float targetTheta = creaseMeta[2] * u_creasePercent;
+                float angForce = creaseMeta[0]*(targetTheta-thetas[0]);// + creaseMeta[1]*thetas[1];
+
+                float nodeNum = nodeCreaseMeta[1];//1, 2, 3, 4
+
+                if (nodeNum > 2.0){//crease reaction, node is on a crease
+
+                    //node #1
+                    vec3 normal1 = getFromArray(thetas[2], u_textureDimFaces, u_normals).xyz;
+
+                    //node #2
+                    vec3 normal2 = getFromArray(thetas[3], u_textureDimFaces, u_normals).xyz;
+
+                    float coef1 = creaseGeo[2];
+                    float coef2 = creaseGeo[3];
+
+                    if (nodeNum == 3.0){
+                        coef1 = 1.0-coef1;
+                        coef2 = 1.0-coef2;
+                    }
+
+                    vec3 _force = -angForce*(coef1/creaseGeo[0]*normal1 + coef2/creaseGeo[1]*normal2);
+                    force += _force;
+
+                } else {
+
+                    float normalIndex1D = thetas[2];//node #1
+                    float momentArm = creaseGeo[0];//node #1
+                    if (nodeNum == 2.0) {
+                        normalIndex1D = thetas[3];//node #2
+                        momentArm = creaseGeo[1];//node #2
+                    }
+
+                    vec3 normal = getFromArray(normalIndex1D, u_textureDimFaces, u_normals).xyz;
+
+                    vec3 _force = angForce/momentArm*normal;
+                    force += _force;
+                }
+            }
+
+            for (int j=0;j<100;j++){//for all faces (up to 100, had to put a const int in here)
+                if (j >= int(meta2[1])) break;
+
+                vec4 faceMeta = getFromArray(meta2[0]+float(j), u_textureDimNodeFaces, u_nodeFaceMeta);//[face index, a, b, c]
+                vec3 nominalAngles = getFromArray(faceMeta[0], u_textureDimFaces, u_nominalTriangles).xyz;//[angA, angB, angC]
+
+                int faceIndex = 0;
+                if (faceMeta[2] < 0.0) faceIndex = 1;
+                if (faceMeta[3] < 0.0) faceIndex = 2;
+
+                //get node positions
+                vec3 a = faceIndex == 0 ? lastPosition+originalPosition : getPosition(faceMeta[1]);
+                vec3 b = faceIndex == 1 ? lastPosition+originalPosition : getPosition(faceMeta[2]);
+                vec3 c = faceIndex == 2 ? lastPosition+originalPosition : getPosition(faceMeta[3]);
+
+                //calc angles
+                vec3 ab = b-a;
+                vec3 ac = c-a;
+                vec3 bc = c-b;
+
+                float lengthAB = length(ab);
+                float lengthAC = length(ac);
+                float lengthBC = length(bc);
+
+                float tol = 0.0000001;
+                if (abs(lengthAB) < tol || abs(lengthBC) < tol || abs(lengthAC) < tol) continue;
+
+                ab /= lengthAB;
+                ac /= lengthAC;
+                bc /= lengthBC;
+
+                vec3 angles = vec3(acos(dot(ab, ac)),
+                    acos(-1.0*dot(ab, bc)),
+                    acos(dot(ac, bc)));
+                vec3 anglesDiff = nominalAngles-angles;
+
+                vec3 normal = getFromArray(faceMeta[0], u_textureDimFaces, u_normals).xyz;
+
+                //calc forces
+                anglesDiff *= u_faceStiffness;
+                if (faceIndex == 0){//a
+                    vec3 normalCrossAC = cross(normal, ac)/lengthAC;
+                    vec3 normalCrossAB = cross(normal, ab)/lengthAB;
+                    force -= anglesDiff[0]*(normalCrossAC - normalCrossAB);
+                    force -= anglesDiff[1]*normalCrossAB;
+                    force += anglesDiff[2]*normalCrossAC;
+                } else if (faceIndex == 1){
+                    vec3 normalCrossAB = cross(normal, ab)/lengthAB;
+                    vec3 normalCrossBC = cross(normal, bc)/lengthBC;
+                    force -= anglesDiff[0]*normalCrossAB;
+                    force += anglesDiff[1]*(normalCrossAB + normalCrossBC);
+                    force -= anglesDiff[2]*normalCrossBC;
+                } else if (faceIndex == 2){
+                    vec3 normalCrossAC = cross(normal, ac)/lengthAC;
+                    vec3 normalCrossBC = cross(normal, bc)/lengthBC;
+                    force += anglesDiff[0]*normalCrossAC;
+                    force -= anglesDiff[1]*normalCrossBC;
+                    force += anglesDiff[2]*(normalCrossBC - normalCrossAC);
+                }
+
+            }
+
+            vec3 nextPosition = force*u_dt*u_dt/mass[0] + 2.0*lastPosition - lastLastPosition;
+            gl_FragColor = vec4(nextPosition,nodeError);//position.a has error info
+        }
+    </script>
+<script id="thetaCalcShader" type="x-shader/x-fragment">
+        #define TWO_PI 6.283185307179586476925286766559
+        precision mediump float;
+        uniform vec2 u_textureDim;
+        uniform vec2 u_textureDimFaces;
+        uniform vec2 u_textureDimCreases;
+        uniform sampler2D u_normals;
+        uniform sampler2D u_lastTheta;
+        uniform sampler2D u_creaseVectors;
+        uniform sampler2D u_lastPosition;
+        uniform sampler2D u_originalPosition;
+        uniform float u_dt;
+
+        vec4 getFromArray(float index1D, vec2 dimensions, sampler2D tex){
+            vec2 index = vec2(mod(index1D, dimensions.x)+0.5, floor(index1D/dimensions.x)+0.5);
+            vec2 scaledIndex = index/dimensions;
+            return texture2D(tex, scaledIndex);
+        }
+
+        void main(){
+
+            vec2 fragCoord = gl_FragCoord.xy;
+            vec2 scaledFragCoord = fragCoord/u_textureDimCreases;
+
+            vec4 lastTheta = texture2D(u_lastTheta, scaledFragCoord);
+
+            if (lastTheta[2]<0.0){
+                gl_FragColor = vec4(lastTheta[0], 0.0, -1.0, -1.0);
+                return;
+            }
+
+            vec3 normal1 = getFromArray(lastTheta[2], u_textureDimFaces, u_normals).xyz;
+            vec3 normal2 = getFromArray(lastTheta[3], u_textureDimFaces, u_normals).xyz;
+
+            float dotNormals = dot(normal1, normal2);//normals are already normalized, no need to divide by length
+            if (dotNormals < -1.0) dotNormals = -1.0;
+            else if (dotNormals > 1.0) dotNormals = 1.0;
+
+            vec2 creaseVectorIndices = texture2D(u_creaseVectors, scaledFragCoord).xy;
+            vec2 creaseNodeIndex = vec2(mod(creaseVectorIndices[0], u_textureDim.x)+0.5, floor(creaseVectorIndices[0]/u_textureDim.x)+0.5);
+            vec2 scaledNodeIndex = creaseNodeIndex/u_textureDim;
+            vec3 node0 = texture2D(u_lastPosition, scaledNodeIndex).xyz + texture2D(u_originalPosition, scaledNodeIndex).xyz;
+            creaseNodeIndex = vec2(mod(creaseVectorIndices[1], u_textureDim.x)+0.5, floor(creaseVectorIndices[1]/u_textureDim.x)+0.5);
+            scaledNodeIndex = creaseNodeIndex/u_textureDim;
+            vec3 node1 = texture2D(u_lastPosition, scaledNodeIndex).xyz + texture2D(u_originalPosition, scaledNodeIndex).xyz;
+
+            //https://math.stackexchange.com/questions/47059/how-do-i-calculate-a-dihedral-angle-given-cartesian-coordinates
+            vec3 creaseVector = normalize(node1-node0);
+            float x = dotNormals;
+            float y = dot(cross(normal1, creaseVector), normal2);
+
+            float theta = atan(y, x);
+
+            float diff = theta-lastTheta[0];
+            float origDiff = diff;
+            if (diff < -5.0) {
+                diff += TWO_PI;
+            } else if (diff > 5.0) {
+                diff -= TWO_PI;
+            }
+            theta = lastTheta[0] + diff;
+            gl_FragColor = vec4(theta, diff, lastTheta[2], lastTheta[3]);//[theta, w, normal1Index, normal2Index]
+        }
+    </script>
+<script id="normalCalc" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec2 u_textureDim;
+        uniform vec2 u_textureDimFaces;
+        uniform sampler2D u_faceVertexIndices;
+        uniform sampler2D u_lastPosition;
+        uniform sampler2D u_originalPosition;
+
+        vec3 getPosition(float index1D){
+            vec2 index = vec2(mod(index1D, u_textureDim.x)+0.5, floor(index1D/u_textureDim.x)+0.5);
+            vec2 scaledIndex = index/u_textureDim;
+            return texture2D(u_lastPosition, scaledIndex).xyz + texture2D(u_originalPosition, scaledIndex).xyz;
+        }
+
+        void main(){
+            vec2 fragCoord = gl_FragCoord.xy;
+            vec2 scaledFragCoord = fragCoord/u_textureDimFaces;
+
+            vec3 indices = texture2D(u_faceVertexIndices, scaledFragCoord).xyz;
+
+            vec3 a = getPosition(indices[0]);
+            vec3 b = getPosition(indices[1]);
+            vec3 c = getPosition(indices[2]);
+
+            vec3 normal = normalize(cross(b-a, c-a));
+
+            gl_FragColor = vec4(normal, 0.0);
+        }
+    </script>
+<script id="updateCreaseGeo" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec2 u_textureDim;
+        uniform vec2 u_textureDimCreases;
+        uniform sampler2D u_lastPosition;
+        uniform sampler2D u_originalPosition;
+        uniform sampler2D u_creaseMeta2;
+
+        vec3 getPosition(float index1D){
+            vec2 index = vec2(mod(index1D, u_textureDim.x)+0.5, floor(index1D/u_textureDim.x)+0.5);
+            vec2 scaledIndex = index/u_textureDim;
+            return texture2D(u_lastPosition, scaledIndex).xyz + texture2D(u_originalPosition, scaledIndex).xyz;
+        }
+
+        void main(){
+            vec2 fragCoord = gl_FragCoord.xy;
+            vec2 scaledFragCoord = fragCoord/u_textureDimCreases;
+
+            vec4 creaseMeta = texture2D(u_creaseMeta2, scaledFragCoord);
+
+            vec3 node1 = getPosition(creaseMeta[0]);
+            vec3 node2 = getPosition(creaseMeta[1]);
+            vec3 node3 = getPosition(creaseMeta[2]);
+            vec3 node4 = getPosition(creaseMeta[3]);
+
+            float tol = 0.000001;
+
+            vec3 creaseVector = node4-node3;
+            float creaseLength = length(creaseVector);
+
+            if (abs(creaseLength)<tol) {
+                gl_FragColor = vec4(-1);//disable crease
+                return;
+            }
+            creaseVector /= creaseLength;
+
+            vec3 vector1 = node1-node3;
+            vec3 vector2 = node2-node3;
+
+            float proj1Length = dot(creaseVector, vector1);
+            float proj2Length = dot(creaseVector, vector2);
+
+            float dist1 = sqrt(abs(vector1.x*vector1.x+vector1.y*vector1.y+vector1.z*vector1.z-proj1Length*proj1Length));
+            float dist2 = sqrt(abs(vector2.x*vector2.x+vector2.y*vector2.y+vector2.z*vector2.z-proj2Length*proj2Length));
+
+            if (dist1<tol || dist2<tol){
+                gl_FragColor = vec4(-1);//disable crease
+                return;
+            }
+
+            gl_FragColor = vec4(dist1, dist2, proj1Length/creaseLength, proj2Length/creaseLength);
+        }
+    </script>
+
+<!-- ═══ 上游依赖（按上游 index.html 的顺序与子集） ═══ -->
+<script src="vendor/origamisimulator/dependencies/jquery-3.2.1.min.js"></script>
+<script src="vendor/origamisimulator/dependencies/underscore-min.js"></script>
+<script src="vendor/origamisimulator/dependencies/three.min.js"></script>
+<script src="vendor/origamisimulator/dependencies/TrackballControls.js"></script>
+<script src="vendor/origamisimulator/dependencies/SVGLoader.js"></script>
+<script src="vendor/origamisimulator/dependencies/path-data-polyfill.js"></script>
+<script src="vendor/origamisimulator/dependencies/earcut.js"></script>
+<script src="vendor/origamisimulator/dependencies/numeric-1.2.6.js"></script>
+<script src="vendor/origamisimulator/dependencies/fold.js"></script>
+<script src="assets/cp-import.js"></script>
+
+<!-- ═══ 上游求解器模块（只取需要的子集，避开 Angular/jQuery-UI/VR 那一大堆） ═══ -->
+<script src="vendor/origamisimulator/js/dynamic/GLBoilerplate.js"></script>
+<script src="vendor/origamisimulator/js/dynamic/GPUMath.js"></script>
+<script src="vendor/origamisimulator/js/threeView.js"></script>
+<script src="vendor/origamisimulator/js/globals.js"></script>
+<script src="vendor/origamisimulator/js/node.js"></script>
+<script src="vendor/origamisimulator/js/beam.js"></script>
+<script src="vendor/origamisimulator/js/crease.js"></script>
+<script src="vendor/origamisimulator/js/model.js"></script>
+<script src="vendor/origamisimulator/js/dynamic/dynamicSolver.js"></script>
+<script src="vendor/origamisimulator/js/pattern.js"></script>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════════════════════════
+ * 本站自写的接线层（上游代码只提供求解器，UI 和调度在这里）
+ *   - 上游 pattern.js 会调用 gtag()，所以必须先给一个空函数兜底
+ *   - 上游用 jQuery + Bootstrap/jQuery-UI 的 modal/slider，我们没引那两个库，
+ *     这里补空实现，避免"没有 WebGL / 加载失败"这类异常路径直接抛错
+ * ══════════════════════════════════════════════════════════════════════ */
+window.dataLayer = window.dataLayer || [];
+window.gtag = window.gtag || function(){ window.dataLayer.push(arguments); };
+if (!$.fn.modal)  $.fn.modal  = function(){ return this; };
+if (!$.fn.slider) $.fn.slider = function(){ return this; };
+
+// ── MIT 预设折痕图（来自 cp_examples/mit/models/，即 OrigamiSimulator 的示例资产）──
+var MIT_MODELS = [
+  { id:'traditionalCrane',     name:'Traditional Crane', url:'cp_examples/mit/models/traditionalCrane.svg' },
+  { id:'flat_crane',           name:'Flat Crane', url:'cp_examples/mit/models/flat_crane.svg' },
+  { id:'birdBase',             name:'Bird Base', url:'cp_examples/mit/models/birdBase.svg' },
+  { id:'waterbombBase',        name:'Waterbomb Base', url:'cp_examples/mit/models/waterbombBase.svg' },
+  { id:'squareBase',           name:'Square Base', url:'cp_examples/mit/models/squareBase.svg' },
+  { id:'frogBase',             name:'Frog Base', url:'cp_examples/mit/models/frogBase.svg' },
+  { id:'boatBase',             name:'Boat Base', url:'cp_examples/mit/models/boatBase.svg' },
+  { id:'openSinkBase',         name:'Open Sink Base', url:'cp_examples/mit/models/openSinkBase.svg' },
+  { id:'pinwheelBase',         name:'Pinwheel Base', url:'cp_examples/mit/models/pinwheelBase.svg' },
+  { id:'randlettflappingbird', name:'Randlett Flapping Bird', url:'cp_examples/mit/models/randlettflappingbird.svg' },
+  { id:'singlesquaretwist',    name:'Single Square Twist', url:'cp_examples/mit/models/singlesquaretwist.svg' },
+  { id:'hypar',                name:'Hypar', url:'cp_examples/mit/models/hypar.svg' },
+  { id:'airplane',             name:'Paper Airplane', url:'cp_examples/mit/models/paper-airplane-clean.svg' },
+  { id:'miuraOri',             name:'Miura-Ori', url:'vendor/origamisimulator/assets/Tessellations/miura-ori.svg' }
+];
+
+var G = null;              // 上游的 globals 对象（求解器、模型、图案都挂在上面）
+var currentId = null;
+var playing = false;
+var playT = 0;
+var lastTS = 0;
+var loadState = null;      // 加载进度标记：等上游 model.sync() 真的跑完
+
+var $status = document.getElementById('status');
+function setStatus(t){ if ($status) $status.textContent = t; }
+function showError(msg){
+  var el = document.getElementById('err');
+  el.style.display = 'block';
+  el.textContent = 'Could not load this pattern\n' + msg + '\n\nClick this message to dismiss it, then try again.';
+  setStatus('Load failed');
+}
+
+// ── 模型列表 ──
+function buildModelList(){
+  var grid = document.getElementById('modelGrid');
+  MIT_MODELS.forEach(function(m){
+    var b = document.createElement('button');
+    b.className = 'model-btn';
+    b.dataset.id = m.id;
+    b.textContent = m.name;
+    b.title = m.name + ' (' + m.url.split('/').pop() + ')';
+    b.addEventListener('click', function(){ loadModel(m); });
+    grid.appendChild(b);
+  });
+}
+
+function markActive(id){
+  document.querySelectorAll('.model-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.id === id);
+  });
+}
+
+function loadModel(m){
+  return importModelSource({name:m.name+'.svg',url:m.url,id:m.id});
+}
+
+// 上游没有"加载完成"回调。buildModel() 会把 globals.needsSync 置 true，
+// 渲染循环里的 model.sync() 再把 needsSync/simNeedsSync 置回 false。
+// 注意 needsSync=true 只存在一帧，轮询会漏掉，所以在 boot() 里包住 buildModel 记录"新模型到了"。
+var waitTimer = null;
+function waitForModel(){
+  if (waitTimer) clearInterval(waitTimer);
+  var tries = 0;
+  waitTimer = setInterval(function(){
+    tries++;
+    var n = 0;
+    try { n = G.model.getNodes().length; } catch(e){}
+    var ready = loadState && loadState.arrived && !G.needsSync && !G.simNeedsSync && n > 0;
+    if (ready) {
+      clearInterval(waitTimer); waitTimer = null;
+      document.getElementById('svgViewer').style.display = 'block'; // 上游 sync() 会把它 hide
+      fitView();
+      setStatus('Ready · ' + n + ' vertices · crease pattern at left');
+      finishImport();
+    } else if (tries > 100) {
+      clearInterval(waitTimer); waitTimer = null;
+      finishImport(new Error('The model timed out. Check WebGL support and make sure the paper boundary is closed.'));
+    }
+  }, 100);
+}
+
+// ── 视口尺寸与取景 ──
+function resizeView(){
+  if (!G) return;
+  var el = document.getElementById('threeContainer');
+  var w = el.clientWidth, h = el.clientHeight;
+  if (w < 10 || h < 10) return;
+  G.threeView.camera.aspect = w / h;
+  G.threeView.camera.updateProjectionMatrix();
+  G.threeView.renderer.setSize(w, h);
+}
+
+// 按模型实际包围盒自动取景（各模型单位尺度差别很大：纸鹤 ~2，三浦折叠更小）
+function fitView(){
+  if (!G) return;
+  resizeView();
+  var cam = G.threeView.camera;
+  var size = 2;                                   // 兜底尺度
+  try {
+    var pos = G.model.getPositionsArray();        // 扁平 [x,y,z, x,y,z, ...]
+    var min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    for (var i = 0; i + 2 < pos.length; i += 3) {
+      for (var k = 0; k < 3; k++) {
+        var v = pos[i + k];
+        if (v < min[k]) min[k] = v;
+        if (v > max[k]) max[k] = v;
+      }
+    }
+    var span = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
+    if (span > 1e-6 && isFinite(span)) size = span;
+  } catch (e) { console.warn('fitView fallback:', e); }
+  // 相机在 (5,5,5)、目标在原点 → 距离 8.66；透视 fov=60°，可见高度 ≈ 距离*1.1547/zoom
+  var dist = Math.sqrt(3) * 5;
+  var zoom = (dist * 1.1547) / (size * 1.45);     // 留 ~45% 边距
+  cam.zoom = Math.max(0.1, Math.min(20, zoom * Math.min(1,cam.aspect)));
+  cam.updateProjectionMatrix();
+}
+
+// ── 折叠百分比 ──
+function setFoldPercent(pct, fromSlider){
+  if (!G) return;
+  var p = Math.max(-1, Math.min(1, pct / 100));
+  G.creasePercent = p;
+  G.shouldChangeCreasePercent = true;
+  if (!fromSlider) document.getElementById('foldRange').value = String(Math.round(p * 100));
+  document.getElementById('foldPct').textContent = Math.round(p * 100) + '%';
+}
+
+function updatePlayButton(){
+  var b = document.getElementById('btnPlay');
+  b.textContent = playing ? 'PAUSE' : 'PLAY FOLD';
+  b.classList.toggle('on', playing);
+}
+
+// 播放：目标折叠百分比 0 → 100 → 0 往复；中间态由上游动态松弛求解。
+function tickAnim(ts){
+  if (playing && G) {
+    if (!lastTS) lastTS = ts;
+    playT += (ts - lastTS) / 6000;            // 6 秒一个单程
+    lastTS = ts;
+    if (playT > 2) playT -= 2;
+    var t = playT < 1 ? playT : 2 - playT;    // 三角波 → 往复
+    var eased = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+    setFoldPercent(eased * 100);
+  } else {
+    lastTS = ts;
+  }
+  requestAnimationFrame(tickAnim);
+}
+
+// ── 启动 ──
+function boot(){
+  try {
+    G = initGlobals();
+    window.globals = G;                        // 上游若干处引用全局 globals
+    G.backgroundColor = 'F3F0EA';              // 画布底色对齐本站配色
+    G.color1 = 'E2D9C7';                       // 纸正面（暖纸色；上游灯光偏强，太浅会曝成纯白）
+    G.color2 = 'B7AD99';                       // 纸背面（明显更深 → 正反面可分辨，立体感更强）
+    G.foldUseAngles = true;
+    G.warn = function(msg){
+      var parsed = new DOMParser().parseFromString(String(msg),'text/html');
+      document.getElementById('notice').textContent = parsed.body.textContent;
+    };
+
+    // 上游有些代码会调用这两个模块，这里给最小桩
+    G.controls = { updateCreasePercent:function(){}, setDeltaT:function(){} };
+    G.videoAnimator = { nextFoldAngle:function(){ return G.creasePercent; } };
+
+    G.threeView = initThreeView(G);
+    // 上游把所有环境光都注释掉了，全折叠状态下朝下的面会接近全黑，补一点环境光更好读
+    G.threeView.scene.add(new THREE.AmbientLight(0xffffff, 0.28));
+    G.model = initModel(G);
+    // 包一层：新的折痕图被解析完（buildModel 被调用）时打个标记
+    var _buildModel = G.model.buildModel;
+    G.model.buildModel = function(fold, creaseParams){
+      if (!fold.faces_vertices || !fold.faces_vertices.length) throw new Error('No paper faces were created. Check that the boundary is closed and that creases meet at intersections.');
+      if (loadState) loadState.arrived = true;
+      return _buildModel(fold, creaseParams);
+    };
+    G.pattern = initPattern(G);
+    G.dynamicSolver = initDynamicSolver(G);    // 会创建 GPU 程序（着色器已在 DOM 里）
+
+    window.globals = G;
+    window.addEventListener('resize', function(){ fitView(); });
+    resizeView();
+
+    buildModelList();
+    setFoldPercent(0);
+    initImportUI();
+    requestAnimationFrame(tickAnim);
+  } catch (e) {
+    console.error(e);
+    showError((e && e.message ? e.message : String(e)) +
+      '\nIf this is a WebGL error, check that the browser supports WebGL and floating-point textures.');
+  }
+}
+
+// ── UI 事件 ──
+document.getElementById('foldRange').addEventListener('input', function(e){
+  playing = false; updatePlayButton();
+  setFoldPercent(parseInt(e.target.value, 10), true);
+});
+document.getElementById('btnPlay').addEventListener('click', function(){
+  playing = !playing;
+  if (playing) {
+    var p = Math.max(0,G.creasePercent);
+    playT = p < 0.5 ? Math.sqrt(p/2) : 1-Math.sqrt((1-p)/2);
+    lastTS = 0;
+  }
+  updatePlayButton();
+});
+document.getElementById('btnFlat').addEventListener('click', function(){
+  playing = false; updatePlayButton(); setFoldPercent(0);
+});
+document.getElementById('btnFolded').addEventListener('click', function(){
+  playing = false; updatePlayButton(); setFoldPercent(100);
+});
+document.getElementById('btnReverse').addEventListener('click', function(){
+  playing = false; updatePlayButton(); setFoldPercent(-100);
+});
+document.getElementById('btnReset').addEventListener('click', function(){
+  playing = false; updatePlayButton();
+  if (G) {
+    try {
+      setFoldPercent(0);
+      G.model.reset();
+      G.threeView.resetCamera();   // 上游 reset 会把 zoom 还原成 7
+      fitView();                   // 所以这里再按本站视口重新取景
+    } catch(e){ console.warn(e); }
+  }
+});
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+</script>
+<script src="assets/simulation-ui.js"></script>
+<script type="module" src="assets/step-studio.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -20 440 440" width="440" height="440">
+<style>
+  .paper { fill: #f5f0e8; stroke: #333; stroke-width: 1.5; }
+  .mountain { stroke: #c0392b; stroke-width: 1.2; stroke-dasharray: 8,2,2,2; fill: none; }
+  .valley { stroke: #2980b9; stroke-width: 1.2; stroke-dasharray: 4,3; fill: none; }
+  .crease { stroke: #666; stroke-width: 0.8; stroke-dasharray: 2,4; fill: none; }
+  .label { font-family: sans-serif; font-size: 10px; fill: #666; }
+  .title { font-family: sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+</style>
+<rect class="paper" x="0" y="0" width="400.0" height="400.0" rx="1"/>
+<line class="mountain" x1="0.0" y1="92.8" x2="400.0" y2="94.3"/>
+<line class="mountain" x1="90.7" y1="400.0" x2="91.7" y2="0.0"/>
+<line class="mountain" x1="90.8" y1="0.0" x2="96.7" y2="400.0"/>
+<line class="valley" x1="0.0" y1="0.0" x2="165.7" y2="400.0"/>
+<line class="valley" x1="0.0" y1="0.0" x2="400.0" y2="165.7"/>
+<line class="valley" x1="0.0" y1="0.0" x2="400.0" y2="400.0"/>
+<line class="valley" x1="0.0" y1="66.2" x2="400.0" y2="333.8"/>
+<line class="valley" x1="0.0" y1="89.5" x2="400.0" y2="103.0"/>
+<line class="valley" x1="0.0" y1="114.7" x2="291.5" y2="0.0"/>
+<line class="valley" x1="0.0" y1="115.8" x2="289.5" y2="0.0"/>
+<line class="valley" x1="0.0" y1="118.0" x2="400.0" y2="282.0"/>
+<line class="valley" x1="0.0" y1="167.1" x2="392.1" y2="0.0"/>
+<line class="valley" x1="0.0" y1="168.0" x2="384.0" y2="0.0"/>
+<line class="valley" x1="0.0" y1="196.1" x2="202.8" y2="0.0"/>
+<line class="valley" x1="0.0" y1="198.3" x2="202.5" y2="0.0"/>
+<line class="valley" x1="0.0" y1="200.0" x2="400.0" y2="200.0"/>
+<line class="valley" x1="0.0" y1="202.0" x2="197.5" y2="0.0"/>
+<line class="valley" x1="0.0" y1="205.1" x2="192.5" y2="0.0"/>
+<line class="valley" x1="0.0" y1="289.6" x2="115.5" y2="0.0"/>
+<line class="valley" x1="0.0" y1="299.7" x2="112.4" y2="0.0"/>
+<line class="valley" x1="0.0" y1="390.4" x2="167.3" y2="0.0"/>
+<line class="valley" x1="0.0" y1="393.1" x2="167.3" y2="0.0"/>
+<line class="valley" x1="0.0" y1="400.0" x2="400.0" y2="0.0"/>
+<line class="valley" x1="66.4" y1="0.0" x2="333.6" y2="400.0"/>
+<line class="valley" x1="118.1" y1="0.0" x2="281.9" y2="400.0"/>
+<line class="valley" x1="200.0" y1="0.0" x2="200.0" y2="400.0"/>
+<text class="title" x="0" y="-5">lily</text>
+<text class="label" x="0" y="415">(55 folds, 26 lines: 3M 23V 0C)</text>
+</svg>

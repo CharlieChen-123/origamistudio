@@ -1,0 +1,15 @@
+{
+  "name": "origami-fold-simulator",
+  "version": "0.1.0",
+  "description": "开源的折纸折叠模拟器核心库 —— FOLD数据模型 + 几何数学 + 折叠引擎（自研，MIT）",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "keywords": ["origami", "fold", "crease-pattern", "simulator"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

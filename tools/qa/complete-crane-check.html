@@ -1,0 +1,29 @@
+<!doctype html><meta charset="utf-8"><title>Complete crane check</title>
+<style>body{font:14px system-ui;margin:8px}iframe{width:100%;height:780px;border:0}pre{max-height:55px;overflow:auto}button,select,input{padding:7px}</style>
+<button id="load">Load complete crane</button><select id="step" aria-label="Step"></select><input id="progress" aria-label="Progress" type="range" value="100" min="0" max="100"><button id="final">Finished crane</button><button id="verify">Verify save / reload</button><pre id="report">Ready</pre><iframe id="app" src="../../origami-3d.html"></iframe>
+<script type="module">
+const app=document.querySelector('#app'),select=document.querySelector('#step'),progress=document.querySelector('#progress'),report=document.querySelector('#report');
+let data;
+const editorTest=document.createElement('button');editorTest.textContent='Verify template editor';document.querySelector('#report').before(editorTest);
+editorTest.onclick=async()=>{try{
+ const w=app.contentWindow,d=w.document;await w.StepStudio.craneLesson();data=w.StepStudio.tutorialData();
+ d.querySelectorAll('#actionList .lesson-step')[14].click();d.querySelector('#copyLesson').click();
+ if(w.StepStudio.getState().steps!==15)throw Error('Copy did not stop at selected step');
+ d.querySelector('[data-template="petal"]').click();
+ if(d.querySelector('#motionChooser').hidden!==true||d.querySelector('#markControls').hidden)throw Error('The editor did not focus on the selected motion');
+ if(d.querySelector('#actionAdvanced').tagName!=='SECTION'||d.querySelector('#templateSettings').hidden||!d.querySelector('#foldSettings').hidden)throw Error('The open controls should show only pocket settings for a petal fold');
+ const a=data.actions[15],svg=d.querySelector('#paperEditor');
+ for(const p of [a.tip,a.left,a.right,a.hingeLeft,a.hingeRight]){
+  const pt=svg.createSVGPoint();pt.x=p[0];pt.y=p[1];const screen=pt.matrixTransform(svg.getScreenCTM());
+  for(const type of ['pointerdown','pointerup'])svg.dispatchEvent(new w.PointerEvent(type,{bubbles:true,clientX:screen.x,clientY:screen.y,button:0,pointerId:1}));
+ }
+ if(d.querySelector('#previewAction').disabled)throw Error('Five landmarks did not enable preview');
+ d.querySelector('#previewAction').click();if(w.StepStudio.getState().phase!=='preview')throw Error(d.querySelector('#actionMessage').textContent);
+ d.querySelector('#saveAction').click();if(w.StepStudio.getState().steps!==16)throw Error('Template not added');
+ report.textContent='PASS: copy through step 15, pick petal landmarks, validate, preview and add step 16';
+ }catch(e){report.textContent='FAIL '+e.stack;}};
+document.querySelector('#verify').onclick=()=>{try{const studio=app.contentWindow.StepStudio,saved=JSON.parse(JSON.stringify(studio.tutorialData()));studio.load(saved);if(JSON.stringify(studio.tutorialData())!==JSON.stringify(saved))throw Error('Round trip changed lesson');report.textContent='PASS: all 33 actions and paper survive save / reload; playback opens at step 1';}catch(e){report.textContent='FAIL '+e.stack;}};
+async function pose(){const d=app.contentWindow.document;d.querySelectorAll('#actionList .lesson-step')[select.value].click();await new Promise(r=>setTimeout(r,20));d.querySelector('#stepScrub').value=progress.value;d.querySelector('#stepScrub').dispatchEvent(new Event('input'));}
+document.querySelector('#load').onclick=async()=>{try{await app.contentWindow.StepStudio.craneLesson();data=app.contentWindow.StepStudio.tutorialData();select.replaceChildren(...data.actions.map((a,i)=>new Option(`${i+1}. ${a.title}`,i)));report.textContent=`Loaded ${data.actions.length} steps`;select.value='15';progress.value='50';await pose();}catch(e){report.textContent=e.stack;}};
+select.onchange=pose;progress.oninput=pose;document.querySelector('#final').onclick=()=>{select.value=data.actions.length-1;progress.value=100;pose();};
+</script>

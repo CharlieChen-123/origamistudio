@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-30 -30 460 460">
+<rect x="0" y="0" width="400" height="400" fill="#F5F0E8" stroke="#999" stroke-width="1"/>
+<line x1="400.0" y1="0.0" x2="0.0" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="200.0" y1="0.0" x2="200.0" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="0.0" y1="200.0" x2="400.0" y2="200.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="0.0" y1="0.2" x2="400.0" y2="165.9" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="0.2" y1="0.0" x2="0.2" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="283.2" y1="0.0" x2="0.0" y2="283.2" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<text x="5" y="420" font-size="12" font-family="sans-serif" fill="#666">birdbase</text>
+</svg>

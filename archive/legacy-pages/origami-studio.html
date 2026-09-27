@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>折纸工作室 · Origami Studio</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#F7F5F0;--surface:#fff;--surface2:#F2EFE8;--border:#E0DBD2;
+  --ink:#2B2622;--ink2:#7A726A;--ink3:#B5AFA6;
+  --accent:#C8603A;--accent2:#4A7C6F;
+  --fold-v:#3B82F6;--fold-m:#EF4444;--fold-c:#9CA3AF;
+  --r:10px;--r-sm:7px;
+  font-size:14px;
+}
+body{font-family:'PingFang SC','Hiragino Sans GB','Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--ink);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── Header ── */
+header{height:54px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 18px;gap:20px;flex-shrink:0;z-index:10;
+  box-shadow:0 1px 0 rgba(0,0,0,.04);}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;letter-spacing:-.2px;flex-shrink:0;}
+.brand-ico{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.brand-ico svg{stroke:white;fill:none;}
+.brand em{color:var(--accent);font-style:normal;}
+.tabs{display:flex;gap:2px;background:var(--surface2);padding:4px;border-radius:9px;border:1px solid var(--border);}
+.tab{padding:5px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:var(--ink2);
+  border:none;background:transparent;transition:all .18s;display:flex;align-items:center;gap:5px;}
+.tab:hover{color:var(--ink);background:rgba(0,0,0,.04);}
+.tab.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.tab-dot{width:5px;height:5px;border-radius:50%;background:var(--ink3);transition:background .18s;}
+.tab.on .tab-dot{background:var(--accent);}
+.hdr-acts{margin-left:auto;display:flex;gap:6px;}
+.btn-xs{padding:6px 13px;border-radius:var(--r-sm);font-size:12px;font-weight:500;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface);color:var(--ink2);transition:all .15s;
+  display:flex;align-items:center;gap:5px;}
+.btn-xs:hover{border-color:var(--ink2);color:var(--ink);}
+.btn-xs.pri{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-xs.pri:hover{filter:brightness(1.08);}
+
+/* ── Layout ── */
+.app{flex:1;display:flex;overflow:hidden;}
+.view{display:none;width:100%;}
+.view.on{display:flex;}
+
+/* ── Sidebar ── */
+aside{width:252px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;}
+.sb-scroll{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.sb-scroll::-webkit-scrollbar{width:4px;}
+.sb-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.panel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:13px;}
+.ptitle{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);
+  margin-bottom:11px;display:flex;align-items:center;gap:6px;}
+.ptitle::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--accent);}
+
+/* Tool grid */
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.tbtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 5px;
+  border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;font-size:11px;color:var(--ink2);transition:all .15s;font-weight:500;}
+.tbtn:hover{border-color:var(--accent);color:var(--ink);}
+.tbtn.on{background:#FEF3EE;border-color:var(--accent);color:var(--accent);}
+.tbtn svg{stroke:currentColor;fill:none;}
+
+/* Line types */
+.ltgrid{display:flex;flex-direction:column;gap:4px;}
+.ltbtn{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--r-sm);
+  border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;
+  color:var(--ink2);transition:all .15s;font-weight:500;}
+.ltbtn:hover{border-color:var(--ink2);}
+.ltbtn.on{background:var(--surface2);border-color:var(--ink2);color:var(--ink);}
+.lswatch{width:26px;height:3px;border-radius:2px;flex-shrink:0;}
+.ls-v{background:var(--fold-v);}
+.ls-m{height:0;border-top:3px dashed var(--fold-m);background:transparent;}
+.ls-c{background:var(--fold-c);}
+.ls-b{background:#1F2937;}
+.ltbadge{margin-left:auto;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700;}
+
+/* Sliders */
+.srow{display:flex;flex-direction:column;gap:5px;margin-bottom:1px;}
+.slabel{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);}
+.slabel .v{font-weight:600;color:var(--ink);}
+input[type=range]{width:100%;height:4px;border-radius:2px;background:var(--border);
+  appearance:none;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:13px;height:13px;
+  background:var(--accent);border-radius:50%;box-shadow:0 0 0 3px rgba(200,96,58,.13);cursor:pointer;}
+
+/* Color chips */
+.chips{display:flex;gap:5px;flex-wrap:wrap;}
+.chip{width:21px;height:21px;border-radius:50%;cursor:pointer;border:2px solid transparent;
+  transition:transform .15s,border-color .15s;flex-shrink:0;}
+.chip:hover{transform:scale(1.15);}
+.chip.on{border-color:var(--ink);transform:scale(1.1);}
+
+/* Action buttons */
+.arow{display:flex;gap:5px;}
+.abtn{flex:1;padding:7px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;font-size:12px;font-weight:500;color:var(--ink2);
+  display:flex;align-items:center;justify-content:center;gap:4px;transition:all .15s;}
+.abtn:hover{border-color:var(--ink2);color:var(--ink);}
+.abtn.red{color:#EF4444;border-color:#FCA5A5;}
+.abtn.red:hover{background:#FEF2F2;}
+select{width:100%;padding:7px 9px;border-radius:var(--r-sm);border:1px solid var(--border);
+  background:var(--surface);font-size:12px;color:var(--ink);outline:none;cursor:pointer;}
+select:focus{border-color:var(--accent);}
+
+/* Sym chips */
+.sychips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;}
+.sychip{width:31px;height:31px;border-radius:7px;border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;font-size:12px;font-weight:600;color:var(--ink2);
+  display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.sychip:hover{border-color:var(--accent);color:var(--accent);}
+.sychip.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* ── Canvas Area ── */
+.carea{flex:1;position:relative;overflow:hidden;background:var(--bg);}
+.carea canvas{position:absolute;top:0;left:0;}
+#cpCanvas{cursor:crosshair;}
+
+/* Floating toolbar */
+.ftb{position:absolute;top:14px;left:50%;transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--border);border-radius:9px;
+  padding:5px;display:flex;gap:3px;box-shadow:0 2px 10px rgba(0,0,0,.08);z-index:5;}
+.ftbtn{padding:5px 11px;border-radius:6px;border:none;background:transparent;
+  font-size:12px;font-weight:500;color:var(--ink2);cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:4px;}
+.ftbtn:hover{background:var(--surface2);color:var(--ink);}
+.ftbtn.on{background:var(--surface2);color:var(--accent);}
+.ftbtn svg{stroke:currentColor;fill:none;}
+.sep{width:1px;background:var(--border);margin:3px 1px;}
+
+/* Status bar */
+.sbar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  background:rgba(43,38,34,.72);backdrop-filter:blur(8px);color:white;
+  font-size:11px;padding:5px 13px;border-radius:18px;pointer-events:none;white-space:nowrap;}
+
+/* Zoom panel */
+.zpanel{position:absolute;bottom:14px;right:14px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-sm);padding:4px 9px;
+  font-size:11px;color:var(--ink2);display:flex;gap:6px;align-items:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.07);}
+.zpanel button{background:none;border:none;cursor:pointer;color:var(--ink2);font-size:13px;padding:0 1px;line-height:1;}
+.zpanel button:hover{color:var(--ink);}
+
+/* Snap dot */
+.snapdot{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);
+  border:2px solid white;pointer-events:none;transform:translate(-50%,-50%);display:none;
+  box-shadow:0 0 0 3px rgba(200,96,58,.3);z-index:10;}
+
+/* SF mini preview */
+.miniwrap{text-align:center;padding:3px 0;}
+.miniwrap canvas{border-radius:50%;border:1px solid var(--border);}
+
+/* Sim step dots */
+.stepdots{display:flex;gap:3px;}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .2s;}
+.sdot.done{background:var(--accent2);}
+.sdot.cur{background:var(--accent);transform:scale(1.3);}
+.finstr{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:9px 11px;font-size:12px;color:var(--ink2);line-height:1.55;margin-top:9px;}
+.finstr strong{color:var(--ink);}
+.progbar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:5px;}
+.progfill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width .3s;}
+.sbtn{flex:1;padding:8px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;font-size:13px;font-weight:500;color:var(--ink2);transition:all .15s;}
+.sbtn:hover{border-color:var(--ink);color:var(--ink);}
+.sbtn.pri{background:var(--accent);color:#fff;border-color:var(--accent);}
+.sbtn.pri:hover{filter:brightness(1.08);}
+.sbtn:disabled{opacity:.4;cursor:not-allowed;}
+.hint{font-size:11px;color:var(--ink2);background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:7px 9px;line-height:1.5;}
+label{display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-ico">
+      <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 22 20 2 20"/><line x1="12" y1="2" x2="12" y2="20"/>
+        <line x1="2" y1="14" x2="22" y2="14"/>
+      </svg>
+    </div>
+    折纸 <em>工作室</em>
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-v="cp" onclick="gotoView('cp')"><span class="tab-dot"></span>CP 折痕图</button>
+    <button class="tab" data-v="sf" onclick="gotoView('sf')"><span class="tab-dot"></span>雪花设计</button>
+    <button class="tab" data-v="sim" onclick="gotoView('sim')"><span class="tab-dot"></span>折叠模拟</button>
+  </div>
+  <div class="hdr-acts">
+    <button class="btn-xs" onclick="doExport()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      导出
+    </button>
+  </div>
+</header>
+
+<div class="app">
+
+<!-- ══ CP VIEW ══════════════════════════════════════ -->
+<div class="view on" id="view-cp">
+  <aside>
+    <div class="sb-scroll">
+      <div class="panel">
+        <div class="ptitle">绘图工具</div>
+        <div class="tgrid">
+          <button class="tbtn on" id="ct-line" onclick="setCPTool('line')">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+            折痕线
+          </button>
+          <button class="tbtn" id="ct-select" onclick="setCPTool('select')">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+            选择
+          </button>
+          <button class="tbtn" id="ct-erase" onclick="setCPTool('erase')">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M20 20H7L3 16l13-13 4 4-7 7 3 3"/></svg>
+            橡皮擦
+          </button>
+          <button class="tbtn" id="ct-node" onclick="setCPTool('node')">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="2" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="22" y2="12"/></svg>
+            节点
+          </button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">折线类型</div>
+        <div class="ltgrid">
+          <button class="ltbtn on" id="lt-valley" onclick="setLT('valley')">
+            <span class="lswatch ls-v"></span>谷折 Valley
+            <span class="ltbadge" style="background:#EFF6FF;color:#1D4ED8">V</span>
+          </button>
+          <button class="ltbtn" id="lt-mountain" onclick="setLT('mountain')">
+            <span class="lswatch ls-m"></span>山折 Mountain
+            <span class="ltbadge" style="background:#FEF2F2;color:#991B1B">M</span>
+          </button>
+          <button class="ltbtn" id="lt-crease" onclick="setLT('crease')">
+            <span class="lswatch ls-c"></span>辅助折痕
+            <span class="ltbadge" style="background:#F3F4F6;color:#6B7280">C</span>
+          </button>
+          <button class="ltbtn" id="lt-border" onclick="setLT('border')">
+            <span class="lswatch ls-b"></span>边界线
+            <span class="ltbadge" style="background:#111;color:#fff">B</span>
+          </button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">网格与吸附</div>
+        <div class="srow">
+          <div class="slabel"><span>网格密度</span><span class="v" id="cpGV">16</span></div>
+          <input type="range" id="cpGR" min="4" max="32" step="2" value="16" oninput="setGrid(this.value)">
+        </div>
+        <div class="arow" style="margin-top:8px">
+          <button class="abtn" id="snapBtn" onclick="toggleSnap()" style="flex:2">⊕ 吸附: 开</button>
+          <button class="abtn" id="gridBtn" onclick="toggleGrid()">⊞ 网格: 开</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">纸张设置</div>
+        <div style="margin-bottom:9px">
+          <select id="pshape" onchange="setPShape(this.value)">
+            <option value="square">正方形</option>
+            <option value="rect">长方形 2:1</option>
+            <option value="hex">正六边形</option>
+            <option value="tri">等边三角形</option>
+          </select>
+        </div>
+        <div class="chips" id="pcolorRow">
+          <div class="chip on" style="background:#FAFAF8;border:1px solid #ccc" data-c="#FAFAF8" onclick="setPColor('#FAFAF8',this)"></div>
+          <div class="chip" style="background:#FDE68A" data-c="#FDE68A" onclick="setPColor('#FDE68A',this)"></div>
+          <div class="chip" style="background:#BAE6FD" data-c="#BAE6FD" onclick="setPColor('#BAE6FD',this)"></div>
+          <div class="chip" style="background:#BBF7D0" data-c="#BBF7D0" onclick="setPColor('#BBF7D0',this)"></div>
+          <div class="chip" style="background:#FECACA" data-c="#FECACA" onclick="setPColor('#FECACA',this)"></div>
+          <div class="chip" style="background:#E9D5FF" data-c="#E9D5FF" onclick="setPColor('#E9D5FF',this)"></div>
+          <div class="chip" style="background:#F97316" data-c="#F97316" onclick="setPColor('#F97316',this)"></div>
+          <div class="chip" style="background:#1E293B" data-c="#1E293B" onclick="setPColor('#1E293B',this)"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">折痕预设</div>
+        <div class="arow" style="flex-wrap:wrap;gap:5px">
+          <button class="abtn" onclick="cpPreset('bird')">鸟基底</button>
+          <button class="abtn" onclick="cpPreset('waterbomb')">水弹基底</button>
+          <button class="abtn" onclick="cpPreset('fish')">鱼基底</button>
+          <button class="abtn" onclick="cpPreset('frog')">蛙基底</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">编辑操作</div>
+        <div class="arow">
+          <button class="abtn" onclick="cpUndo()">↩ 撤销</button>
+          <button class="abtn red" onclick="cpClear()">✕ 清空</button>
+        </div>
+      </div>
+      <div class="hint">💡 拖动画折痕线 · Shift 锁定 45° · 滚轮缩放 · 右键/中键/Alt 拖动平移 · 橙点=可吸附点（含折痕交点）</div>
+    </div>
+  </aside>
+  <div class="carea" id="cpArea">
+    <canvas id="cpCanvas"></canvas>
+    <div class="snapdot" id="snapDot"></div>
+    <div class="ftb">
+      <button class="ftbtn" onclick="cpZoom(1.2)">
+        <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        放大
+      </button>
+      <button class="ftbtn" onclick="cpZoom(1/1.2)">
+        <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        缩小
+      </button>
+      <button class="ftbtn" onclick="cpReset()">↺ 复位</button>
+      <div class="sep"></div>
+      <button class="ftbtn on" id="mirBtn" onclick="toggleMirror()">↔ 镜像</button>
+    </div>
+    <div class="sbar" id="cpBar">工具: 折痕线 · 谷折 · 共 0 条折痕</div>
+    <div class="zpanel"><span id="cpZoom">100%</span><button onclick="cpReset()">⌂</button></div>
+  </div>
+</div>
+
+<!-- ══ SNOWFLAKE VIEW ════════════════════════════════ -->
+<div class="view" id="view-sf">
+  <aside>
+    <div class="sb-scroll">
+      <div class="panel">
+        <div class="ptitle">对称设置</div>
+        <div class="sychips" id="sychips">
+          <div class="sychip on" data-n="4" onclick="setSym(4)">4</div>
+          <div class="sychip" data-n="6" onclick="setSym(6)">6</div>
+          <div class="sychip" data-n="8" onclick="setSym(8)">8</div>
+          <div class="sychip" data-n="10" onclick="setSym(10)">10</div>
+          <div class="sychip" data-n="12" onclick="setSym(12)">12</div>
+          <div class="sychip" data-n="16" onclick="setSym(16)">16</div>
+        </div>
+        <div class="srow">
+          <div class="slabel"><span>自定义等分数</span><span class="v" id="symV">4</span></div>
+          <input type="range" id="symR" min="2" max="20" value="4" oninput="setSym(+this.value)">
+        </div>
+        <label style="margin-top:9px"><input type="checkbox" id="mirCk" checked onchange="sf.mirror=this.checked;sfDraw()"> 扇形内镜像对称</label>
+      </div>
+      <div class="panel">
+        <div class="ptitle">绘图工具</div>
+        <div class="tgrid">
+          <button class="tbtn on" id="sft-freehand" onclick="setSFT('freehand')">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M3 17c3-3 3-3 6-3s3 3 6 3 3-3 6-3"/></svg>
+            手绘线
+          </button>
+          <button class="tbtn" id="sft-line" onclick="setSFT('line')">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+            直线段
+          </button>
+          <button class="tbtn" id="sft-arc" onclick="setSFT('arc')">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M5 19 Q12 5 19 19"/></svg>
+            弧 线
+          </button>
+          <button class="tbtn" id="sft-erase" onclick="setSFT('erase')">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M20 20H7L3 16l13-13 4 4-7 7 3 3"/></svg>
+            橡皮擦
+          </button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">线条样式</div>
+        <div class="srow">
+          <div class="slabel"><span>粗细</span><span class="v" id="sfWV">2</span>px</div>
+          <input type="range" id="sfWR" min="1" max="8" step=".5" value="2" oninput="sf.w=+this.value;$('sfWV').textContent=this.value;sfDraw()">
+        </div>
+        <div class="chips" style="margin-top:9px" id="sfCR">
+          <div class="chip on" style="background:#2B2622" data-c="#2B2622" onclick="setSFC('#2B2622',this)"></div>
+          <div class="chip" style="background:#C8603A" data-c="#C8603A" onclick="setSFC('#C8603A',this)"></div>
+          <div class="chip" style="background:#3B82F6" data-c="#3B82F6" onclick="setSFC('#3B82F6',this)"></div>
+          <div class="chip" style="background:#10B981" data-c="#10B981" onclick="setSFC('#10B981',this)"></div>
+          <div class="chip" style="background:#8B5CF6" data-c="#8B5CF6" onclick="setSFC('#8B5CF6',this)"></div>
+          <div class="chip" style="background:#F59E0B" data-c="#F59E0B" onclick="setSFC('#F59E0B',this)"></div>
+        </div>
+        <div class="slabel" style="margin-top:10px;margin-bottom:5px;font-size:12px">背景</div>
+        <div class="chips">
+          <div class="chip on" id="sfb-light" style="background:#F7F5F0;border:1px solid #ccc" onclick="setSFBg('light',this)"></div>
+          <div class="chip" id="sfb-dark" style="background:#1a1a2e" onclick="setSFBg('dark',this)"></div>
+          <div class="chip" id="sfb-paper" style="background:#F3EED9" onclick="setSFBg('paper',this)"></div>
+          <div class="chip" id="sfb-blue" style="background:#0F172A" onclick="setSFBg('blue',this)"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">实时预览</div>
+        <div class="miniwrap"><canvas id="sfMini" width="190" height="190"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">操作</div>
+        <div class="arow">
+          <button class="abtn" onclick="sfUndo()">↩ 撤销</button>
+          <button class="abtn red" onclick="sfClear()">✕ 清空</button>
+        </div>
+      </div>
+      <div class="hint">💡 在左侧扇形区域内绘制，图案将自动对称展开</div>
+    </div>
+  </aside>
+  <div class="carea" id="sfArea">
+    <canvas id="sfCanvas"></canvas>
+    <div class="sbar" id="sfBar">在扇形区域内绘制 → 自动生成对称花纹</div>
+  </div>
+</div>
+
+<!-- ══ SIMULATION VIEW ═══════════════════════════════ -->
+<div class="view" id="view-sim">
+  <aside>
+    <div class="sb-scroll">
+      <div class="panel">
+        <div class="ptitle">折纸模型</div>
+        <select id="simSel" onchange="loadSim(this.value)">
+          <optgroup label="基础折叠">
+            <option value="valley">简单谷折</option>
+            <option value="mountain">简单山折</option>
+            <option value="diag">对角预折痕</option>
+          </optgroup>
+          <optgroup label="基底">
+            <option value="prelim">初步基底 Preliminary</option>
+            <option value="waterbomb">水弹基底 Waterbomb</option>
+            <option value="bird">鸟基底 Bird Base</option>
+          </optgroup>
+          <optgroup label="经典模型">
+            <option value="crane">纸鹤 Crane</option>
+            <option value="shuriken">手里剑 Shuriken</option>
+            <option value="frog">青蛙 Frog</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="panel">
+        <div class="ptitle">折叠步骤</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <div class="stepdots" id="stepDots"></div>
+          <span style="margin-left:auto;font-size:12px;color:var(--ink2)" id="stepLbl">—</span>
+        </div>
+        <div class="progbar"><div class="progfill" id="progFill" style="width:0%"></div></div>
+        <div class="finstr" id="foldDesc">请选择一个折纸模型，然后按「下一步」开始。</div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">控制</div>
+        <div class="arow" style="margin-bottom:7px">
+          <button class="sbtn" id="simPrev" onclick="simGo(-1)" disabled>← 上一步</button>
+          <button class="sbtn pri" id="simNext" onclick="simGo(1)">下一步 →</button>
+        </div>
+        <div class="arow" style="margin-bottom:10px">
+          <button class="sbtn" onclick="simReset()">↺ 重置</button>
+          <button class="sbtn" id="autoBtn" onclick="simToggleAuto()">▶ 自动</button>
+        </div>
+        <div class="srow">
+          <div class="slabel"><span>播放速度</span><span class="v" id="simSpV">1×</span></div>
+          <input type="range" id="simSpR" min=".25" max="3" step=".25" value="1" oninput="sim.speed=+this.value;$('simSpV').textContent=this.value+'×'">
+        </div>
+        <div class="srow" style="margin-top:6px">
+          <div class="slabel"><span>折叠进度</span><span class="v" id="simAnV">0°</span></div>
+          <input type="range" id="simAnR" min="0" max="180" value="0" oninput="sim.angle=+this.value;$('simAnV').textContent=this.value+'°';simDraw()">
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">视图选项</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <label><input type="checkbox" id="showLines" checked onchange="simDraw()"> 显示折痕线</label>
+          <label><input type="checkbox" id="showShadow" checked onchange="simDraw()"> 显示投影</label>
+        </div>
+        <div class="arow" style="margin-top:9px">
+          <button class="abtn" onclick="setView(0.35,-0.4)">等轴</button>
+          <button class="abtn" onclick="setView(0,0)">正面</button>
+          <button class="abtn" onclick="setView(-1.2,0)">俯视</button>
+        </div>
+      </div>
+      <div class="hint">💡 拖动画布旋转视角 · 蓝线=谷折 · 红线=山折</div>
+    </div>
+  </aside>
+  <div class="carea" id="simArea">
+    <canvas id="simCanvas"></canvas>
+    <div class="ftb">
+      <span id="simModelLbl" style="font-size:12px;color:var(--ink2);padding:0 6px;line-height:28px">—</span>
+    </div>
+    <div class="sbar" id="simBar">选择模型开始</div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ─────────────────────────────────────────────────────
+//  TINY HELPERS
+// ─────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const lerp = (a,b,t) => a+(b-a)*t;
+const clamp = (v,lo,hi) => Math.min(Math.max(v,lo),hi);
+const dist2 = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+
+function gotoView(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('on'));
+  $('view-'+v).classList.add('on');
+  document.querySelector(`.tab[data-v="${v}"]`).classList.add('on');
+  if(v==='cp'){ cpResize(); }
+  if(v==='sf'){ sfResize(); }
+  if(v==='sim'){ simResize(); simDraw(); }
+}
+
+function doExport(){
+  const v = document.querySelector('.tab.on').dataset.v;
+  if(v==='cp') cpExportSVG();
+  else if(v==='sf') sfExportPNG();
+  else alert('模拟视图请截图保存。');
+}
+
+// ─────────────────────────────────────────────────────
+//  MODULE 1 — CP DIAGRAM
+// ─────────────────────────────────────────────────────
+const cp = {
+  lines:[], nodes:[], hist:[],
+  tool:'line', lt:'valley',
+  pshape:'square', pcolor:'#FAFAF8',
+  gridN:16, snap:true, gridVis:true, mirror:false,
+  zoom:1, px:0, py:0,
+  drag:false, ds:null, de:null,
+  panning:false, panBase:null,
+  SIZE:400,
+};
+const LS = {
+  valley: {c:'#3B82F6', d:[],   w:1.5},
+  mountain:{c:'#EF4444',d:[8,4],w:1.5},
+  crease: {c:'#9CA3AF', d:[3,3],w:1  },
+  border: {c:'#1F2937', d:[],   w:2.5},
+};
+
+const cpC  = $('cpCanvas'),   cpCtx  = cpC.getContext('2d');
+
+function cpResize(){
+  const a=$('cpArea');
+  cpC.width=a.clientWidth; cpC.height=a.clientHeight;
+  cpRender();
+}
+function s2w(x,y){ const cx=cpC.width/2+cp.px,cy=cpC.height/2+cp.py; return{x:(x-cx)/cp.zoom,y:(y-cy)/cp.zoom}; }
+function w2s(x,y){ const cx=cpC.width/2+cp.px,cy=cpC.height/2+cp.py; return{x:x*cp.zoom+cx,y:y*cp.zoom+cy}; }
+// ── Intersection of two infinite lines (p1+t*d1, p2+t*d2) ──
+function lineIntersect(ax,ay,bx,by,cx,cy,dx,dy){
+  const d1x=bx-ax, d1y=by-ay;
+  const d2x=dx-cx, d2y=dy-cy;
+  const denom=d1x*d2y-d1y*d2x;
+  if(Math.abs(denom)<1e-9) return null;
+  const t=((cx-ax)*d2y-(cy-ay)*d2x)/denom;
+  return {x:ax+t*d1x, y:ay+t*d1y};
+}
+
+// Collect candidate snap points: grid nodes + crease-line intersections
+function getSnapCandidates(){
+  const candidates=[];
+  const c=cp.SIZE/cp.gridN, h=cp.SIZE/2;
+  // grid points
+  for(let i=0;i<=cp.gridN;i++)
+    for(let j=0;j<=cp.gridN;j++)
+      candidates.push({x:-h+i*c, y:-h+j*c});
+  // crease-crease intersections
+  for(let i=0;i<cp.lines.length;i++){
+    const a=cp.lines[i];
+    for(let j=i+1;j<cp.lines.length;j++){
+      const b=cp.lines[j];
+      const pt=lineIntersect(a.p1.x,a.p1.y,a.p2.x,a.p2.y,b.p1.x,b.p1.y,b.p2.x,b.p2.y);
+      if(pt && Math.abs(pt.x)<=h+1 && Math.abs(pt.y)<=h+1) candidates.push(pt);
+    }
+  }
+  // endpoints of crease lines
+  cp.lines.forEach(l=>{ candidates.push(l.p1); candidates.push(l.p2); });
+  return candidates;
+}
+
+function snapPt(x,y){
+  if(!cp.snap) return {x,y};
+  const h=cp.SIZE/2;
+  const c=cp.SIZE/cp.gridN;
+  // grid snap
+  const gx=clamp(Math.round(x/c)*c,-h,h);
+  const gy=clamp(Math.round(y/c)*c,-h,h);
+  // also check crease intersections
+  const snapR=10/cp.zoom;  // world-space snap radius
+  let best={x:gx,y:gy}, bestD=Math.hypot(x-gx,y-gy);
+  const cands=getSnapCandidates();
+  for(const p of cands){
+    const d=Math.hypot(x-p.x,y-p.y);
+    if(d<bestD && d<snapR){ bestD=d; best={x:p.x,y:p.y}; }
+  }
+  return best;
+}
+
+// Grid drawing integrated into main canvas
+function cpDrawGridOnCtx(ctx){
+  if(!cp.gridVis) return;
+  const w=cpC.width, h=cpC.height;
+  const cell=(cp.SIZE/cp.gridN)*cp.zoom;
+  const ox=w/2+cp.px, oy=h/2+cp.py;
+  const half=cp.SIZE/2*cp.zoom;
+
+  // Normal grid lines (very faint)
+  ctx.beginPath();
+  ctx.strokeStyle='rgba(0,0,0,0.055)';
+  ctx.lineWidth=1;
+  for(let i=0;i<=cp.gridN;i++){
+    const x=ox-half+i*cell;
+    if(i!==cp.gridN/2){ ctx.moveTo(x,oy-half); ctx.lineTo(x,oy+half); }
+    const y=oy-half+i*cell;
+    if(i!==cp.gridN/2){ ctx.moveTo(ox-half,y); ctx.lineTo(ox+half,y); }
+  }
+  ctx.stroke();
+
+  // Center lines (slightly more visible)
+  ctx.beginPath();
+  ctx.strokeStyle='rgba(0,0,0,0.16)';
+  ctx.lineWidth=1.5;
+  ctx.moveTo(ox, oy-half); ctx.lineTo(ox, oy+half);
+  ctx.moveTo(ox-half, oy); ctx.lineTo(ox+half, oy);
+  ctx.stroke();
+}
+
+function cpPaper(ctx){
+  const s=cp.SIZE/2, z=cp.zoom;
+  const ox=cpC.width/2+cp.px, oy=cpC.height/2+cp.py;
+  ctx.save(); ctx.translate(ox,oy); ctx.scale(z,z);
+  ctx.beginPath();
+  if(cp.pshape==='square'){ ctx.rect(-s,-s,s*2,s*2); }
+  else if(cp.pshape==='rect'){ ctx.rect(-s,-s/2,s*2,s); }
+  else if(cp.pshape==='hex'){
+    for(let i=0;i<6;i++){const a=Math.PI/6+i*Math.PI/3; i?ctx.lineTo(Math.cos(a)*s,Math.sin(a)*s):ctx.moveTo(Math.cos(a)*s,Math.sin(a)*s);}
+    ctx.closePath();
+  } else if(cp.pshape==='tri'){
+    ctx.moveTo(0,-s*1.15); ctx.lineTo(s,-s*0.55); ctx.lineTo(-s,-s*0.55); ctx.closePath();
+  }
+  ctx.restore();
+}
+
+function cpRender(){
+  cpCtx.clearRect(0,0,cpC.width,cpC.height);
+  // Paper shadow
+  cpCtx.save();
+  cpCtx.shadowColor='rgba(0,0,0,0.1)'; cpCtx.shadowBlur=18; cpCtx.shadowOffsetY=4;
+  cpPaper(cpCtx); cpCtx.fillStyle=cp.pcolor; cpCtx.fill();
+  cpCtx.restore();
+  cpPaper(cpCtx); cpCtx.strokeStyle='rgba(0,0,0,0.25)'; cpCtx.lineWidth=1.5; cpCtx.stroke();
+
+  // Grid overlay (on top of paper, below crease lines)
+  cpDrawGridOnCtx(cpCtx);
+
+  const ox=cpC.width/2+cp.px, oy=cpC.height/2+cp.py, z=cp.zoom;
+  cpCtx.save(); cpCtx.translate(ox,oy); cpCtx.scale(z,z);
+
+  cp.lines.forEach(l=>drawCPLine(cpCtx,l));
+
+  if(cp.drag && cp.ds && cp.de && cp.tool==='line'){
+    const s=snapPt(...Object.values(s2w(cp.ds.x,cp.ds.y)));
+    const e=snapPt(...Object.values(s2w(cp.de.x,cp.de.y)));
+    drawCPLine(cpCtx,{p1:s,p2:e,lt:cp.lt},{alpha:0.55});
+    if(cp.mirror) drawCPLine(cpCtx,{p1:{x:-s.x,y:s.y},p2:{x:-e.x,y:e.y},lt:cp.lt},{alpha:0.3});
+  }
+
+  cpCtx.fillStyle='#C8603A';
+  cp.nodes.forEach(n=>{ cpCtx.beginPath(); cpCtx.arc(n.x,n.y,4/z,0,Math.PI*2); cpCtx.fill(); });
+  cpCtx.restore();
+
+  // Snap dot — show at nearest candidate within screen-space radius
+  const sd=$('snapDot');
+  if(cp._hover && cp.snap){
+    const w=s2w(cp._hover.x,cp._hover.y);
+    const sn=snapPt(w.x,w.y);
+    const screenDist=Math.hypot(sn.x-w.x, sn.y-w.y)*cp.zoom;
+    if(screenDist<14){
+      const sc=w2s(sn.x,sn.y);
+      sd.style.display='block'; sd.style.left=sc.x+'px'; sd.style.top=sc.y+'px';
+    } else sd.style.display='none';
+  } else sd.style.display='none';
+
+  $('cpBar').textContent=`工具: ${cpToolLabel()} · 折线类型: ${cpLTLabel()} · 折痕线: ${cp.lines.length} 条`;
+  $('cpZoom').textContent=Math.round(cp.zoom*100)+'%';
+}
+
+function drawCPLine(ctx,l,opts={}){
+  const st=LS[l.lt]||LS.valley;
+  const z=cp.zoom;
+  ctx.save();
+  ctx.globalAlpha=opts.alpha||1;
+  ctx.beginPath();
+  ctx.moveTo(l.p1.x,l.p1.y); ctx.lineTo(l.p2.x,l.p2.y);
+  ctx.strokeStyle=st.c; ctx.lineWidth=st.w/z;
+  ctx.setLineDash(st.d.map(d=>d/z));
+  ctx.lineCap='round'; ctx.stroke(); ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function cpToolLabel(){ return {line:'折痕线',select:'选择',erase:'橡皮擦',node:'节点'}[cp.tool]||''; }
+function cpLTLabel(){   return {valley:'谷折',mountain:'山折',crease:'辅助',border:'边界'}[cp.lt]||''; }
+
+// Mouse
+cpC.addEventListener('contextmenu',e=>e.preventDefault());
+
+cpC.addEventListener('wheel',e=>{
+  e.preventDefault();
+  cp.zoom=clamp(cp.zoom*(e.deltaY<0?1.1:1/1.1),0.12,6);
+  cpRender();
+},{passive:false});
+
+cpC.addEventListener('mousedown',e=>{
+  const pos={x:e.offsetX,y:e.offsetY};
+  // Middle button, right button, or Alt = pan
+  if(e.button===1 || e.button===2 || e.altKey){
+    cp.panning=true; cp.panBase={x:e.offsetX-cp.px,y:e.offsetY-cp.py}; return;
+  }
+  if(cp.tool==='line'){ cp.drag=true; cp.ds=pos; cp.de=pos; }
+  if(cp.tool==='node'){
+    const w=s2w(pos.x,pos.y); const sn=snapPt(w.x,w.y);
+    cp.nodes.push(sn); cpRender();
+  }
+  if(cp.tool==='erase') cpErase(pos);
+});
+cpC.addEventListener('mousemove',e=>{
+  const pos={x:e.offsetX,y:e.offsetY};
+  cp._hover=pos;
+  if(cp.panning){ cp.px=e.offsetX-cp.panBase.x; cp.py=e.offsetY-cp.panBase.y; cpRender(); return; }
+  if(cp.tool==='erase' && e.buttons) cpErase(pos);
+  if(cp.drag){
+    let ep={x:e.offsetX,y:e.offsetY};
+    if(e.shiftKey){
+      const sw=s2w(cp.ds.x,cp.ds.y), ew=s2w(ep.x,ep.y);
+      const dx=ew.x-sw.x,dy=ew.y-sw.y;
+      const a=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4);
+      const len=Math.hypot(dx,dy);
+      const sc=w2s(sw.x+Math.cos(a)*len,sw.y+Math.sin(a)*len);
+      ep=sc;
+    }
+    cp.de=ep; cpRender();
+  }
+  cpRender();
+});
+cpC.addEventListener('mouseup',e=>{
+  if(cp.panning){ cp.panning=false; return; }
+  if(cp.drag && cp.tool==='line'){
+    const s=snapPt(...Object.values(s2w(cp.ds.x,cp.ds.y)));
+    const en=snapPt(...Object.values(s2w(cp.de.x,cp.de.y)));
+    if(dist2(s,en)>2/cp.zoom){
+      const l={p1:s,p2:en,lt:cp.lt};
+      cp.lines.push(l); cp.hist.push([l]);
+      if(cp.mirror){ const ml={p1:{x:-s.x,y:s.y},p2:{x:-en.x,y:en.y},lt:cp.lt}; cp.lines.push(ml); }
+    }
+    cp.drag=false; cp.ds=cp.de=null; cpRender();
+  }
+});
+cpC.addEventListener('mouseleave',()=>{ cp._hover=null; $('snapDot').style.display='none'; cpRender(); });
+
+function cpErase(pos){
+  const w=s2w(pos.x,pos.y); const thr=10/cp.zoom;
+  const before=cp.lines.length;
+  cp.lines=cp.lines.filter(l=>{
+    const dx=l.p2.x-l.p1.x,dy=l.p2.y-l.p1.y,len2=dx*dx+dy*dy;
+    if(len2===0) return dist2(l.p1,w)>thr;
+    const t=clamp(((w.x-l.p1.x)*dx+(w.y-l.p1.y)*dy)/len2,0,1);
+    return Math.hypot(w.x-(l.p1.x+t*dx),w.y-(l.p1.y+t*dy))>thr;
+  });
+  if(cp.lines.length!==before) cpRender();
+}
+
+function setCPTool(t){
+  cp.tool=t;
+  document.querySelectorAll('[id^="ct-"]').forEach(b=>b.classList.remove('on'));
+  $('ct-'+t)&&$('ct-'+t).classList.add('on');
+  cpC.style.cursor=t==='erase'?'cell':t==='select'?'default':'crosshair';
+}
+function setLT(t){
+  cp.lt=t;
+  document.querySelectorAll('[id^="lt-"]').forEach(b=>b.classList.remove('on'));
+  $('lt-'+t).classList.add('on');
+}
+function setGrid(v){ cp.gridN=+v; $('cpGV').textContent=v; cpRender(); }
+function toggleSnap(){ cp.snap=!cp.snap; $('snapBtn').textContent=`⊕ 吸附: ${cp.snap?'开':'关'}`; }
+function toggleGrid(){ cp.gridVis=!cp.gridVis; $('gridBtn').textContent=cp.gridVis?'⊞ 网格: 开':'⊞ 网格: 关'; cpRender(); }
+function setPShape(v){ cp.pshape=v; cpRender(); }
+function setPColor(c,el){ cp.pcolor=c; document.querySelectorAll('#pcolorRow .chip').forEach(e=>e.classList.remove('on')); el.classList.add('on'); cpRender(); }
+function toggleMirror(){ cp.mirror=!cp.mirror; $('mirBtn').classList.toggle('on',cp.mirror); }
+function cpZoom(f){ cp.zoom=clamp(cp.zoom*f,0.12,6); cpRender(); }
+function cpReset(){ cp.zoom=1; cp.px=0; cp.py=0; cpRender(); }
+function cpUndo(){ if(cp.hist.length){ const h=cp.hist.pop(); cp.lines.splice(cp.lines.length-h.length); cpRender(); } }
+function cpClear(){ cp.lines=[]; cp.nodes=[]; cp.hist=[]; cpRender(); }
+
+function cpPreset(name){
+  cpClear();
+  const s=cp.SIZE/2;
+  const border=[
+    {p1:{x:-s,y:-s},p2:{x:s,y:-s},lt:'border'},{p1:{x:s,y:-s},p2:{x:s,y:s},lt:'border'},
+    {p1:{x:s,y:s},p2:{x:-s,y:s},lt:'border'},{p1:{x:-s,y:s},p2:{x:-s,y:-s},lt:'border'},
+  ];
+  const presets={
+    bird:[
+      {p1:{x:-s,y:-s},p2:{x:s,y:s},lt:'crease'},{p1:{x:s,y:-s},p2:{x:-s,y:s},lt:'crease'},
+      {p1:{x:0,y:-s},p2:{x:0,y:s},lt:'valley'},{p1:{x:-s,y:0},p2:{x:s,y:0},lt:'valley'},
+      {p1:{x:-s,y:-s},p2:{x:0,y:0},lt:'mountain'},{p1:{x:s,y:-s},p2:{x:0,y:0},lt:'mountain'},
+      {p1:{x:s,y:s},p2:{x:0,y:0},lt:'mountain'},{p1:{x:-s,y:s},p2:{x:0,y:0},lt:'mountain'},
+    ],
+    waterbomb:[
+      {p1:{x:-s,y:-s},p2:{x:s,y:s},lt:'valley'},{p1:{x:s,y:-s},p2:{x:-s,y:s},lt:'valley'},
+      {p1:{x:-s,y:0},p2:{x:s,y:0},lt:'mountain'},{p1:{x:0,y:-s},p2:{x:0,y:s},lt:'mountain'},
+    ],
+    fish:[
+      {p1:{x:0,y:-s},p2:{x:-s,y:s},lt:'valley'},{p1:{x:0,y:-s},p2:{x:s,y:s},lt:'valley'},
+      {p1:{x:-s,y:s},p2:{x:s,y:s},lt:'valley'},{p1:{x:0,y:-s},p2:{x:0,y:s*0.3},lt:'mountain'},
+      {p1:{x:-s*0.6,y:0},p2:{x:0,y:s*0.3},lt:'crease'},{p1:{x:s*0.6,y:0},p2:{x:0,y:s*0.3},lt:'crease'},
+    ],
+    frog:[
+      {p1:{x:-s,y:-s},p2:{x:s,y:s},lt:'crease'},{p1:{x:s,y:-s},p2:{x:-s,y:s},lt:'crease'},
+      {p1:{x:-s,y:0},p2:{x:s,y:0},lt:'mountain'},{p1:{x:0,y:-s},p2:{x:0,y:s},lt:'mountain'},
+      {p1:{x:-s,y:-s},p2:{x:0,y:0},lt:'valley'},{p1:{x:s,y:-s},p2:{x:0,y:0},lt:'valley'},
+      {p1:{x:s,y:s},p2:{x:0,y:0},lt:'valley'},{p1:{x:-s,y:s},p2:{x:0,y:0},lt:'valley'},
+      {p1:{x:-s/2,y:-s},p2:{x:-s,y:-s/2},lt:'crease'},{p1:{x:s/2,y:-s},p2:{x:s,y:-s/2},lt:'crease'},
+      {p1:{x:s/2,y:s},p2:{x:s,y:s/2},lt:'crease'},{p1:{x:-s/2,y:s},p2:{x:-s,y:s/2},lt:'crease'},
+    ]
+  };
+  cp.lines=[...border,...(presets[name]||[])];
+  cpRender();
+}
+
+function cpExportSVG(){
+  const s=cp.SIZE/2;
+  let svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-s} ${-s} ${s*2} ${s*2}">`;
+  svg+=`<rect x="${-s}" y="${-s}" width="${s*2}" height="${s*2}" fill="${cp.pcolor}" stroke="#888" stroke-width="1"/>`;
+  cp.lines.forEach(l=>{
+    const st=LS[l.lt];
+    svg+=`<line x1="${l.p1.x.toFixed(2)}" y1="${l.p1.y.toFixed(2)}" x2="${l.p2.x.toFixed(2)}" y2="${l.p2.y.toFixed(2)}" stroke="${st.c}" stroke-width="${st.w}"${st.d.length?` stroke-dasharray="${st.d.join(',')}"`:''}/>`;
+  });
+  svg+='</svg>';
+  const a=document.createElement('a');
+  a.href='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  a.download='origami-cp.svg'; a.click();
+}
+
+// ─────────────────────────────────────────────────────
+//  MODULE 2 — SNOWFLAKE DESIGNER
+// ─────────────────────────────────────────────────────
+const sf = {
+  strokes:[], cur:null,
+  tool:'freehand', n:4, mirror:true,
+  color:'#2B2622', w:2,
+  bg:'light',
+  drawing:false,
+};
+const SF_BG = {light:'#F7F5F0',dark:'#1a1a2e',paper:'#F3EED9',blue:'#0F172A'};
+let sfOX=0, sfOY=0, sfR=0;
+
+const sfC   = $('sfCanvas'), sfCtx = sfC.getContext('2d');
+const sfMC  = $('sfMini'),   sfMCtx= sfMC.getContext('2d');
+
+function sfResize(){
+  sfC.width=$('sfArea').clientWidth; sfC.height=$('sfArea').clientHeight;
+  sfOX=sfC.width/2; sfOY=sfC.height/2;
+  sfR=Math.min(sfC.width,sfC.height)*0.38;
+  sfDraw();
+}
+
+function sfDraw(){
+  const w=sfC.width, h=sfC.height;
+  sfCtx.clearRect(0,0,w,h);
+  sfCtx.fillStyle=SF_BG[sf.bg]||'#F7F5F0'; sfCtx.fillRect(0,0,w,h);
+
+  const angle=2*Math.PI/sf.n;
+  const isDark=sf.bg==='dark'||sf.bg==='blue';
+
+  // Sector guide
+  sfCtx.save(); sfCtx.translate(sfOX,sfOY);
+  // Active sector highlight
+  sfCtx.beginPath(); sfCtx.moveTo(0,0);
+  sfCtx.arc(0,0,sfR,-Math.PI/2,-Math.PI/2+angle); sfCtx.closePath();
+  sfCtx.fillStyle=isDark?'rgba(255,255,255,0.035)':'rgba(200,96,58,0.035)'; sfCtx.fill();
+  // Divider lines
+  sfCtx.setLineDash([4,4]);
+  sfCtx.strokeStyle=isDark?'rgba(255,255,255,.12)':'rgba(0,0,0,.12)'; sfCtx.lineWidth=1;
+  for(let i=0;i<sf.n;i++){
+    sfCtx.beginPath(); sfCtx.moveTo(0,0);
+    sfCtx.lineTo(Math.cos(-Math.PI/2+i*angle)*sfR,Math.sin(-Math.PI/2+i*angle)*sfR);
+    sfCtx.stroke();
+  }
+  sfCtx.setLineDash([]);
+  sfCtx.beginPath(); sfCtx.arc(0,0,sfR,0,Math.PI*2);
+  sfCtx.strokeStyle=isDark?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)'; sfCtx.stroke();
+  sfCtx.restore();
+
+  // Draw strokes + live stroke
+  const all=[...sf.strokes, ...(sf.cur?[sf.cur]:[])];
+  sfDrawAll(sfCtx, all);
+
+  // Mini
+  sfDrawMini();
+  $('sfBar').textContent=`${sf.n} 重对称${sf.mirror?' + 镜像':''} · 笔触数: ${sf.strokes.length}`;
+}
+
+function sfDrawAll(ctx, strokes){
+  const angle=2*Math.PI/sf.n;
+  ctx.save(); ctx.translate(sfOX,sfOY);
+  for(let i=0;i<sf.n;i++){
+    ctx.save(); ctx.rotate(-Math.PI/2+i*angle);
+    strokes.forEach(s=>sfDrawStroke(ctx,s));
+    if(sf.mirror){ ctx.save(); ctx.scale(-1,1); strokes.forEach(s=>sfDrawStroke(ctx,s)); ctx.restore(); }
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function sfDrawStroke(ctx,s){
+  if(!s||!s.pts||s.pts.length<2) return;
+  ctx.beginPath();
+  ctx.strokeStyle=s.color; ctx.lineWidth=s.w; ctx.lineCap='round'; ctx.lineJoin='round';
+  if(s.tool==='arc' && s.pts.length>=3){
+    const [a,b,c]=s.pts;
+    ctx.moveTo(a.x,a.y); ctx.quadraticCurveTo(b.x,b.y,c.x,c.y);
+  } else {
+    ctx.moveTo(s.pts[0].x,s.pts[0].y);
+    s.pts.forEach((p,i)=>{ if(i) ctx.lineTo(p.x,p.y); });
+  }
+  ctx.stroke();
+}
+
+function sfDrawMini(){
+  const w=sfMC.width,h=sfMC.height;
+  sfMCtx.clearRect(0,0,w,h);
+  sfMCtx.fillStyle=SF_BG[sf.bg]; sfMCtx.fillRect(0,0,w,h);
+
+  const sc=w/(sfR*2), angle=2*Math.PI/sf.n;
+  sfMCtx.save(); sfMCtx.translate(w/2,h/2); sfMCtx.scale(sc,sc);
+  for(let i=0;i<sf.n;i++){
+    sfMCtx.save(); sfMCtx.rotate(-Math.PI/2+i*angle);
+    sf.strokes.forEach(s=>sfDrawStroke(sfMCtx,s));
+    if(sf.mirror){ sfMCtx.save(); sfMCtx.scale(-1,1); sf.strokes.forEach(s=>sfDrawStroke(sfMCtx,s)); sfMCtx.restore(); }
+    sfMCtx.restore();
+  }
+  sfMCtx.restore();
+}
+
+function sfToLocal(ex,ey){ return {x:ex-sfOX,y:ey-sfOY}; }
+
+sfC.addEventListener('mousedown',e=>{
+  const p=sfToLocal(e.offsetX,e.offsetY);
+  if(sf.tool==='erase'){ sfErase(p); return; }
+  sf.drawing=true;
+  sf.cur={pts:[p],color:sf.color,w:sf.w,tool:sf.tool};
+});
+sfC.addEventListener('mousemove',e=>{
+  if(!sf.drawing||!sf.cur) return;
+  const p=sfToLocal(e.offsetX,e.offsetY);
+  if(sf.tool==='freehand') sf.cur.pts.push(p);
+  else if(sf.tool==='line') sf.cur.pts=[sf.cur.pts[0],p];
+  else if(sf.tool==='arc'){
+    if(sf.cur.pts.length<3) sf.cur.pts=[sf.cur.pts[0],p,p];
+    else sf.cur.pts[1]=p;
+  }
+  sfDraw();
+});
+sfC.addEventListener('mouseup',()=>{
+  if(!sf.drawing) return;
+  sf.drawing=false;
+  if(sf.cur && sf.cur.pts.length>=2){
+    sf.strokes.push({...sf.cur,pts:[...sf.cur.pts]});
+  }
+  sf.cur=null; sfDraw();
+});
+sfC.addEventListener('mouseleave',()=>{
+  if(sf.drawing){
+    sf.drawing=false;
+    if(sf.cur && sf.cur.pts.length>=2) sf.strokes.push({...sf.cur,pts:[...sf.cur.pts]});
+    sf.cur=null; sfDraw();
+  }
+});
+
+function sfErase(p){
+  sf.strokes=sf.strokes.filter(s=>!s.pts.some(pt=>Math.hypot(pt.x-p.x,pt.y-p.y)<14));
+  sfDraw();
+}
+function setSym(n){
+  sf.n=+n; $('symV').textContent=n; $('symR').value=n;
+  document.querySelectorAll('.sychip').forEach(c=>c.classList.toggle('on',+c.dataset.n===n));
+  sfDraw();
+}
+function setSFT(t){
+  sf.tool=t;
+  document.querySelectorAll('[id^="sft-"]').forEach(b=>b.classList.remove('on'));
+  $('sft-'+t)&&$('sft-'+t).classList.add('on');
+  sfC.style.cursor=t==='erase'?'cell':'crosshair';
+}
+function setSFC(c,el){ sf.color=c; document.querySelectorAll('#sfCR .chip').forEach(e=>e.classList.remove('on')); el.classList.add('on'); }
+function setSFBg(b,el){ sf.bg=b; document.querySelectorAll('[id^="sfb-"]').forEach(e=>{ e.style.outline=e.id==='sfb-'+b?'2px solid var(--ink)':'none'; e.style.outlineOffset='2px'; }); sfDraw(); }
+function sfUndo(){ sf.strokes.pop(); sfDraw(); }
+function sfClear(){ sf.strokes=[]; sf.cur=null; sfDraw(); }
+function sfExportPNG(){
+  const a=document.createElement('a');
+  a.href=sfC.toDataURL('image/png'); a.download='snowflake.png'; a.click();
+}
+
+// ─────────────────────────────────────────────────────
+//  MODULE 3 — FOLD SIMULATION
+// ─────────────────────────────────────────────────────
+const sim = {
+  model:'valley', step:0, total:1,
+  auto:false, autoT:null, speed:1,
+  angle:0, rotX:0.35, rotY:-0.4,
+  dragging:false, lastDrag:null,
+};
+
+const simC=$('simCanvas'), simCtx=simC.getContext('2d');
+
+// Model definitions — each step has a desc and an array of crease lines
+const MODELS={
+  valley:{name:'简单谷折',steps:[
+    {desc:'<strong>准备纸张</strong><br>将正方形纸张正面朝上放平。',creases:[]},
+    {desc:'<strong>标记谷折线</strong><br>找到纸张水平中心线，这将是谷折折痕。',creases:[{p1:[.1,.5],p2:[.9,.5],t:'valley'}]},
+    {desc:'<strong>完成谷折 ✓</strong><br>沿折痕将下半部分向上翻折，折完后会看到两层叠加。',creases:[{p1:[.1,.5],p2:[.9,.5],t:'valley'}]},
+  ]},
+  mountain:{name:'简单山折',steps:[
+    {desc:'<strong>准备纸张</strong><br>将正方形纸张背面朝上放平。',creases:[]},
+    {desc:'<strong>标记山折线</strong><br>找到纸张垂直中心线，这将是山折折痕。',creases:[{p1:[.5,.1],p2:[.5,.9],t:'mountain'}]},
+    {desc:'<strong>完成山折 ✓</strong><br>沿折痕将右半部分向背面折叠。',creases:[{p1:[.5,.1],p2:[.5,.9],t:'mountain'}]},
+  ]},
+  diag:{name:'对角预折痕',steps:[
+    {desc:'<strong>正方形纸张</strong><br>纸张正面朝上放置，旋转为菱形方向。',creases:[]},
+    {desc:'<strong>第一条对角谷折</strong><br>将右上角折至左下角，形成对角折痕后展开。',creases:[{p1:[0,0],p2:[1,1],t:'valley'}]},
+    {desc:'<strong>第二条对角谷折</strong><br>将左上角折至右下角，形成另一对角折痕后展开。',creases:[{p1:[0,0],p2:[1,1],t:'valley'},{p1:[1,0],p2:[0,1],t:'valley'}]},
+    {desc:'<strong>完成预折痕 ✓</strong><br>展开纸张，可见十字形及对角线共4条预折痕。',creases:[{p1:[0,0],p2:[1,1],t:'crease'},{p1:[1,0],p2:[0,1],t:'crease'},{p1:[.5,0],p2:[.5,1],t:'crease'},{p1:[0,.5],p2:[1,.5],t:'crease'}]},
+  ]},
+  prelim:{name:'初步基底',steps:[
+    {desc:'<strong>正方形纸张</strong><br>纸张正面朝上，菱形方向放置。',creases:[]},
+    {desc:'<strong>水平对折</strong><br>将底角折至顶角，形成半菱形。',creases:[{p1:[0,.5],p2:[1,.5],t:'valley'}]},
+    {desc:'<strong>再次对折</strong><br>将右角折至左角，形成四分之一菱形。',creases:[{p1:[0,.5],p2:[1,.5],t:'valley'},{p1:[.5,0],p2:[.5,1],t:'valley'}]},
+    {desc:'<strong>撑开压平</strong><br>撑开上方开口，利用折痕向下压平成小方形。',creases:[{p1:[0,0],p2:[1,1],t:'valley'},{p1:[1,0],p2:[0,1],t:'valley'},{p1:[0,.5],p2:[1,.5],t:'valley'},{p1:[.5,0],p2:[.5,1],t:'valley'}]},
+    {desc:'<strong>完成初步基底 ✓</strong><br>翻面，对背面重复步骤，完成完整初步基底！',creases:[{p1:[0,0],p2:[1,1],t:'crease'},{p1:[1,0],p2:[0,1],t:'crease'},{p1:[0,.5],p2:[1,.5],t:'crease'},{p1:[.5,0],p2:[.5,1],t:'crease'}]},
+  ]},
+  waterbomb:{name:'水弹基底',steps:[
+    {desc:'<strong>纸张背面朝上</strong><br>确认背面朝上放置，旋转为菱形方向。',creases:[]},
+    {desc:'<strong>对角线山折</strong><br>背面朝上，沿两条对角线各山折一次后展开。',creases:[{p1:[0,0],p2:[1,1],t:'mountain'},{p1:[1,0],p2:[0,1],t:'mountain'}]},
+    {desc:'<strong>中线谷折</strong><br>翻至正面，沿水平和垂直中线各谷折一次后展开。',creases:[{p1:[0,0],p2:[1,1],t:'mountain'},{p1:[1,0],p2:[0,1],t:'mountain'},{p1:[0,.5],p2:[1,.5],t:'valley'},{p1:[.5,0],p2:[.5,1],t:'valley'}]},
+    {desc:'<strong>完成水弹基底 ✓</strong><br>利用所有折痕，将四角向内压折形成扁平三角形。',creases:[{p1:[0,0],p2:[1,1],t:'mountain'},{p1:[1,0],p2:[0,1],t:'mountain'},{p1:[0,.5],p2:[1,.5],t:'valley'},{p1:[.5,0],p2:[.5,1],t:'valley'}]},
+  ]},
+  bird:{name:'鸟基底',steps:[
+    {desc:'<strong>从初步基底开始</strong><br>完成初步基底，菱形开口朝下。',creases:[]},
+    {desc:'<strong>前瓣向中线折</strong><br>将正面左右两瓣的侧边折向中线。',creases:[{p1:[0,.5],p2:[.5,0],t:'valley'},{p1:[1,.5],p2:[.5,0],t:'valley'}]},
+    {desc:'<strong>顶角下折</strong><br>将顶角沿步骤2形成的折痕位置向下翻折。',creases:[{p1:[0,.5],p2:[.5,0],t:'valley'},{p1:[1,.5],p2:[.5,0],t:'valley'},{p1:[.1,.1],p2:[.9,.35],t:'valley'}]},
+    {desc:'<strong>展开复位</strong><br>将步骤2、3所有折痕展开，让纸回到扁平状态。',creases:[{p1:[0,.5],p2:[.5,0],t:'crease'},{p1:[1,.5],p2:[.5,0],t:'crease'},{p1:[.1,.1],p2:[.9,.35],t:'crease'}]},
+    {desc:'<strong>底角内折拉伸</strong><br>撑开底层，利用折痕将底角向上拉伸，压平为鸟基底标准形状。',creases:[{p1:[0,.5],p2:[.5,0],t:'valley'},{p1:[1,.5],p2:[.5,0],t:'valley'},{p1:[.5,0],p2:[.5,1],t:'valley'}]},
+    {desc:'<strong>完成鸟基底 ✓</strong><br>翻面重复，得到经典鸟基底！可用于折纸鹤、鸟、昆虫等。',creases:[{p1:[0,0],p2:[1,1],t:'crease'},{p1:[1,0],p2:[0,1],t:'crease'},{p1:[.5,0],p2:[.5,1],t:'valley'},{p1:[0,.5],p2:[1,.5],t:'valley'}]},
+  ]},
+  crane:{name:'纸鹤',pcolor:'#FECACA',steps:[
+    {desc:'<strong>从鸟基底开始</strong><br>完成鸟基底，细长菱形，四个尖角朝外。',creases:[]},
+    {desc:'<strong>两前角折向中线</strong><br>将菱形左右两侧尖角分别折向垂直中线。',creases:[{p1:[.15,.5],p2:[.5,.15],t:'valley'},{p1:[.85,.5],p2:[.5,.15],t:'valley'}]},
+    {desc:'<strong>翻面后同样操作</strong><br>翻到背面，重复步骤2。两侧同样折向中线。',creases:[{p1:[.15,.5],p2:[.5,.15],t:'valley'},{p1:[.85,.5],p2:[.5,.15],t:'valley'},{p1:[.5,.5],p2:[.5,.9],t:'mountain'}]},
+    {desc:'<strong>内反折下方两角</strong><br>将下方两个细长角（翅膀根部）分别向外内反折，形成头和尾。',creases:[{p1:[.3,.65],p2:[.7,.65],t:'valley'},{p1:[.35,.75],p2:[.65,.75],t:'mountain'}]},
+    {desc:'<strong>头部下折</strong><br>将一侧尖角顶端向下弯折约30°，形成鸟头和鸟喙。',creases:[{p1:[.42,.22],p2:[.58,.28],t:'valley'}]},
+    {desc:'<strong>展开翅膀</strong><br>轻轻拉开两侧翅膀，使身体自然膨起。',creases:[{p1:[.1,.5],p2:[.5,.1],t:'valley'},{p1:[.9,.5],p2:[.5,.1],t:'valley'}]},
+    {desc:'<strong>纸鹤完成 🎉</strong><br>轻吹底部孔洞将身体撑圆。一只经典日式纸鹤完成！',creases:[{p1:[0,0],p2:[1,1],t:'crease'},{p1:[1,0],p2:[0,1],t:'crease'},{p1:[0,.5],p2:[1,.5],t:'crease'},{p1:[.5,0],p2:[.5,1],t:'crease'}]},
+  ]},
+  shuriken:{name:'手里剑',pcolor:'#E9D5FF',steps:[
+    {desc:'<strong>准备两张纸条</strong><br>将正方形纸对折成1:2长条，取两张（颜色不同）。',creases:[]},
+    {desc:'<strong>第一张折L形</strong><br>白色纸条从中点谷折，两端朝下，呈L形。',creases:[{p1:[.5,0],p2:[.5,1],t:'valley'}]},
+    {desc:'<strong>第二张反向折</strong><br>彩色纸条从中点谷折，但方向相反，两端朝上，呈反L形。',creases:[{p1:[.5,0],p2:[.5,1],t:'valley'},{p1:[0,.5],p2:[1,.5],t:'mountain'}]},
+    {desc:'<strong>交叉放置</strong><br>将两个L形纸片交叉叠放，白色在上，准备互相插接。',creases:[{p1:[.25,0],p2:[.75,1],t:'crease'},{p1:[.75,0],p2:[.25,1],t:'crease'}]},
+    {desc:'<strong>相互插入锁合</strong><br>将白色纸片的端角插入彩色夹层；彩色端角插入白色夹层。',creases:[{p1:[0,.5],p2:[1,.5],t:'valley'},{p1:[.5,0],p2:[.5,1],t:'valley'}]},
+    {desc:'<strong>手里剑完成 ⭐</strong><br>调整形状使左右对称。双色六芒星手里剑完成！',creases:[{p1:[0,0],p2:[1,1],t:'valley'},{p1:[1,0],p2:[0,1],t:'valley'},{p1:[0,.5],p2:[1,.5],t:'valley'},{p1:[.5,0],p2:[.5,1],t:'valley'}]},
+  ]},
+  frog:{name:'跳跳蛙',pcolor:'#BBF7D0',steps:[
+    {desc:'<strong>正方形纸张</strong><br>取绿色正方形纸，背面朝上，旋转为菱形方向放置。',creases:[]},
+    {desc:'<strong>四角折中心</strong><br>将纸张四个角分别折向中心点后展开，形成对角折痕。',creases:[{p1:[0,.5],p2:[1,.5],t:'crease'},{p1:[.5,0],p2:[.5,1],t:'crease'}]},
+    {desc:'<strong>向内压折四角</strong><br>利用折痕，将四个角向内压折，形成较小正方形（蛙基底）。',creases:[{p1:[0,0],p2:[1,1],t:'valley'},{p1:[1,0],p2:[0,1],t:'valley'},{p1:[0,.5],p2:[1,.5],t:'valley'},{p1:[.5,0],p2:[.5,1],t:'valley'}]},
+    {desc:'<strong>折出前腿</strong><br>将上方两个小三角分别向左右展开折出，形成前腿。',creases:[{p1:[.1,.3],p2:[.4,.5],t:'valley'},{p1:[.9,.3],p2:[.6,.5],t:'valley'}]},
+    {desc:'<strong>跳跳蛙完成 🐸</strong><br>折叠后腿并弯出后腿膝部。按压青蛙背部后松手，青蛙就会跳起来！',creases:[{p1:[0,0],p2:[1,1],t:'crease'},{p1:[.1,.3],p2:[.4,.5],t:'valley'},{p1:[.6,.5],p2:[.9,.3],t:'valley'},{p1:[.5,0],p2:[.5,.5],t:'valley'}]},
+  ]},
+};
+
+function simResize(){
+  simC.width=$('simArea').clientWidth; simC.height=$('simArea').clientHeight;
+}
+
+function loadSim(name){
+  sim.model=name; sim.step=0; sim.angle=0;
+  if(sim.autoT){ clearInterval(sim.autoT); sim.autoT=null; sim.auto=false; $('autoBtn').textContent='▶ 自动'; }
+  const m=MODELS[name];
+  if(!m) return;
+  sim.total=m.steps.length;
+  $('simModelLbl').textContent=m.name;
+  $('simAnR').value=0; $('simAnV').textContent='0°';
+  simUpdateUI(); simDraw();
+}
+
+function simUpdateUI(){
+  const m=MODELS[sim.model]; if(!m) return;
+  const dots=$('stepDots'); dots.innerHTML='';
+  for(let i=0;i<m.steps.length;i++){
+    const d=document.createElement('div');
+    d.className='sdot'+(i<sim.step?' done':i===sim.step?' cur':'');
+    dots.appendChild(d);
+  }
+  $('stepLbl').textContent=`${sim.step+1} / ${m.steps.length}`;
+  $('progFill').style.width=((sim.step+1)/m.steps.length*100)+'%';
+  $('foldDesc').innerHTML=m.steps[sim.step]?.desc||'';
+  $('simPrev').disabled=sim.step===0;
+  $('simNext').disabled=sim.step>=m.steps.length-1;
+  $('simNext').textContent=sim.step>=m.steps.length-1?'✓ 已完成':'下一步 →';
+}
+
+function simGo(d){
+  const m=MODELS[sim.model]; if(!m) return;
+  const ns=clamp(sim.step+d,0,m.steps.length-1);
+  if(ns===sim.step) return;
+  sim.step=ns;
+  simAnimate();
+}
+function simReset(){ sim.step=0; sim.angle=0; $('simAnR').value=0; $('simAnV').textContent='0°'; simUpdateUI(); simDraw(); }
+function simToggleAuto(){
+  sim.auto=!sim.auto;
+  $('autoBtn').textContent=sim.auto?'⏸ 暂停':'▶ 自动';
+  if(sim.auto){
+    sim.autoT=setInterval(()=>{
+      const m=MODELS[sim.model];
+      if(!m||sim.step>=m.steps.length-1){ sim.auto=false; clearInterval(sim.autoT); $('autoBtn').textContent='▶ 自动'; return; }
+      sim.step++; simAnimate();
+    },1600/sim.speed);
+  } else { clearInterval(sim.autoT); }
+}
+function setView(rx,ry){ sim.rotX=rx; sim.rotY=ry; simDraw(); }
+
+let animRAF=null, animT=0;
+function simAnimate(){
+  cancelAnimationFrame(animRAF); animT=0;
+  function frame(){
+    animT+=0.05*sim.speed;
+    sim.angle=Math.round(lerp(0,180,clamp(animT,0,1)));
+    $('simAnR').value=sim.angle; $('simAnV').textContent=sim.angle+'°';
+    simDraw(); simUpdateUI();
+    if(animT<1) animRAF=requestAnimationFrame(frame);
+  }
+  animRAF=requestAnimationFrame(frame);
+}
+
+function simDraw(){
+  const w=simC.width||800, h=simC.height||600;
+  simCtx.clearRect(0,0,w,h);
+
+  // Subtle grid background
+  simCtx.fillStyle='#F7F5F0'; simCtx.fillRect(0,0,w,h);
+  simCtx.strokeStyle='rgba(0,0,0,.04)'; simCtx.lineWidth=1;
+  for(let x=0;x<w;x+=40){ simCtx.beginPath(); simCtx.moveTo(x,0); simCtx.lineTo(x,h); simCtx.stroke(); }
+  for(let y=0;y<h;y+=40){ simCtx.beginPath(); simCtx.moveTo(0,y); simCtx.lineTo(w,y); simCtx.stroke(); }
+
+  const m=MODELS[sim.model];
+  if(!m){
+    simCtx.fillStyle='#B5AFA6'; simCtx.font='15px sans-serif'; simCtx.textAlign='center';
+    simCtx.fillText('← 请从左侧选择折纸模型',w/2,h/2); return;
+  }
+
+  const st=m.steps[sim.step]; if(!st) return;
+  const S=Math.min(w,h)*0.46;
+  const cx=w/2+40, cy=h/2;
+  const rx=sim.rotX, ry=sim.rotY;
+
+  function proj(x,y,z){
+    const cosRY=Math.cos(ry), sinRY=Math.sin(ry);
+    const cosRX=Math.cos(rx), sinRX=Math.sin(rx);
+    const rx1=x*cosRY-z*sinRY, rz1=x*sinRY+z*cosRY;
+    const ry1=y*cosRX-rz1*sinRX, rz2=y*sinRX+rz1*cosRX;
+    const fov=900, sc=fov/(fov+rz2*80);
+    return {x:cx+rx1*S*sc, y:cy+ry1*S*sc, z:rz2};
+  }
+
+  const pcolor=m.pcolor||'#FAFAF8';
+  const foldT=clamp(sim.angle/180,0,1);
+
+  // Draw base paper quad
+  const corners=[[-0.5,-0.5],[0.5,-0.5],[0.5,0.5],[-0.5,0.5]];
+  const projected=corners.map(c=>proj(c[0],c[1],0));
+
+  if($('showShadow').checked){
+    simCtx.save(); simCtx.shadowColor='rgba(0,0,0,.14)'; simCtx.shadowBlur=22; simCtx.shadowOffsetY=8;
+    simCtx.beginPath(); projected.forEach((p,i)=>i?simCtx.lineTo(p.x,p.y):simCtx.moveTo(p.x,p.y));
+    simCtx.closePath(); simCtx.fillStyle=pcolor; simCtx.fill(); simCtx.restore();
+  }
+  simCtx.beginPath(); projected.forEach((p,i)=>i?simCtx.lineTo(p.x,p.y):simCtx.moveTo(p.x,p.y));
+  simCtx.closePath(); simCtx.fillStyle=pcolor; simCtx.fill();
+  simCtx.strokeStyle='rgba(0,0,0,.22)'; simCtx.lineWidth=1.5; simCtx.stroke();
+
+  // Folded flap (if angle > 0 and step > 0)
+  if(sim.step>0 && sim.angle>0){
+    const foldAngle=foldT*Math.PI;
+    const cosA=Math.cos(foldAngle), sinA=Math.sin(foldAngle);
+    // Simple flap: fold top half along y=0 axis
+    const flapCorners=[[-0.5,-0.5],[0.5,-0.5],[0.5,0],[-0.5,0]];
+    const fproj=flapCorners.map(c=>{
+      const ny=c[1]-0;
+      const foldedY=0+ny*cosA, foldedZ=ny*sinA;
+      return proj(c[0],foldedY,foldedZ);
+    });
+    simCtx.beginPath(); fproj.forEach((p,i)=>i?simCtx.lineTo(p.x,p.y):simCtx.moveTo(p.x,p.y));
+    simCtx.closePath();
+    simCtx.fillStyle=lightenColor(pcolor,0.85);
+    simCtx.fill();
+    simCtx.strokeStyle='rgba(0,0,0,.18)'; simCtx.lineWidth=1.5; simCtx.stroke();
+  }
+
+  // Crease lines
+  if($('showLines').checked){
+    (st.creases||[]).forEach(cr=>{
+      const p1=proj(cr.p1[0]-.5,cr.p1[1]-.5,0.001);
+      const p2=proj(cr.p2[0]-.5,cr.p2[1]-.5,0.001);
+      const ls=LS[cr.t]||LS.crease;
+      simCtx.beginPath(); simCtx.moveTo(p1.x,p1.y); simCtx.lineTo(p2.x,p2.y);
+      simCtx.strokeStyle=ls.c; simCtx.lineWidth=2.2;
+      simCtx.setLineDash(ls.d); simCtx.lineCap='round'; simCtx.stroke(); simCtx.setLineDash([]);
+    });
+  }
+
+  // Center dot
+  const cpt=proj(0,0,0);
+  simCtx.beginPath(); simCtx.arc(cpt.x,cpt.y,3,0,Math.PI*2);
+  simCtx.fillStyle='rgba(200,96,58,.5)'; simCtx.fill();
+
+  // Info
+  simCtx.fillStyle='#B5AFA6'; simCtx.font='12px sans-serif'; simCtx.textAlign='left';
+  simCtx.fillText(`${m.name}  ·  步骤 ${sim.step+1} / ${m.steps.length}  ·  折叠角度 ${sim.angle}°`, 20, h-18);
+  $('simBar').textContent=`${m.name} · 步骤 ${sim.step+1}/${m.steps.length} · 拖拽旋转3D视角`;
+}
+
+function lightenColor(hex, amount){
+  const num=parseInt(hex.replace('#',''),16);
+  const r=clamp((num>>16)+Math.round(255*amount),0,255);
+  const g=clamp(((num>>8)&0xFF)+Math.round(255*amount),0,255);
+  const b=clamp((num&0xFF)+Math.round(255*amount),0,255);
+  const rh=r.toString(16).padStart(2,'0');
+  const gh=g.toString(16).padStart(2,'0');
+  const bh=b.toString(16).padStart(2,'0');
+  return `#${rh}${gh}${bh}`;
+}
+
+// Drag to rotate
+simC.addEventListener('mousedown',e=>{ sim.dragging=true; sim.lastDrag={x:e.offsetX,y:e.offsetY}; });
+simC.addEventListener('mousemove',e=>{
+  if(!sim.dragging) return;
+  sim.rotY+=(e.offsetX-sim.lastDrag.x)*0.009;
+  sim.rotX+=(e.offsetY-sim.lastDrag.y)*0.009;
+  sim.lastDrag={x:e.offsetX,y:e.offsetY};
+  simDraw();
+});
+simC.addEventListener('mouseup',()=>sim.dragging=false);
+simC.addEventListener('mouseleave',()=>sim.dragging=false);
+
+// ─────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  cpResize();
+  window.addEventListener('resize',()=>{
+    const v=document.querySelector('.tab.on').dataset.v;
+    if(v==='cp') cpResize();
+    if(v==='sf') sfResize();
+    if(v==='sim') simResize();
+  });
+});
+</script>
+</body>
+</html>

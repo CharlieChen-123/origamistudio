@@ -1,0 +1,51 @@
+{
+  "file_spec": 1.2,
+  "file_creator": "OE3D .ori decoder",
+  "file_title": "squarebase",
+  "frame_title": "squarebase",
+  "vertices_coords": [
+    [
+      0.0,
+      400
+    ],
+    [
+      400.0,
+      0
+    ],
+    [
+      200.0,
+      0
+    ],
+    [
+      200.0,
+      400
+    ],
+    [
+      0,
+      200.0
+    ],
+    [
+      400,
+      200.0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      4,
+      5
+    ]
+  ],
+  "edges_assignment": [
+    "V",
+    "V",
+    "V"
+  ]
+}

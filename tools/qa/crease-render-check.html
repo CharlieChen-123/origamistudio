@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><title>Valley dash regression</title>
+<style>body{font:15px system-ui;margin:24px;background:#f0f2ec;color:#263d38}canvas{background:#fff;border:1px solid #ddd;display:block;margin:12px 0}button{padding:10px}pre{white-space:pre-wrap}</style>
+<h1>Valley dash regression</h1><p>Left: continuous geometry. Right: 1,200 tiny reversed fragments. Same colors, dash lengths and gaps.</p>
+<button data-scale=".5">50% zoom</button> <button data-scale="1">100% zoom</button> <button data-scale="1.6">160% zoom</button> <button id="print">A4 preview</button>
+<canvas id="canvas" width="1100" height="540"></canvas><pre id="report"></pre>
+<script src="../../assets/crease-render.js"></script><script>
+const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
+const base=[{lt:'valley',p1:{x:-170,y:-170},p2:{x:130,y:130}},{lt:'valley',p1:{x:-170,y:60},p2:{x:160,y:-65}},{lt:'valley',p1:{x:30,y:-170},p2:{x:30,y:170}}];
+const fragments=base.flatMap(l=>Array.from({length:400},(_,i)=>({lt:l.lt,p1:{x:l.p1.x+(l.p2.x-l.p1.x)*(i+1)/400,y:l.p1.y+(l.p2.y-l.p1.y)*(i+1)/400},p2:{x:l.p1.x+(l.p2.x-l.p1.x)*i/400,y:l.p1.y+(l.p2.y-l.p1.y)*i/400}})));
+function draw(scale,print=false){ctx.clearRect(0,0,1100,540);[base,fragments].forEach((lines,i)=>{ctx.save();ctx.translate(275+i*550,270);ctx.scale(scale,scale);OrigamiCreaseRender.mergeValleys(lines).forEach(l=>OrigamiCreaseRender.stroke(ctx,l,{scale,color:'#2563EB',widthPx:print?2.3:2.4,dashPx:print?17:11,gapPx:print?9:8}));OrigamiCreaseRender.stroke(ctx,{p1:{x:-170,y:170},p2:{x:170,y:-170}},{scale,color:'#EF4444',widthPx:print?2.75:2});ctx.restore();});document.querySelector('#report').textContent=`${print?'A4 color / dash preview':Math.round(scale*100)+'% zoom'} · Imported fragments: ${fragments.length} · consolidated strokes: ${OrigamiCreaseRender.mergeValleys(fragments).length}`;}
+document.querySelectorAll('[data-scale]').forEach(b=>b.onclick=()=>draw(Number(b.dataset.scale)));document.querySelector('#print').onclick=()=>draw(1,true);draw(1);
+</script>

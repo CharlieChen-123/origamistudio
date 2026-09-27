@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-30 -30 460 460">
+<rect x="0" y="0" width="400" height="400" fill="#F5F0E8" stroke="#999" stroke-width="1"/>
+<line x1="0.0" y1="0.0" x2="400.0" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="200.0" y1="0.0" x2="200.0" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="0.0" y1="200.0" x2="400.0" y2="200.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="117.2" y1="0.0" x2="117.2" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="282.0" y1="0.0" x2="282.0" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="199.7" y1="0.0" x2="199.7" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="165.6" y1="0.0" x2="165.6" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="234.1" y1="0.0" x2="234.1" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="119.2" y1="0.0" x2="400.0" y2="118.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="280.9" y1="0.0" x2="0.0" y2="118.3" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="281.7" y1="0.0" x2="0.0" y2="117.9" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="216.1" y1="0.0" x2="216.1" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="183.4" y1="0.0" x2="183.4" y2="400.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="78.4" y1="0.0" x2="400.0" y2="91.0" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="322.8" y1="0.0" x2="0.0" y2="90.7" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="0.0" y1="141.7" x2="400.0" y2="141.7" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="91.0" y1="0.0" x2="400.0" y2="173.9" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="116.6" y1="0.0" x2="400.0" y2="149.1" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="310.8" y1="0.0" x2="0.0" y2="171.8" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="284.4" y1="0.0" x2="0.0" y2="147.8" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="233.9" y1="0.0" x2="0.0" y2="233.9" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="166.4" y1="0.0" x2="400.0" y2="233.6" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="118.9" y1="0.0" x2="400.0" y2="250.5" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<line x1="278.8" y1="0.0" x2="0.0" y2="243.6" stroke="#2980B9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>
+<text x="5" y="420" font-size="12" font-family="sans-serif" fill="#666">frog</text>
+</svg>

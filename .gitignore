@@ -1,0 +1,51 @@
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# 工具本地配置（不入库）
+.codebuddy/
+.workbuddy/
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 参考代码（GPLv3，不随开源发布）
+src1.3.5/
+tools/*
+!tools/build-origami3d.mjs
+!tools/origami3d.template.html
+!tools/serve.mjs
+!tools/start-origami.ps1
+!tools/test-cp-simulator.mjs
+!tools/README.md
+!tools/convert-mitani.py
+!tools/qa/
+tools/qa/*
+!tools/qa/*.html
+
+# Artist artwork is a local research input, not relicensed as project code.
+cp_examples/mitani/*
+!cp_examples/mitani/README.md
+
+# 其他本地文件
+*.jar
+*.zip
+*.tar.gz
+
+# 下载的源码包（数据已提取，不需要入库）
+cp_examples/mit/OrigamiSimulator-main/
+cp_examples/mit/*.tar.gz
+
+# Local portfolio concepts and unrelated reference imagery are not website assets.
+docs/portfolio-*.png
+ancient-astronomy-cutouts-jianyi-jixianyi.png

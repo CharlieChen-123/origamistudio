@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Origami Fold Studio</title>
+<style>
+/* ═══ Design Tokens (match cp-designer) ═══ */
+:root {
+  --bg: #F3F0EA;          /* slightly darker than paper for contrast */
+  --surface: #FFFFFF;
+  --surface2: #F7F5F2;
+  --border: #E2DED6;
+  --text: #2B2B2B;
+  --text-dim: #8A857C;
+  --accent: #2E3A8C;
+  --accent-hover: #3D4BB0;
+  --accent-soft: #E8EAFA;
+  --danger: #B03535;
+  --danger-soft: #F9ECEC;
+  --ok: #2E7D4F;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,0,0,.07);
+  --header-h: 54px;
+  --toolbar-h: 48px;
+  --sidebar-w: 272px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg); color: var(--text);
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ═══ Header ═══ */
+header {
+  height: var(--header-h); display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; background: var(--surface);
+  border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 10;
+}
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15px; letter-spacing: .2px; }
+.brand-icon {
+  width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0;
+  background: linear-gradient(135deg, #3D5AFE 0%, #2E3A8C 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.brand-icon svg { width: 19px; height: 19px; fill: none; stroke: #fff; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.header-badge {
+  margin-left: auto; padding: 4px 12px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 12.5px; font-weight: 600;
+}
+.header-badge.dim { background: var(--surface2); color: var(--text-dim); }
+
+/* ═══ Top Toolbar (fold progress) ═══ */
+.toolbar {
+  height: var(--toolbar-h); display: flex; align-items: center; gap: 10px;
+  padding: 0 14px; background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; flex-wrap: nowrap; z-index: 9;
+}
+.toolbar .step-label { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; min-width: 92px; }
+.toolbar .slider-wrap { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 120px; }
+.toolbar input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; }
+.toolbar .pct { font-size: 12.5px; font-weight: 700; color: var(--accent); min-width: 44px; text-align: right; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+  padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .15s; white-space: nowrap; user-select: none;
+}
+.btn:hover { background: var(--surface2); border-color: #C9C3B8; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-icon { padding: 7px 10px; }
+.btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ═══ Main layout ═══ */
+main { flex: 1; display: flex; min-height: 0; }
+
+/* ═══ Sidebar ═══ */
+aside {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0;
+}
+.panel { border-bottom: 1px solid var(--border); }
+.panel-header {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 13px 14px; background: none; border: none; cursor: pointer;
+  font-size: 13.5px; font-weight: 700; color: var(--text); text-align: left;
+}
+.panel-header:hover { background: var(--surface2); }
+.panel-header .chev { margin-left: auto; transition: transform .2s; width: 15px; height: 15px; fill: none; stroke: var(--text-dim); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.panel-header .chev.open { transform: rotate(90deg); }
+.panel-body { padding: 4px 14px 14px; }
+
+/* Model list */
+.model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.model-btn {
+  padding: 10px 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); cursor: pointer; font-size: 12.5px; font-weight: 500;
+  color: var(--text); transition: all .15s; display: flex; flex-direction: column;
+  align-items: center; gap: 4px; text-align: center; line-height: 1.25;
+}
+.model-btn .ico { width: 26px; height: 26px; border-radius: 6px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+.model-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+.model-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+/* CP diagram */
+.cp-wrap { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 6px; }
+.cp-wrap svg { width: 100%; height: auto; display: block; }
+.cp-legend { display: flex; gap: 14px; margin-top: 10px; font-size: 11.5px; color: var(--text-dim); flex-wrap: wrap; }
+.cp-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend-line { width: 22px; height: 0; border-top-width: 2px; border-top-style: var(--ls); border-top-color: var(--lc); }
+
+/* ═══ Canvas area ═══ */
+.carea { position: relative; overflow: hidden; flex: 1; min-width: 0; background: var(--bg); }
+#canvas3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+#canvas3d:active { cursor: grabbing; }
+.hint {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  background: rgba(255,255,255,.92); border: 1px solid var(--border); color: var(--text-dim);
+  font-size: 12px; padding: 6px 14px; border-radius: 999px; pointer-events: none;
+  box-shadow: var(--shadow); white-space: nowrap;
+}
+.load-error {
+  position: absolute; inset: 0; display: none; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px; background: var(--bg);
+  color: var(--text); font-size: 14px; z-index: 5;
+}
+.load-error h3 { color: var(--danger); font-size: 16px; }
+.load-error code { background: var(--surface); padding: 8px 14px; border-radius: 8px; font-size: 12px; max-width: 80%; word-break: break-all; }
+
+/* ═══ Sidebar toggle (mobile) ═══ */
+.sidebar-toggle { display: none; }
+
+/* Scrollbar */
+aside::-webkit-scrollbar { width: 8px; }
+aside::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+@media (max-width: 860px) {
+  aside { position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; transform: translateX(-100%); transition: transform .25s; box-shadow: 4px 0 16px rgba(0,0,0,.12); }
+  aside.open { transform: translateX(0); }
+  .sidebar-toggle { display: inline-flex; }
+  .hint { display: none; }
+  .toolbar { overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ Header ═══ -->
+<header>
+  <button class="btn btn-icon sidebar-toggle" id="btnSidebar" title="Toggle sidebar" aria-label="Toggle sidebar">
+    <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 8 L5 7 L7 9 L9 8 L12 10 L15 8 L17 9 L19 7 L21 8 L12 17 Z"/></svg>
+    </div>
+    Origami Fold Studio
+  </div>
+  <span class="header-badge" id="modelLabel">Select a model</span>
+</header>
+
+<!-- ═══ Toolbar: fold steps (outside sidebar!) ═══ -->
+<div class="toolbar">
+  <button class="btn btn-icon" id="btnPrev" title="Previous step">
+    <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>
+  <span class="step-label" id="stepLabel">Step 0 / 0</span>
+  <button class="btn btn-icon" id="btnNext" title="Next step">
+    <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <div class="slider-wrap">
+    <input type="range" id="foldSlider" min="0" max="100" value="0" title="Fold progress">
+    <span class="pct" id="foldPct">0%</span>
+  </div>
+  <button class="btn btn-icon" id="btnPlay" title="Play / Pause animation">
+    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <button class="btn" id="btnReset">Reset</button>
+</div>
+
+<!-- ═══ Main ═══ -->
+<main>
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <!-- Models panel: collapsible, starts COLLAPSED -->
+    <div class="panel">
+      <button class="panel-header" data-target="modelsBody" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.6"/><circle cx="15.5" cy="8.5" r="1.6"/><circle cx="12" cy="15.5" r="1.6"/></svg>
+        Models
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <div class="panel-body" id="modelsBody" style="display:none">
+        <div class="model-grid" id="modelGrid"></div>
+      </div>
+    </div>
+
+    <!-- CP diagram panel -->
+    <div class="panel">
+      <button class="panel-header" data-target="cpBody" aria-expanded="true">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 4l16 16M20 4L4 20"/></svg>
+        Crease Pattern (CP)
+        <svg class="chev open" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <div class="panel-body" id="cpBody">
+        <div class="cp-wrap">
+          <svg id="cpSvg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+        <div class="cp-legend">
+          <span><span class="legend-line" style="--ls: solid; --lc: #C0392B"></span> Mountain</span>
+          <span><span class="legend-line" style="--ls: dashed; --lc: #2E5FA3"></span> Valley</span>
+          <span><span class="legend-line" style="--ls: dotted; --lc: #999"></span> Guide</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- About panel -->
+    <div class="panel">
+      <button class="panel-header" data-target="aboutBody" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg>
+        About
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <div class="panel-body" id="aboutBody" style="display:none">
+        <p style="font-size:12.5px;color:var(--text-dim);line-height:1.6">
+          Fold every crease simultaneously with a rigid-fold engine.
+          Drag to rotate, scroll to zoom. Crease patterns from the
+          <b>OrigamiSimulator</b> project (MIT License).
+        </p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Canvas -->
+  <div class="carea">
+    <div id="canvas3d"></div>
+    <div class="hint">Drag to rotate &nbsp;·&nbsp; Scroll to zoom</div>
+    <div class="load-error" id="loadError">
+      <h3>3D renderer failed to load</h3>
+      <code id="loadErrMsg"></code>
+    </div>
+  </div>
+</main>
+
+<!-- ═══ three.js UMD (works on file://, no CORS) ═══ -->
+<script src="vendor/three/three.min.js"></script>
+<script src="vendor/three/OrbitControls.js"></script>
+
+<script>
+'use strict';
+/* ══════════════════════════════════════════════════════════════
+ * Origami Fold Studio — rigid fold simulator
+ * Engine: half-edge planarization + face-based rigid folding
+ * Data: MIT OrigamiSimulator crease patterns
+ * ══════════════════════════════════════════════════════════════ */
+
+// ── Model data (inlined from models-data.json) ──
+const MODELS = {"crane":{"name":"Traditional Crane","zh":"传统纸鹤","pw":400,"ph":400,"cp":[{"p1":[400,200],"p2":[400,164.07407407407408],"type":"B"},{"p1":[400,200],"p2":[400,400],"type":"B"},{"p1":[400,164.07407407407408],"p2":[400,0],"type":"B"},{"p1":[0,200],"p2":[0,70],"type":"B"},{"p1":[0,200],"p2":[0,235.92592592592592],"type":"B"},{"p1":[0,70],"p2":[0,0],"type":"B"},{"p1":[0,235.92592592592592],"p2":[0,400],"type":"B"},{"p1":[199.98456909189105,0],"p2":[69.99459918216185,0],"type":"B"},{"p1":[199.98456909189105,0],"p2":[235.9077231695085,0],"type":"B"},{"p1":[69.99459918216185,0],"p2":[0,0],"type":"B"},{"p1":[235.9077231695085,0],"p2":[400,0],"type":"B"},{"p1":[164.09227683049144,400],"p2":[0,400],"type":"B"},{"p1":[199.98456909189105,400],"p2":[164.09227683049144,400],"type":"B"},{"p1":[199.98456909189105,400],"p2":[400,400],"type":"B"},{"p1":[133.63166422343951,200],"p2":[82.83311472880177,200],"type":"M"},{"p1":[133.63166422343951,200],"p2":[199.98456909189105,200],"type":"M"},{"p1":[72.30923539850319,225.4012345679012],"p2":[82.83311472880177,200],"type":"M"},{"p1":[53.761283851554666,270.2469135802469],"p2":[72.30923539850319,225.4012345679012],"type":"M"},{"p1":[53.761283851554666,270.2469135802469],"p2":[0,400],"type":"M"},{"p1":[82.83311472880177,250.80246913580248],"p2":[113.2937273358537,230.46296296296296],"type":"M"},{"p1":[82.83311472880177,250.80246913580248],"p2":[53.761283851554666,270.2469135802469],"type":"M"},{"p1":[76.53730422035336,184.78395061728392],"p2":[103.1710516163876,154.41358024691357],"type":"M"},{"p1":[0,200],"p2":[36.231772239796314,182.12962962962965],"type":"M"},{"p1":[26.78805647712368,64.66049382716051],"p2":[12.437311935807424,62.438271604938265],"type":"M"},{"p1":[49.50235321348661,49.4753086419753],"p2":[35.36764138569554,52.93209876543211],"type":"M"},{"p1":[141.40884191034638,141.41975308641975],"p2":[49.50235321348661,49.4753086419753],"type":"M"},{"p1":[76.53730422035336,184.78395061728392],"p2":[82.83311472880177,200],"type":"M"},{"p1":[76.53730422035336,184.78395061728392],"p2":[26.78805647712368,64.66049382716051],"type":"M"},{"p1":[103.1710516163876,154.41358024691357],"p2":[133.63166422343951,200],"type":"M"},{"p1":[103.1710516163876,154.41358024691357],"p2":[35.36764138569554,52.93209876543211],"type":"M"},{"p1":[35.36764138569554,52.93209876543211],"p2":[0,0],"type":"M"},{"p1":[26.78805647712368,64.66049382716051],"p2":[0,0],"type":"M"},{"p1":[64.68636679268575,26.790123456790127],"p2":[0,0],"type":"M"},{"p1":[52.95887662988966,35.37037037037037],"p2":[0,0],"type":"M"},{"p1":[49.50235321348661,49.4753086419753],"p2":[52.95887662988966,35.37037037037037],"type":"M"},{"p1":[64.68636679268575,26.790123456790127],"p2":[62.46431602499807,12.407407407407414],"type":"M"},{"p1":[184.769693696474,76.54320987654322],"p2":[199.98456909189105,82.83950617283949],"type":"M"},{"p1":[184.769693696474,76.54320987654322],"p2":[64.68636679268575,26.790123456790127],"type":"M"},{"p1":[154.40166653807574,103.17901234567898],"p2":[199.98456909189105,133.64197530864197],"type":"M"},{"p1":[154.40166653807574,103.17901234567898],"p2":[52.95887662988966,35.37037037037037],"type":"M"},{"p1":[184.769693696474,76.54320987654322],"p2":[154.40166653807574,103.17901234567898],"type":"M"},{"p1":[199.98456909189105,0],"p2":[182.14643931795382,36.2037037037037],"type":"M"},{"p1":[225.3838438392099,72.31481481481481],"p2":[199.98456909189105,82.83950617283949],"type":"M"},{"p1":[270.22606280379597,53.73456790123456],"p2":[225.3838438392099,72.31481481481481],"type":"M"},{"p1":[270.22606280379597,53.73456790123456],"p2":[400,0],"type":"M"},{"p1":[199.98456909189105,133.64197530864197],"p2":[199.98456909189105,82.83950617283949],"type":"M"},{"p1":[199.98456909189105,133.64197530864197],"p2":[199.98456909189105,200],"type":"M"},{"p1":[250.7831185865288,82.83950617283949],"p2":[230.44518169894292,113.2716049382716],"type":"M"},{"p1":[250.7831185865288,82.83950617283949],"p2":[270.22606280379597,53.73456790123456],"type":"M"},{"p1":[215.23030630352596,323.4567901234568],"p2":[245.5983334619242,296.82098765432096],"type":"M"},{"p1":[323.46269577964665,215.21604938271602],"p2":[296.8289483836123,245.5864197530864],"type":"M"},{"p1":[296.8289483836123,245.5864197530864],"p2":[266.36833577656046,200],"type":"M"},{"p1":[323.46269577964665,215.21604938271602],"p2":[317.16688527119817,200],"type":"M"},{"p1":[400,200],"p2":[363.7682277602037,217.87037037037038],"type":"M"},{"p1":[174.61615616079,327.6851851851852],"p2":[129.77393719620397,346.2654320987655],"type":"M"},{"p1":[174.61615616079,327.6851851851852],"p2":[199.98456909189105,317.1604938271605],"type":"M"},{"p1":[129.77393719620397,346.2654320987655],"p2":[0,400],"type":"M"},{"p1":[199.98456909189105,400],"p2":[217.85356068204612,363.7962962962963],"type":"M"},{"p1":[317.16688527119817,149.19753086419752],"p2":[286.70627266414624,169.537037037037],"type":"M"},{"p1":[317.16688527119817,149.19753086419752],"p2":[346.23871614844535,129.75308641975306],"type":"M"},{"p1":[327.6599027852789,174.59876543209873],"p2":[317.16688527119817,200],"type":"M"},{"p1":[346.23871614844535,129.75308641975306],"p2":[327.6599027852789,174.59876543209873],"type":"M"},{"p1":[346.23871614844535,129.75308641975306],"p2":[400,0],"type":"M"},{"p1":[266.36833577656046,200],"p2":[317.16688527119817,200],"type":"M"},{"p1":[266.36833577656046,200],"p2":[199.98456909189105,200],"type":"M"},{"p1":[82.83311472880177,250.80246913580248],"p2":[149.21688141347116,317.1604938271605],"type":"M"},{"p1":[72.30923539850319,225.4012345679012],"p2":[46.9408224674022,235.92592592592592],"type":"M"},{"p1":[174.61615616079,327.6851851851852],"p2":[164.09227683049144,353.08641975308643],"type":"M"},{"p1":[225.3838438392099,72.31481481481481],"p2":[235.9077231695085,46.91358024691359],"type":"M"},{"p1":[250.7831185865288,82.83950617283949],"p2":[317.16688527119817,149.19753086419752],"type":"M"},{"p1":[327.6599027852789,174.59876543209873],"p2":[353.05917753259774,164.07407407407408],"type":"M"},{"p1":[149.21688141347116,317.1604938271605],"p2":[169.554818301057,286.72839506172835],"type":"M"},{"p1":[149.21688141347116,317.1604938271605],"p2":[129.77393719620397,346.2654320987655],"type":"M"},{"p1":[245.5983334619242,296.82098765432096],"p2":[400,400],"type":"M"},{"p1":[245.5983334619242,296.82098765432096],"p2":[199.98456909189105,266.358024691358],"type":"M"},{"p1":[215.23030630352596,323.4567901234568],"p2":[199.98456909189105,317.1604938271605],"type":"M"},{"p1":[215.23030630352596,323.4567901234568],"p2":[400,400],"type":"M"},{"p1":[199.98456909189105,266.358024691358],"p2":[199.98456909189105,200],"type":"M"},{"p1":[199.98456909189105,266.358024691358],"p2":[199.98456909189105,317.1604938271605],"type":"M"},{"p1":[258.56029627343565,258.58024691358025],"p2":[400,400],"type":"M"},{"p1":[113.2937273358537,230.46296296296296],"p2":[82.83311472880177,200],"type":"V"},{"p1":[133.63166422343951,200],"p2":[113.2937273358537,230.46296296296296],"type":"V"},{"p1":[76.53730422035336,184.78395061728392],"p2":[36.231772239796314,182.12962962962965],"type":"V"},{"p1":[0,70],"p2":[12.437311935807424,62.438271604938265],"type":"V"},{"p1":[26.78805647712368,64.66049382716051],"p2":[35.36764138569554,52.93209876543211],"type":"V"},{"p1":[49.50235321348661,49.4753086419753],"p2":[0,0],"type":"V"},{"p1":[46.9408224674022,235.92592592592592],"p2":[53.761283851554666,270.2469135802469],"type":"V"},{"p1":[36.231772239796314,182.12962962962965],"p2":[46.9408224674022,235.92592592592592],"type":"V"},{"p1":[36.231772239796314,182.12962962962965],"p2":[12.437311935807424,62.438271604938265],"type":"V"},{"p1":[103.1710516163876,154.41358024691357],"p2":[141.40884191034638,141.41975308641975],"type":"V"},{"p1":[12.437311935807424,62.438271604938265],"p2":[0,0],"type":"V"},{"p1":[69.99459918216185,0],"p2":[62.46431602499807,12.407407407407414],"type":"V"},{"p1":[62.46431602499807,12.407407407407414],"p2":[0,0],"type":"V"},{"p1":[64.68636679268575,26.790123456790127],"p2":[52.95887662988966,35.37037037037037],"type":"V"},{"p1":[235.9077231695085,46.91358024691359],"p2":[270.22606280379597,53.73456790123456],"type":"V"},{"p1":[182.14643931795382,36.2037037037037],"p2":[235.9077231695085,46.91358024691359],"type":"V"},{"p1":[182.14643931795382,36.2037037037037],"p2":[62.46431602499807,12.407407407407414],"type":"V"},{"p1":[154.40166653807574,103.17901234567898],"p2":[141.40884191034638,141.41975308641975],"type":"V"},{"p1":[184.769693696474,76.54320987654322],"p2":[182.14643931795382,36.2037037037037],"type":"V"},{"p1":[199.98456909189105,133.64197530864197],"p2":[230.44518169894292,113.2716049382716],"type":"V"},{"p1":[230.44518169894292,113.2716049382716],"p2":[199.98456909189105,82.83950617283949],"type":"V"},{"p1":[169.554818301057,286.72839506172835],"p2":[199.98456909189105,317.1604938271605],"type":"V"},{"p1":[245.5983334619242,296.82098765432096],"p2":[258.56029627343565,258.58024691358025],"type":"V"},{"p1":[296.8289483836123,245.5864197530864],"p2":[258.56029627343565,258.58024691358025],"type":"V"},{"p1":[323.46269577964665,215.21604938271602],"p2":[363.7682277602037,217.87037037037038],"type":"V"},{"p1":[353.05917753259774,164.07407407407408],"p2":[346.23871614844535,129.75308641975306],"type":"V"},{"p1":[363.7682277602037,217.87037037037038],"p2":[353.05917753259774,164.07407407407408],"type":"V"},{"p1":[215.23030630352596,323.4567901234568],"p2":[217.85356068204612,363.7962962962963],"type":"V"},{"p1":[286.70627266414624,169.537037037037],"p2":[317.16688527119817,200],"type":"V"},{"p1":[266.36833577656046,200],"p2":[286.70627266414624,169.537037037037],"type":"V"},{"p1":[82.83311472880177,250.80246913580248],"p2":[72.30923539850319,225.4012345679012],"type":"V"},{"p1":[0,235.92592592592592],"p2":[46.9408224674022,235.92592592592592],"type":"V"},{"p1":[149.21688141347116,317.1604938271605],"p2":[174.61615616079,327.6851851851852],"type":"V"},{"p1":[164.09227683049144,400],"p2":[164.09227683049144,353.08641975308643],"type":"V"},{"p1":[235.9077231695085,0],"p2":[235.9077231695085,46.91358024691359],"type":"V"},{"p1":[250.7831185865288,82.83950617283949],"p2":[225.3838438392099,72.31481481481481],"type":"V"},{"p1":[317.16688527119817,149.19753086419752],"p2":[327.6599027852789,174.59876543209873],"type":"V"},{"p1":[400,164.07407407407408],"p2":[353.05917753259774,164.07407407407408],"type":"V"},{"p1":[217.85356068204612,363.7962962962963],"p2":[164.09227683049144,353.08641975308643],"type":"V"},{"p1":[217.85356068204612,363.7962962962963],"p2":[400,400],"type":"V"},{"p1":[164.09227683049144,353.08641975308643],"p2":[129.77393719620397,346.2654320987655],"type":"V"},{"p1":[199.98456909189105,266.358024691358],"p2":[169.554818301057,286.72839506172835],"type":"V"},{"p1":[199.98456909189105,200],"p2":[141.40884191034638,141.41975308641975],"type":"V"},{"p1":[199.98456909189105,200],"p2":[258.56029627343565,258.58024691358025],"type":"V"},{"p1":[296.8289483836123,245.5864197530864],"p2":[400,400],"type":"M"},{"p1":[323.46269577964665,215.21604938271602],"p2":[400,400],"type":"M"},{"p1":[113.2937273358537,230.46296296296296],"p2":[169.554818301057,286.72839506172835],"type":"V"},{"p1":[230.44518169894292,113.2716049382716],"p2":[286.70627266414624,169.537037037037],"type":"V"},{"p1":[363.7682277602037,217.87037037037038],"p2":[400,400],"type":"V"},{"p1":[270.22606280379597,53.73456790123456],"p2":[346.23871614844535,129.75308641975306],"type":"U"},{"p1":[53.761283851554666,270.2469135802469],"p2":[129.77393719620397,346.2654320987655],"type":"U"},{"p1":[133.63166422343951,200],"p2":[199.98456909189105,266.358024691358],"type":"U"},{"p1":[199.98456909189105,133.64197530864197],"p2":[266.36833577656046,200],"type":"U"}],"steps":[{"creases":[79,25,65,69,122,123],"angle":180,"desc":"Step 1: Pre-crease the main diagonals"},{"creases":[127,126,85,108,80,100],"angle":180,"desc":"Step 2: Fold along the main diagonals"},{"creases":[101,50,21,49,40],"angle":180,"desc":"Step 3: Fold along the main diagonals"},{"creases":[64,15,14,63,117,111],"angle":180,"desc":"Step 4: Fold along the center lines"},{"creases":[82,104],"angle":180,"desc":"Step 5: Fold along the center lines"},{"creases":[125,76,124,73,44,56],"angle":180,"desc":"Step 6: Fold along the diagonal creases"},{"creases":[18,62,27,37,29,39],"angle":180,"desc":"Step 7: Fold along the diagonal creases"},{"creases":[32,31,33,30,74,28],"angle":180,"desc":"Step 8: Fold along the diagonal creases"},{"creases":[51,38,61,43,54,17],"angle":180,"desc":"Step 9: Fold along the diagonal creases"},{"creases":[53,22,57,41,99,109],"angle":180,"desc":"Step 10: Fold along the diagonal creases"},{"creases":[81,19,58,121,71,47],"angle":180,"desc":"Step 11: Fold along the diagonal creases"},{"creases":[72,48,59,20,110,68],"angle":180,"desc":"Step 12: Fold along the diagonal creases"},{"creases":[16,67,115,112,42,70],"angle":180,"desc":"Step 13: Fold along the diagonal creases"},{"creases":[60,116,55,66,75,26],"angle":180,"desc":"Step 14: Fold along the diagonal creases"},{"creases":[52,36,83,84,93,91],"angle":180,"desc":"Step 15: Fold along the diagonal creases"},{"creases":[119,128,88,96,46,77],"angle":180,"desc":"Step 16: Fold along the detail creases"},{"creases":[92,90,106,87,95,118],"angle":180,"desc":"Step 17: Fold along the detail creases"},{"creases":[45,78,114,113,98,107],"angle":180,"desc":"Step 18: Fold along the detail creases"},{"creases":[103,97,89,102,105,86],"angle":180,"desc":"Step 19: Fold along the detail creases"},{"creases":[94,120,35,24,34,23],"angle":180,"desc":"Step 20: Fold along the detail creases"}],"cmds":[]},"birdBase":{"name":"Bird Base","zh":"鸟基底","pw":400,"ph":400,"cp":[{"p1":[0,0],"p2":[400,400],"type":"V"},{"p1":[85.71428571428571,200],"p2":[314.2857142857143,200],"type":"M"},{"p1":[200,85.71428571428571],"p2":[200,314.2857142857143],"type":"M"},{"p1":[0,0],"p2":[200,85.71428571428571],"type":"M"},{"p1":[400,0],"p2":[200,85.71428571428571],"type":"M"},{"p1":[400,0],"p2":[314.2857142857143,200],"type":"M"},{"p1":[400,400],"p2":[314.2857142857143,200],"type":"M"},{"p1":[400,400],"p2":[200,314.2857142857143],"type":"M"},{"p1":[0,400],"p2":[200,314.2857142857143],"type":"M"},{"p1":[0,400],"p2":[85.71428571428571,200],"type":"M"},{"p1":[0,0],"p2":[85.71428571428571,200],"type":"M"},{"p1":[85.71428571428571,200],"p2":[0,200],"type":"V"},{"p1":[314.2857142857143,200],"p2":[400,200],"type":"V"},{"p1":[200,85.71428571428571],"p2":[200,0],"type":"V"},{"p1":[200,314.2857142857143],"p2":[200,400],"type":"V"},{"p1":[0,400],"p2":[400,0],"type":"V"},{"p1":[0,0],"p2":[400,0],"type":"B"},{"p1":[400,0],"p2":[400,400],"type":"B"},{"p1":[400,400],"p2":[0,400],"type":"B"},{"p1":[0,400],"p2":[0,0],"type":"B"}],"steps":[{"creases":[0],"angle":180,"desc":"Pre-crease the diagonal (valley)"},{"creases":[1,2],"angle":180,"desc":"Pre-crease the center lines (mountain)"},{"creases":[3,4,5,6,7,8,9,10],"angle":180,"desc":"Pre-crease the petal folds"},{"creases":[0,1,2,3,4,5,6,7,8,9,10],"angle":180,"desc":"Collapse into the bird base"}],"cmds":[]},"boatBase":{"name":"Boat Base","zh":"船基底","pw":400,"ph":400,"cp":[{"p1":[0,0],"p2":[400,0],"type":"B"},{"p1":[299.9996780306811,99.99993560605324],"p2":[400,99.99993560605324],"type":"V"},{"p1":[0,99.99993560605324],"p2":[100.00006439386378,99.99993560605324],"type":"V"},{"p1":[0,199.9998712121065],"p2":[400,199.9998712121065],"type":"V"},{"p1":[299.9996780306811,300.00006439394673],"p2":[400,300.00006439394673],"type":"V"},{"p1":[0,300.00006439394673],"p2":[100.00006439386378,300.00006439394673],"type":"V"},{"p1":[0,400],"p2":[400,400],"type":"B"},{"p1":[0.0002575754551136399,400],"p2":[0,0],"type":"B"},{"p1":[400,400],"p2":[400,0],"type":"B"},{"p1":[100.00006439386378,300.00006439394673],"p2":[299.9996780306811,300.00006439394673],"type":"M"},{"p1":[100.00006439386378,99.99993560605324],"p2":[299.9996780306811,99.99993560605324],"type":"M"},{"p1":[0,199.9998712121065],"p2":[100.00006439386378,99.99993560605324],"type":"M"},{"p1":[0,0],"p2":[100.00006439386378,99.99993560605324],"type":"M"},{"p1":[400,199.9998712121065],"p2":[299.9996780306811,99.99993560605324],"type":"M"},{"p1":[400,0],"p2":[299.9996780306811,99.99993560605324],"type":"M"},{"p1":[400,400],"p2":[299.9996780306811,300.00006439394673],"type":"M"},{"p1":[400,199.9998712121065],"p2":[299.9996780306811,300.00006439394673],"type":"M"},{"p1":[0,400],"p2":[100.00006439386378,300.00006439394673],"type":"M"},{"p1":[0,199.9998712121065],"p2":[100.00006439386378,300.00006439394673],"type":"M"}],"steps":[{"creases":[16,18,13,15,14,11],"angle":180,"desc":"Step 1: Pre-crease the main diagonals"},{"creases":[12,17],"angle":180,"desc":"Step 2: Fold along the main diagonals"},{"creases":[3,9,10,1,4,2],"angle":180,"desc":"Step 3: Fold along the center lines"},{"creases":[5],"angle":180,"desc":"Step 4: Fold along the center lines"}],"cmds":[]},"frogBase":{"name":"Frog Base","zh":"蛙基底","pw":400,"ph":400,"cp":[{"p1":[0,0],"p2":[140,59.99960317460318],"type":"M"},{"p1":[400,0],"p2":[260,59.99960317460318],"type":"M"},{"p1":[400,0],"p2":[340,140],"type":"M"},{"p1":[400,400],"p2":[340.0003968253968,260],"type":"M"},{"p1":[400,400],"p2":[260,340.00019841269847],"type":"M"},{"p1":[0,400],"p2":[140,340],"type":"M"},{"p1":[0,400],"p2":[60,260],"type":"M"},{"p1":[0,0],"p2":[60,140.00039682539682],"type":"M"},{"p1":[59.99960317460318,140],"p2":[0,200],"type":"M"},{"p1":[200,0],"p2":[140,60],"type":"M"},{"p1":[140.00079365079364,340.00079365079364],"p2":[200,400],"type":"M"},{"p1":[0,200],"p2":[60,260],"type":"M"},{"p1":[340,259.9996031746032],"p2":[400,200],"type":"M"},{"p1":[200,400],"p2":[260,340],"type":"M"},{"p1":[260,60],"p2":[200,0],"type":"M"},{"p1":[400,200],"p2":[340.0007936507936,140.00079365079364],"type":"M"},{"p1":[140,60],"p2":[200,200],"type":"M"},{"p1":[260,60],"p2":[200,200],"type":"M"},{"p1":[60,140],"p2":[200,200],"type":"M"},{"p1":[140,340],"p2":[200,200],"type":"M"},{"p1":[60,260],"p2":[200,200],"type":"M"},{"p1":[260,340],"p2":[200,200],"type":"M"},{"p1":[340,260],"p2":[200,200],"type":"M"},{"p1":[340,140],"p2":[200,200],"type":"M"},{"p1":[0,0],"p2":[400,400],"type":"V"},{"p1":[85.71428571428571,200],"p2":[314.2857142857143,200],"type":"V"},{"p1":[200,85.71428571428571],"p2":[200,314.2857142857143],"type":"V"},{"p1":[85.71428571428571,200],"p2":[0,200],"type":"V"},{"p1":[314.2857142857143,200],"p2":[400,200],"type":"V"},{"p1":[200,85.71428571428571],"p2":[200,0],"type":"V"},{"p1":[200,314.2857142857143],"p2":[200,400],"type":"V"},{"p1":[0,400],"p2":[400,0],"type":"V"},{"p1":[140,60],"p2":[140,0],"type":"V"},{"p1":[260,60],"p2":[260,0],"type":"V"},{"p1":[340,140],"p2":[400,140],"type":"V"},{"p1":[340,260],"p2":[400,260],"type":"V"},{"p1":[260,340],"p2":[260,400],"type":"V"},{"p1":[140,340],"p2":[140,400],"type":"V"},{"p1":[60,260],"p2":[0,260],"type":"V"},{"p1":[60,140],"p2":[0,140],"type":"V"},{"p1":[0,0],"p2":[400,0],"type":"B"},{"p1":[400,0],"p2":[400,400],"type":"B"},{"p1":[400,400],"p2":[0,400],"type":"B"},{"p1":[0,400],"p2":[0,0],"type":"B"}],"steps":[{"creases":[24,31,9,11,13,14],"angle":180,"desc":"Step 1: Pre-crease the main diagonals"},{"creases":[8,12,15,10],"angle":180,"desc":"Step 2: Fold along the main diagonals"},{"creases":[25,28,27,34,35,38],"angle":180,"desc":"Step 3: Fold along the center lines"},{"creases":[39],"angle":180,"desc":"Step 4: Fold along the center lines"},{"creases":[7,2,5,6,16,17],"angle":180,"desc":"Step 5: Fold along the diagonal creases"},{"creases":[18,19,20,21,22,23],"angle":180,"desc":"Step 6: Fold along the diagonal creases"},{"creases":[4,0,1,3],"angle":180,"desc":"Step 7: Fold along the diagonal creases"},{"creases":[26,30,29,32,33,36],"angle":180,"desc":"Step 8: Fold along the detail creases"},{"creases":[37],"angle":180,"desc":"Step 9: Fold along the detail creases"}],"cmds":[]},"waterbombBase":{"name":"Waterbomb Base","zh":"水弹基底","pw":400,"ph":400,"cp":[{"p1":[0,0],"p2":[400,400],"type":"M"},{"p1":[400,0],"p2":[0,400],"type":"M"},{"p1":[0,200],"p2":[400,200],"type":"V"},{"p1":[200,0],"p2":[200,400],"type":"V"},{"p1":[0,0],"p2":[400,0],"type":"B"},{"p1":[400,0],"p2":[400,400],"type":"B"},{"p1":[400,400],"p2":[0,400],"type":"B"},{"p1":[0,400],"p2":[0,0],"type":"B"}],"steps":[{"creases":[0,1],"angle":180,"desc":"Pre-crease the diagonals (mountain)"},{"creases":[2,3],"angle":180,"desc":"Pre-crease the center lines (valley)"},{"creases":[0,1,2,3],"angle":180,"desc":"Collapse into the waterbomb base"}],"cmds":[]},"squareBase":{"name":"Square Base","zh":"正方形基底","pw":400,"ph":400,"cp":[{"p1":[200,400],"p2":[200,0],"type":"M"},{"p1":[400,200],"p2":[0,200],"type":"M"},{"p1":[0,400],"p2":[400,0],"type":"V"},{"p1":[0,0],"p2":[400,0],"type":"B"},{"p1":[400,0],"p2":[400,400],"type":"B"},{"p1":[400,400],"p2":[0,400],"type":"B"},{"p1":[0,400],"p2":[0,0],"type":"B"}],"steps":[{"creases":[2],"angle":180,"desc":"Pre-crease the diagonal (valley)"},{"creases":[0,1],"angle":180,"desc":"Pre-crease the center lines (mountain)"},{"creases":[0,1,2],"angle":180,"desc":"Collapse into the square base"}],"cmds":[]},"pinwheelBase":{"name":"Pinwheel Base","zh":"风车基底","pw":400,"ph":400,"cp":[{"p1":[0,0],"p2":[400,0],"type":"B"},{"p1":[0,400],"p2":[400,400],"type":"B"},{"p1":[0.0002575754551136399,400],"p2":[0,0],"type":"B"},{"p1":[400,400],"p2":[400,0],"type":"B"},{"p1":[100.00006439386378,300.00006439394673],"p2":[299.9996780306811,300.00006439394673],"type":"M"},{"p1":[100.00006439386378,99.99993560605324],"p2":[299.9996780306811,99.99993560605324],"type":"M"},{"p1":[0,0],"p2":[100.00006439386378,99.99993560605324],"type":"M"},{"p1":[400,199.9998712121065],"p2":[299.9996780306811,99.99993560605324],"type":"V"},{"p1":[400,0],"p2":[299.9996780306811,99.99993560605324],"type":"M"},{"p1":[400,400],"p2":[299.9996780306811,300.00006439394673],"type":"M"},{"p1":[0,400],"p2":[100.00006439386378,300.00006439394673],"type":"M"},{"p1":[0,199.9998712121065],"p2":[100.00006439386378,300.00006439394673],"type":"V"},{"p1":[100.00006439386378,99.99993560605324],"p2":[100.00006439386378,300.00006439394673],"type":"M"},{"p1":[299.9996780306811,99.99993560605324],"p2":[299.9996780306811,300.00006439394673],"type":"M"},{"p1":[100.00006439386378,99.99993560605324],"p2":[199.99987121227244,0],"type":"V"},{"p1":[299.9996780306811,300.00006439394673],"p2":[199.99987121227244,400],"type":"V"}],"steps":[{"creases":[11,7,9,8,6,10],"angle":180,"desc":"Step 1: Pre-crease the main diagonals"},{"creases":[15,14],"angle":180,"desc":"Step 2: Fold along the main diagonals"},{"creases":[4,5],"angle":180,"desc":"Step 3: Fold along the center lines"},{"creases":[12,13],"angle":180,"desc":"Step 4: Fold along the detail creases"}],"cmds":[]},"openSinkBase":{"name":"Open Sink Base","zh":"开沉折基底","pw":400,"ph":400,"cp":[{"p1":[0,0],"p2":[400,0],"type":"B"},{"p1":[0,400],"p2":[400,400],"type":"B"},{"p1":[0.0002575754551136399,400],"p2":[0,0],"type":"B"},{"p1":[400,400],"p2":[400,0],"type":"B"},{"p1":[100.00006439386378,300.00006439394673],"p2":[299.9996780306811,300.00006439394673],"type":"M"},{"p1":[100.00006439386378,99.99993560605324],"p2":[299.9996780306811,99.99993560605324],"type":"M"},{"p1":[0,0],"p2":[100.00006439386378,99.99993560605324],"type":"M"},{"p1":[400,0],"p2":[299.9996780306811,99.99993560605324],"type":"M"},{"p1":[400,400],"p2":[299.9996780306811,300.00006439394673],"type":"M"},{"p1":[0,400],"p2":[100.00006439386378,300.00006439394673],"type":"M"},{"p1":[100.00006439386378,99.99993560605324],"p2":[100.00006439386378,300.00006439394673],"type":"M"},{"p1":[299.9996780306811,99.99993560605324],"p2":[299.9996780306811,300.00006439394673],"type":"M"},{"p1":[100.00006439386378,300.00006439394673],"p2":[299.9996780306811,99.99993560605324],"type":"V"},{"p1":[100.00006439386378,99.99993560605324],"p2":[299.9996780306811,300.00006439394673],"type":"V"},{"p1":[199.99987121227244,0],"p2":[199.99987121227244,99.99993560605324],"type":"V"},{"p1":[199.99987121227244,99.99993560605324],"p2":[199.99987121227244,300.00006439394673],"type":"M"},{"p1":[199.99987121227244,300.00006439394673],"p2":[199.99987121227244,400],"type":"V"}],"steps":[{"creases":[12,13,8,7,6,9],"angle":180,"desc":"Step 1: Pre-crease the main diagonals"},{"creases":[4,5],"angle":180,"desc":"Step 2: Fold along the center lines"},{"creases":[10,11,15,16,14],"angle":180,"desc":"Step 3: Fold along the detail creases"}],"cmds":[]},"tradCrane":{"name":"Crane (folded)","zh":"纸鹤(折痕)","pw":400,"ph":400,"cp":[{"p1":[346.3421596346238,130.24276859504133],"p2":[400.00000000000017,400],"type":"V"},{"p1":[200.00067964332322,82.84580252283604],"p2":[317.15895498042636,200.00067964332322],"type":"V"},{"p1":[266.3658112222706,200.00067964332322],"p2":[286.7095748151371,169.555377337973],"type":"V"},{"p1":[130.24208895171816,346.3421596346238],"p2":[400.00000000000017,400.0006796433231],"type":"V"},{"p1":[82.84240430622013,200.00067964332322],"p2":[199.9986407133537,317.15895498042624],"type":"V"},{"p1":[199.9986407133537,266.3664908655938],"p2":[169.55061983471074,286.71093410178344],"type":"V"},{"p1":[269.7585906916051,53.66191822531536],"p2":[0.0006796433231679217,0.0040778599390847966],"type":"V"},{"p1":[53.65852000869946,269.761988908221],"p2":[0,0.0040778599390847966],"type":"V"},{"p1":[199.99932035667686,133.6369073510222],"p2":[230.44734123531973,113.29178447150935],"type":"V"},{"p1":[363.5439321444107,216.73010004349723],"p2":[317.15691605045674,199.9993203566768],"type":"V"},{"p1":[296.18448238364516,244.6294584602001],"p2":[258.57709873858204,258.57913766855154],"type":"V"},{"p1":[216.73010004349723,363.5446117877338],"p2":[199.99932035667686,317.15691605045674],"type":"V"},{"p1":[244.6301381035233,296.1858416702915],"p2":[258.5791376685516,258.5784580252283],"type":"V"},{"p1":[183.2678610265333,36.454708568943005],"p2":[199.9986407133537,82.84376359286645],"type":"V"},{"p1":[155.36782296650725,103.8134786863854],"p2":[141.4181437581557,141.4208623314485],"type":"V"},{"p1":[36.45266963897347,183.26854066985646],"p2":[82.84036537625055,199.99864071335364],"type":"V"},{"p1":[103.81143975641585,155.36782296650716],"p2":[141.41882340147896,141.41882340147887],"type":"V"},{"p1":[133.63486842105263,200.00407785993914],"p2":[113.29042518486298,230.4514190952588],"type":"V"},{"p1":[162.1363908220966,332.8417246628969],"p2":[143.92806655067426,325.5600260983036],"type":"V"},{"p1":[154.30078294910834,400.00135928664645],"p2":[154.30078294910834,350.94266528925624],"type":"V"},{"p1":[67.1582753371031,237.97235210961293],"p2":[74.44201283166596,256.1806763810352],"type":"V"},{"p1":[0,245.80795998260118],"p2":[49.05869399739017,245.80795998260118],"type":"V"},{"p1":[332.8410450195738,162.1363908220966],"p2":[325.5586668116573,143.9280665506742],"type":"V"},{"p1":[400.00067964332334,154.30078294910834],"p2":[350.94198564593313,154.30078294910834],"type":"V"},{"p1":[237.97235210961293,67.15895498042627],"p2":[256.1806763810353,74.44201283166595],"type":"V"},{"p1":[245.80728033927798,0],"p2":[245.80728033927798,49.058693997390165],"type":"V"},{"p1":[61.32353740756851,-0.0767996955197909],"p2":[56.217377120487185,11.047602218355804],"type":"V"},{"p1":[61.672874075685094,25.54915180513266],"p2":[47.754458460200105,32.08935950413221],"type":"V"},{"p1":[11.284118094823844,56.839930404523706],"p2":[0.0027185732927489533,62.01745324053937],"type":"V"},{"p1":[258.5757394519357,258.5757394519356],"p2":[400.00000000000017,400],"type":"M"},{"p1":[43.663685297955645,43.66368529795564],"p2":[141.42086233144846,141.4208623314485],"type":"M"},{"p1":[133.63486842105263,199.9993203566768],"p2":[266.36852979556335,199.9993203566768],"type":"M"},{"p1":[200.00067964332322,133.6369073510222],"p2":[200.00067964332322,266.3664908655938],"type":"M"},{"p1":[317.15895498042636,200.00067964332322],"p2":[400.00000000000017,400],"type":"M"},{"p1":[266.3658112222706,200.00067964332322],"p2":[400.00000000000017,400.0006796433231],"type":"M"},{"p1":[317.15895498042636,200.00067964332322],"p2":[400.00067964332334,0.0040778599390847966],"type":"M"},{"p1":[200.00067964332322,82.84580252283604],"p2":[399.99864071335367,0.0040778599390847966],"type":"M"},{"p1":[286.7095748151371,169.555377337973],"p2":[346.3421596346238,130.24276859504133],"type":"M"},{"p1":[200.00203892996961,317.1582753371031],"p2":[400.00000000000017,400.0006796433231],"type":"M"},{"p1":[200.00203892996961,266.3658112222705],"p2":[400.00000000000017,400.0006796433231],"type":"M"},{"p1":[199.9986407133537,317.15895498042624],"p2":[0,400.00135928664645],"type":"M"},{"p1":[82.84240430622013,200.00067964332322],"p2":[0,399.99932035667683],"type":"M"},{"p1":[169.55061983471074,286.71093410178344],"p2":[130.23869073510224,346.34283927794695],"type":"M"},{"p1":[199.9986407133537,82.84580252283604],"p2":[0.0006796433231679217,0.0040778599390847966],"type":"M"},{"p1":[199.9986407133537,133.63826663766855],"p2":[0.0006796433231679217,0.0040778599390847966],"type":"M"},{"p1":[82.84240430622013,200.00203892996953],"p2":[0,0.0040778599390847966],"type":"M"},{"p1":[133.63554806437588,200.00203892996953],"p2":[0,0.0040778599390847966],"type":"M"},{"p1":[230.44734123531973,113.29178447150935],"p2":[269.7585906916051,53.65987929534579],"type":"M"},{"p1":[399.99864071335367,199.99864071335364],"p2":[363.5439321444107,216.73010004349723],"type":"M"},{"p1":[317.15691605045674,199.9993203566768],"p2":[296.18448238364516,244.6294584602001],"type":"M"},{"p1":[199.9986407133537,399.99932035667683],"p2":[216.73010004349723,363.5446117877338],"type":"M"},{"p1":[199.99932035667686,317.15691605045674],"p2":[244.6301381035233,296.1858416702915],"type":"M"},{"p1":[199.9986407133537,0],"p2":[183.2678610265333,36.454708568943005],"type":"M"},{"p1":[199.9986407133537,82.84376359286645],"p2":[155.36782296650725,103.8134786863854],"type":"M"},{"p1":[-0.0020389299695423987,199.9993203566768],"p2":[36.45266963897347,183.26854066985646],"type":"M"},{"p1":[82.84036537625055,199.99864071335364],"p2":[103.81143975641585,155.36782296650716],"type":"M"},{"p1":[113.29042518486298,230.4514190952588],"p2":[53.65852000869946,269.7633481948673],"type":"M"},{"p1":[74.54803719008262,256.1806763810352],"p2":[143.92806655067426,325.5600260983036],"type":"M"},{"p1":[162.1363908220966,332.8417246628969],"p2":[154.30078294910834,351.1227707699],"type":"M"},{"p1":[67.1582753371031,237.97235210961293],"p2":[48.87790887342322,245.80795998260118],"type":"M"},{"p1":[256.1806763810353,74.54871683340582],"p2":[325.5586668116573,143.9280665506742],"type":"M"},{"p1":[332.8410450195738,162.1363908220966],"p2":[351.1220911265768,154.30078294910834],"type":"M"},{"p1":[237.97235210961293,67.15895498042627],"p2":[245.80728033927798,48.87790887342321],"type":"M"},{"p1":[56.217377120487185,11.047602218355804],"p2":[61.672874075685094,25.54915180513266],"type":"M"},{"p1":[47.754458460200105,32.08935950413221],"p2":[43.663685297955645,43.59979882557635],"type":"M"},{"p1":[32.125380600260975,48.056220095693796],"p2":[43.66436494127882,43.59640060896043],"type":"M"},{"p1":[25.663331883427574,61.80540452370595],"p2":[11.284118094823844,56.839930404523706],"type":"M"},{"p1":[32.125380600260975,48.056220095693796],"p2":[25.663331883427574,61.80608416702916],"type":"V"},{"p1":[43.663685297955645,43.66368529795564],"p2":[0,0],"type":"V"},{"p1":[133.63554806437588,200.00203892996953],"p2":[200.00203892996961,266.3658112222705],"type":"U"},{"p1":[199.9986407133537,133.63826663766855],"p2":[266.3658112222706,200.00067964332322],"type":"U"},{"p1":[200.00203892996961,266.3658112222705],"p2":[258.5791376685516,258.5784580252283],"type":"U"},{"p1":[258.5791376685516,258.5784580252283],"p2":[266.3658112222706,200.00067964332322],"type":"U"},{"p1":[199.9986407133537,133.63826663766855],"p2":[141.41882340147896,141.41882340147887],"type":"U"},{"p1":[141.41882340147896,141.41882340147887],"p2":[133.63554806437588,200.00203892996953],"type":"U"},{"p1":[199.99932035667686,133.6369073510222],"p2":[200.00067964332322,82.84580252283604],"type":"M"},{"p1":[141.41882340147896,141.41882340147887],"p2":[258.57709873858204,258.57913766855154],"type":"V"},{"p1":[133.63486842105263,200.00407785993914],"p2":[82.84240430622013,200.00067964332322],"type":"M"},{"p1":[266.3658112222706,200.00067964332322],"p2":[317.15895498042636,200.00067964332322],"type":"M"},{"p1":[0,400],"p2":[74.44201283166596,256.1806763810352],"type":"U"},{"p1":[143.92806655067426,325.5600260983036],"p2":[0,400],"type":"U"},{"p1":[325.5586668116573,143.9280665506742],"p2":[400.00000000000017,0],"type":"U"},{"p1":[256.1806763810353,74.44201283166595],"p2":[400.00000000000017,0],"type":"U"},{"p1":[200.00203892996961,266.3658112222705],"p2":[199.99932035667686,317.15691605045674],"type":"M"},{"p1":[0,0],"p2":[400,0],"type":"B"},{"p1":[400,0],"p2":[400,400],"type":"B"},{"p1":[400,400],"p2":[0,400],"type":"B"},{"p1":[0,400],"p2":[0,0],"type":"B"}],"steps":[{"creases":[29,76,4,1,30,57],"angle":180,"desc":"Step 1: Pre-crease the main diagonals"},{"creases":[60,68],"angle":180,"desc":"Step 2: Fold along the main diagonals"},{"creases":[31,78,77,23,21],"angle":180,"desc":"Step 3: Fold along the center lines"},{"creases":[34,46,39,44,33,40],"angle":180,"desc":"Step 4: Fold along the diagonal creases"},{"creases":[41,38,45,43,36,35],"angle":180,"desc":"Step 5: Fold along the diagonal creases"},{"creases":[37,42,56,47,55,51],"angle":180,"desc":"Step 6: Fold along the diagonal creases"},{"creases":[49,53,50,48,52,54],"angle":180,"desc":"Step 7: Fold along the diagonal creases"},{"creases":[8,5,17,2,58,61],"angle":180,"desc":"Step 8: Fold along the diagonal creases"},{"creases":[62,59,20,24,22,18],"angle":180,"desc":"Step 9: Fold along the diagonal creases"},{"creases":[63,27,67,28,65,26],"angle":180,"desc":"Step 10: Fold along the diagonal creases"},{"creases":[3,7,6,0,32,83],"angle":180,"desc":"Step 11: Fold along the detail creases"},{"creases":[75,13,11,15,9,19],"angle":180,"desc":"Step 12: Fold along the detail creases"},{"creases":[25,14,10,12,16,66],"angle":180,"desc":"Step 13: Fold along the detail creases"},{"creases":[64],"angle":180,"desc":"Step 14: Fold along the detail creases"}],"cmds":[]},"airplane":{"name":"Paper Airplane","zh":"纸飞机","pw":400,"ph":400,"cp":[{"p1":[0,0],"p2":[400,0],"type":"B"},{"p1":[400,0],"p2":[400,400],"type":"B"},{"p1":[400,400],"p2":[0,400],"type":"B"},{"p1":[0,400],"p2":[0,0],"type":"B"}],"steps":[],"cmds":[]}}
+
+const $ = id => document.getElementById(id);
+
+// ── State ──
+let scene, camera, renderer, controls;
+let paperGroup = null;         // THREE.Group holding folded faces
+let wireGroup = null;          // fold lines overlay
+let currentModelId = null;
+let foldableCache = null;      // precomputed planarization
+let stepsCache = null;         // 分步序列（每步的剖分边索引+角度）
+let stateCache = null;         // 每步完成态的 verts3D（预计算）
+let stepCount = 0;             // 总步骤数
+let currentStep = 0;           // 当前步骤（0..stepCount）
+let animTimer = null;
+let animDir = 1;
+
+// ═══════════ Geometry helpers (pure JS, no THREE needed) ═══════════
+
+// ── Planarize: split segments at intersections ──
+const SNAP = 1e-6;
+function snapKey(x, y) { return `${(x / SNAP).toFixed(0)},${(y / SNAP).toFixed(0)}`; }
+
+function segDist2D(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1e-18) return { dist: Math.hypot(px - ax, py - ay), t: 0 };
+  let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + t * dx, cy = ay + t * dy;
+  return { dist: Math.hypot(px - cx, py - cy), t };
+}
+
+function segSegIntersect(p1, p2, p3, p4) {
+  const d1x = p2[0] - p1[0], d1y = p2[1] - p1[1];
+  const d2x = p4[0] - p3[0], d2y = p4[1] - p3[1];
+  const denom = d1x * d2y - d1y * d2x;
+  if (Math.abs(denom) < 1e-12) return null;
+  const dx = p3[0] - p1[0], dy = p3[1] - p1[1];
+  const t = (dx * d2y - dy * d2x) / denom;
+  const u = (dx * d1y - dy * d1x) / denom;
+  if (t < -1e-9 || t > 1 + 1e-9 || u < -1e-9 || u > 1 + 1e-9) return null;
+  return [p1[0] + t * d1x, p1[1] + t * d1y];
+}
+
+function planarize(segs) {
+  // segs: [{p1:[x,y], p2:[x,y], type}]
+  // collect all points: endpoints + intersections
+  const pts = [];
+  const idOf = new Map();
+  const getIdx = (p) => {
+    const k = snapKey(p[0], p[1]);
+    if (idOf.has(k)) return idOf.get(k);
+    const id = pts.length;
+    pts.push([p[0], p[1]]);
+    idOf.set(k, id);
+    return id;
+  };
+  // endpoints
+  for (const s of segs) { getIdx(s.p1); getIdx(s.p2); }
+  // intersections (pairwise, only for non-parallel)
+  for (let i = 0; i < segs.length; i++) {
+    for (let j = i + 1; j < segs.length; j++) {
+      const ip = segSegIntersect(segs[i].p1, segs[i].p2, segs[j].p1, segs[j].p2);
+      if (ip) getIdx(ip);
+    }
+  }
+  // split each segment at every point lying on it
+  const outEdges = [];
+  const outTypes = [];
+  const outSources = [];
+  for (let ei = 0; ei < segs.length; ei++) {
+    const s = segs[ei];
+    const A = s.p1, B = s.p2;
+    const onEdge = new Map();
+    onEdge.set(snapKey(A[0], A[1]), { id: getIdx(A), t: 0 });
+    onEdge.set(snapKey(B[0], B[1]), { id: getIdx(B), t: 1 });
+    for (const [k, p] of idOf) {
+      if (onEdge.has(k)) continue;
+      const { dist, t } = segDist2D(p[0], p[1], A[0], A[1], B[0], B[1]);
+      if (dist < Math.max(1e-7, Math.hypot(B[0]-A[0], B[1]-A[1]) * 1e-6)) {
+        onEdge.set(k, { id: idOf.get(k), t });
+      }
+    }
+    const sorted = [...onEdge.values()].sort((a, b) => a.t - b.t);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const u = sorted[i].id, v = sorted[i+1].id;
+      if (u === v) continue;
+      outEdges.push([u, v]);
+      outTypes.push(s.type || 'U');
+      outSources.push(ei);   // 记录输出边来自哪条原始线段
+    }
+  }
+  // dedupe undirected edges
+  const seen = new Set();
+  const dedupE = [], dedupT = [], dedupS = [];
+  for (let i = 0; i < outEdges.length; i++) {
+    const [a, b] = outEdges[i];
+    const k = a < b ? `${a},${b}` : `${b},${a}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    dedupE.push([a, b]);
+    dedupT.push(outTypes[i]);
+    dedupS.push(outSources[i]);
+  }
+  return { vertices: pts, edges: dedupE, edgeTypes: dedupT, edgeSources: dedupS };
+}
+
+// ── Half-edge face tracing ──
+function buildFaces(vertices, edges) {
+  const n = vertices.length;
+  const adj = Array.from({ length: n }, () => []);
+  for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }
+  const angle = (v, w) => Math.atan2(vertices[w][1] - vertices[v][1], vertices[w][0] - vertices[v][0]);
+  for (let v = 0; v < n; v++) adj[v].sort((a, b) => angle(v, a) - angle(v, b));
+  const rank = new Map();
+  for (let v = 0; v < n; v++) adj[v].forEach((w, i) => rank.set(`${v},${w}`, i));
+  const nextOf = (u, v) => {
+    const neigh = adj[v];
+    if (!neigh.length) return null;
+    if (neigh.length === 1) return neigh[0];
+    const i = rank.get(`${v},${u}`);
+    if (i === undefined) return null;
+    return neigh[(i - 1 + neigh.length) % neigh.length];
+  };
+  const visited = new Set();
+  const faces = [];
+  const boundary = [];
+  for (const [a, b] of edges) {
+    for (const start of [[a, b], [b, a]]) {
+      if (visited.has(start.join(','))) continue;
+      const ring = [];
+      let u = start[0], v = start[1], guard = 0, closed = true;
+      while (!visited.has(`${u},${v}`)) {
+        visited.add(`${u},${v}`);
+        ring.push(u);
+        const w = nextOf(u, v);
+        if (w === null) { closed = false; break; }
+        u = v; v = w;
+        if (++guard > edges.length * 2 + 10) { closed = false; break; }
+      }
+      if (!closed || ring.length < 3 || ring[0] !== start[0]) continue;
+      // area sign: CCW = inner face, CW = outer boundary
+      let a2 = 0;
+      for (let i = 0; i < ring.length; i++) {
+        const [x1, y1] = vertices[ring[i]];
+        const [x2, y2] = vertices[ring[(i + 1) % ring.length]];
+        a2 += x1 * y2 - x2 * y1;
+      }
+      if (a2 > 1e-9) faces.push(ring);
+      else if (a2 < -1e-9) boundary.push(ring);
+    }
+  }
+  return { faces, boundary };
+}
+
+// ── Rigid fold: propagate rotations across creases ──
+function computeFolding(planar, progress, maxAngle = Math.PI, creaseAngles = null) {
+  const { vertices, edges, edgeTypes, faces } = planar;
+  // edge -> adjacent faces + edge index (direction-independent)
+  const ekey = (a, b) => (a < b ? `${a},${b}` : `${b},${a}`);
+  const edgeIdxByKey = new Map();
+  edges.forEach((e, i) => edgeIdxByKey.set(ekey(e[0], e[1]), i));
+  const edgeFaces = new Map();
+  faces.forEach((face, fi) => {
+    for (let i = 0; i < face.length; i++) {
+      const a = face[i], b = face[(i + 1) % face.length];
+      const k = ekey(a, b);
+      if (!edgeFaces.has(k)) edgeFaces.set(k, []);
+      edgeFaces.get(k).push(fi);
+    }
+  });
+  // largest face = base
+  let baseFace = 0, maxArea = -1;
+  faces.forEach((face, fi) => {
+    let a2 = 0;
+    for (let i = 0; i < face.length; i++) {
+      const [x1, y1] = vertices[face[i]];
+      const [x2, y2] = vertices[face[(i + 1) % face.length]];
+      a2 += x1 * y2 - x2 * y1;
+    }
+    const area = Math.abs(a2) / 2;
+    if (area > maxArea) { maxArea = area; baseFace = fi; }
+  });
+  const ID = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+  const faceTransform = faces.map(() => null);
+  faceTransform[baseFace] = ID;
+  const visited = new Set([baseFace]);
+  const queue = [baseFace];
+  // face center helper
+  const faceCenter = (face) => {
+    let cx = 0, cy = 0;
+    for (const vi of face) { cx += vertices[vi][0]; cy += vertices[vi][1]; }
+    return [cx / face.length, cy / face.length];
+  };
+  while (queue.length) {
+    const fi = queue.shift();
+    const M = faceTransform[fi];
+    const face = faces[fi];
+    for (let i = 0; i < face.length; i++) {
+      const a = face[i], b = face[(i + 1) % face.length];
+      const k = ekey(a, b);
+      const adj = edgeFaces.get(k);
+      if (!adj || adj.length < 2) continue;
+      const other = adj.find(x => x !== fi);
+      if (other === undefined || visited.has(other)) continue;
+      const ei = edgeIdxByKey.get(k);
+      const type = ei >= 0 ? edgeTypes[ei] : 'U';
+      let R = null;
+      if (type === 'V' || type === 'M') {
+        // Direction fix: which side is the child face on? (2D cross product,
+        // using the ORIGINAL edge direction so it's stable across the loop)
+        const [ea, eb] = edges[ei];
+        const A2 = vertices[ea], B2 = vertices[eb];
+        const d2x = B2[0] - A2[0], d2y = B2[1] - A2[1];
+        const [ocx, ocy] = faceCenter(faces[other]);
+        const cross = d2x * (ocy - A2[1]) - d2y * (ocx - A2[0]);
+        const side = cross > 0 ? 1 : -1;   // child on left(+1)/right(-1) of crease
+        // crease line in 3D after parent transform
+        const A = transformPt(M, [A2[0], A2[1], 0]);
+        const B = transformPt(M, [B2[0], B2[1], 0]);
+        const dir = norm([B[0]-A[0], B[1]-A[1], B[2]-A[2]]);
+        // V (valley) folds toward viewer (+z), M (mountain) away (-z);
+        // rotating +θ about dir lifts the left side to +z, so multiply by side
+        const baseSign = type === 'V' ? 1 : -1;
+        const angle = creaseAngles
+          ? Math.max(0, Math.min(maxAngle, creaseAngles[ei] || 0))
+          : maxAngle * progress;
+        R = rotationAround(A, dir, baseSign * side * angle);
+      }
+      faceTransform[other] = R ? mulMat(R, M) : M;
+      visited.add(other);
+      queue.push(other);
+    }
+  }
+  // Global vertex averaging: shared vertices stay continuous (no tearing)
+  const nV = vertices.length;
+  const acc = Array.from({ length: nV }, () => ({ x: 0, y: 0, z: 0, c: 0 }));
+  faces.forEach((face, fi) => {
+    const M = faceTransform[fi] || ID;
+    for (const vi of face) {
+      const p = transformPt(M, [vertices[vi][0], vertices[vi][1], 0]);
+      acc[vi].x += p[0]; acc[vi].y += p[1]; acc[vi].z += p[2]; acc[vi].c++;
+    }
+  });
+  const verts3D = acc.map(a => [a.x / a.c, a.y / a.c, a.z / a.c]);
+  // Fallback: isolated boundary vertices (degenerate triangles dropped)
+  const neighborOf = Array.from({ length: nV }, () => []);
+  edges.forEach(([a, b]) => { neighborOf[a].push(b); neighborOf[b].push(a); });
+  let pending = verts3D.map((v, i) => ({ v, i })).filter(x => acc[x.i].c === 0).map(x => x.i);
+  for (let iter = 0; iter < 20 && pending.length; iter++) {
+    const next = [];
+    for (const vi of pending) {
+      const nb = neighborOf[vi].filter(w => acc[w].c > 0);
+      if (!nb.length) { next.push(vi); continue; }
+      let sx = 0, sy = 0, sz = 0;
+      for (const w of nb) { sx += verts3D[w][0]; sy += verts3D[w][1]; sz += verts3D[w][2]; }
+      verts3D[vi] = [sx / nb.length, sy / nb.length, sz / nb.length];
+      acc[vi].c = 1;
+    }
+    pending = next;
+  }
+  for (const vi of pending) {
+    if (acc[vi].c === 0) verts3D[vi] = [vertices[vi][0], vertices[vi][1], 0];
+  }
+  return { verts3D, faces, baseFace };
+}
+
+// 4x4 column-major helpers
+function mulMat(A, B) {
+  const out = new Array(16).fill(0);
+  for (let col = 0; col < 4; col++)
+    for (let row = 0; row < 4; row++) {
+      let s = 0;
+      for (let k = 0; k < 4; k++) s += A[k*4+row] * B[col*4+k];
+      out[col*4+row] = s;
+    }
+  return out;
+}
+function transformPt(M, p) {
+  return [
+    M[0]*p[0] + M[4]*p[1] + M[8]*p[2] + M[12],
+    M[1]*p[0] + M[5]*p[1] + M[9]*p[2] + M[13],
+    M[2]*p[0] + M[6]*p[1] + M[10]*p[2] + M[14],
+  ];
+}
+function norm(v) {
+  const l = Math.hypot(v[0], v[1], v[2]);
+  return l < 1e-12 ? [0, 0, 1] : [v[0]/l, v[1]/l, v[2]/l];
+}
+function rotationAround(axisPoint, axisDir, angle) {
+  const [ux, uy, uz] = norm(axisDir);
+  const [px, py, pz] = axisPoint;
+  const c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
+  const R = [
+    c + ux*ux*t,   ux*uy*t - uz*s, ux*uz*t + uy*s, 0,
+    uy*ux*t + uz*s, c + uy*uy*t,  uy*uz*t - ux*s, 0,
+    uz*ux*t - uy*s, uz*uy*t + ux*s, c + uz*uz*t,  0,
+    0, 0, 0, 1,
+  ];
+  // T(p) * R * T(-p)
+  const Tneg = [1,0,0,0, 0,1,0,0, 0,0,1,0, -px,-py,-pz, 1];
+  const Tpos = [1,0,0,0, 0,1,0,0, 0,0,1,0, px,py,pz, 1];
+  return mulMat(Tpos, mulMat(R, Tneg));
+}
+
+// ═══════════ THREE.js rendering ═══════════
+function oe3dToThree(v) { return new THREE.Vector3(v[0] - 200, -(v[1] - 200), v[2]); }
+
+function initThree() {
+  const container = $('canvas3d');
+  const w = container.clientWidth || window.innerWidth * 0.7;
+  const h = container.clientHeight || (window.innerHeight - 110);
+  if (w < 50 || h < 50) return false;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color('#F3F0EA');
+
+  camera = new THREE.PerspectiveCamera(55, w / h, 1, 5000);
+  camera.position.set(340, -420, 340);
+  camera.lookAt(0, 0, 60);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  container.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0, 40);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 80;
+  controls.maxDistance = 2400;
+  controls.update();
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.9);
+  dl.position.set(400, -300, 600);
+  scene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0xffffff, 0.3);
+  dl2.position.set(-300, -200, -200);
+  scene.add(dl2);
+
+  window.addEventListener('resize', () => {
+    const w2 = container.clientWidth || window.innerWidth * 0.7;
+    const h2 = container.clientHeight || (window.innerHeight - 110);
+    if (w2 < 10 || h2 < 10) return;
+    camera.aspect = w2 / h2;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w2, h2);
+  });
+
+  // Render loop: setInterval fallback + rAF (works in all environments)
+  function renderFrame() {
+    if (controls) controls.update();
+    if (renderer && scene && camera) renderer.render(scene, camera);
+  }
+  renderFrame(); // immediate first render
+  setInterval(renderFrame, 33);          // ~30fps guaranteed
+  function rafLoop() { requestAnimationFrame(rafLoop); renderFrame(); }
+  rafLoop();                              // smooth 60fps when rAF available
+  return true;
+}
+
+// ── Build folded paper mesh from face data ──
+// Uses GLOBAL shared vertices (verts3D) + face index lists → paper stays one piece
+function buildPaperMesh(result) {
+  const positions = [];
+  for (const v of result.verts3D) {
+    const t = oe3dToThree(v);
+    positions.push(t.x, t.y, t.z);
+  }
+  const indices = [];
+  for (const face of result.faces) {
+    if (face.length < 3) continue;
+    // fan triangulation using global vertex indices
+    for (let i = 1; i < face.length - 1; i++) {
+      indices.push(face[0], face[i], face[i + 1]);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xFDFCF9,           // paper white (contrast vs #F3F0EA bg)
+    side: THREE.DoubleSide,
+    roughness: 0.8,
+    metalness: 0.0,
+  });
+  return new THREE.Mesh(geo, mat);
+}
+
+// ── Fold lines overlay (crease pattern in 3D, colored by type) ──
+// M=red, V=blue, boundary/guide=gray
+// 直接遍历剖分边（每条边只画一次）；已激活折痕全彩、未激活淡化 → 视觉清晰不混乱
+function buildFoldLines(result) {
+  const fc = foldableCache;
+  const COLOR = {
+    M: [0.72, 0.18, 0.15],   // red (mountain)
+    V: [0.16, 0.35, 0.62],   // blue (valley)
+    B: [0.32, 0.30, 0.28],   // dark gray (boundary)
+    U: [0.62, 0.60, 0.56],   // light gray (guide)
+  };
+  const linePts = [];
+  const lineColors = [];
+  if (fc) {
+    // 当前步骤激活的折痕边（步骤已定义时）
+    const active = activeCreaseEdges();
+    (fc.edges || []).forEach((e, i) => {
+      const a = e[0], b = e[1];
+      if (a >= result.verts3D.length || b >= result.verts3D.length) return;
+      const t1 = oe3dToThree(result.verts3D[a]), t2 = oe3dToThree(result.verts3D[b]);
+      linePts.push(t1.x, t1.y, t1.z, t2.x, t2.y, t2.z);
+      // 折痕状态着色：
+      //   当前步骤折痕 → 全彩高亮
+      //   已完成折痕   → 浅色可见（变淡但仍可辨认）
+      //   未开始折痕   → 几乎隐藏（混合到背景）
+      const t = (fc.edgeTypes || [])[i] || 'U';
+      const c = COLOR[t] || COLOR.U;
+      const isActive = active && active.has(i);
+      const isDone = active && !isActive && doneCreaseEdges().has(i);
+      let cc;
+      if (isActive) cc = c;
+      else {
+        const bg = [0.953, 0.941, 0.918];
+        const f = isDone ? 0.45 : 0.06;
+        cc = [c[0]*f + bg[0]*(1-f), c[1]*f + bg[1]*(1-f), c[2]*f + bg[2]*(1-f)];
+      }
+      lineColors.push(cc[0], cc[1], cc[2], cc[0], cc[1], cc[2]);
+    });
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(linePts, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(lineColors, 3));
+  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9 });
+  return new THREE.LineSegments(geo, mat);
+}
+
+// 已完成的折痕剖分边集合（前 currentStep-1 步）
+function doneCreaseEdges() {
+  const done = new Set();
+  if (!stepsCache || !stepCount) return done;
+  for (let i = 0; i < Math.min(Math.max(0, currentStep - 1), stepCount); i++) {
+    for (const ei of stepsCache[i].creaseEdges) done.add(ei);
+  }
+  return done;
+}
+
+// 当前正在折叠的折痕剖分边集合（仅当前步骤的新折痕 → 高亮）
+// 已完成折痕已"折好"不需要强调，未开始折痕隐藏 → 视觉聚焦当前动作
+function activeCreaseEdges() {
+  if (!foldableCache || !stepsCache || !stepCount) return null;
+  const active = new Set();
+  // 当前步骤（currentStep 是目标步，其折痕正被激活）
+  if (currentStep >= 1 && currentStep <= stepCount) {
+    for (const ei of stepsCache[currentStep - 1].creaseEdges) active.add(ei);
+  }
+  return active;
+}
+
+// ── CP diagram (SVG) ──
+function renderCP(model) {
+  const svg = $('cpSvg');
+  let out = '';
+  for (const s of model.cp || []) {
+    const color = s.type === 'M' ? '#C0392B'
+      : s.type === 'V' ? '#2E5FA3'
+      : s.type === 'B' ? '#444'
+      : '#AAA';
+    const dash = s.type === 'M' ? '' : s.type === 'V' ? '8 5' : '2 4';
+    out += `<line x1="${s.p1[0].toFixed(1)}" y1="${s.p1[1].toFixed(1)}" x2="${s.p2[0].toFixed(1)}" y2="${s.p2[1].toFixed(1)}" stroke="${color}" stroke-width="1.6" ${dash ? `stroke-dasharray="${dash}"` : ''} opacity="${s.type === 'U' ? 0.55 : 1}"/>`;
+  }
+  svg.innerHTML = out;
+}
+
+// ═══════════ Model management ═══════════
+function buildModelList() {
+  const grid = $('modelGrid');
+  grid.innerHTML = '';
+  for (const [id, m] of Object.entries(MODELS)) {
+    const btn = document.createElement('button');
+    btn.className = 'model-btn';
+    btn.dataset.model = id;
+    btn.innerHTML = `<span class="ico">${m.emoji || '📄'}</span>${m.name}`;
+    btn.title = m.name;
+    btn.addEventListener('click', () => loadModel(id));
+    grid.appendChild(btn);
+  }
+}
+
+function loadModel(id) {
+  stopAnim();
+  currentModelId = id;
+  const m = MODELS[id];
+  const plan = planarize(m.cp || []);
+  const { faces } = buildFaces(plan.vertices, plan.edges);
+  plan.faces = faces;
+  foldableCache = plan;
+
+  // ── 构建分步折叠序列 ──
+  // 原始线段 → 剖分边映射
+  const segToEdges = Array.from({ length: m.cp.length }, () => []);
+  (plan.edgeSources || []).forEach((si, ei) => {
+    if (segToEdges[si]) segToEdges[si].push(ei);
+  });
+  const stepsDef = (m.steps && m.steps.length ? m.steps : [{ creases: [], angle: 180 }]);
+  stepsCache = stepsDef.map(st => ({
+    creaseEdges: (st.creases || []).flatMap(si => segToEdges[si] || []),
+    angle: (st.angle ?? 180) * Math.PI / 180,
+    desc: st.desc || '',
+  }));
+  stepCount = stepsCache.length;
+
+  // ── 预计算每步完成态（步骤完成态是合法构型，不穿模）──
+  // 注意：creaseAnglesForStep(s, 1) 的语义是「前 s+1 步完成」，
+  // 所以 stateCache[0] 必须显式用全 0 角度（平坦纸），不能从 s=0 开始循环。
+  stateCache = [];
+  stateCache.push(computeFolding(plan, 1, Math.PI, new Array(plan.edges.length).fill(0)));
+  for (let s = 0; s < stepCount; s++) {
+    const angles = creaseAnglesForStep(s, 1);
+    stateCache.push(computeFolding(plan, 1, Math.PI, angles));
+  }
+
+  // clear old
+  if (paperGroup) { scene.remove(paperGroup); paperGroup = null; }
+  if (wireGroup) { scene.remove(wireGroup); wireGroup = null; }
+
+  paperGroup = buildPaperMesh(stateCache[0]);
+  wireGroup = buildFoldLines(stateCache[0]);
+  scene.add(paperGroup);
+  scene.add(wireGroup);
+
+  renderCP(m);
+  $('modelLabel').textContent = m.name;
+  currentStep = 0;
+  updateUI();
+  applyStepView(0);
+}
+
+// 某步骤的折痕角度数组：前 s 步完成、第 s 步动画到 t、后续 0
+function creaseAnglesForStep(s, t) {
+  const n = foldableCache.edges.length;
+  const angles = new Array(n).fill(0);
+  for (let i = 0; i < stepCount; i++) {
+    const st = stepsCache[i];
+    let tt = 0;
+    if (i < s) tt = 1;
+    else if (i === s) tt = t;
+    for (const ei of st.creaseEdges) angles[ei] = st.angle * tt;
+  }
+  return angles;
+}
+
+// 渲染指定步骤
+// 动画在「上一步完成态」→「本步完成态」之间做顶点插值（MCMC 思路的简化）：
+// 两个端点都是合法构型（无穿模），插值路径纸柔性过渡，全程不穿模。
+// 若在折痕角度空间线性插值，中间态几何非法 → 严重穿模（已验证）。
+function applyStepView(step, animT = 1) {
+  if (!stateCache || !foldableCache) return;
+  const from = stateCache[Math.max(0, step - 1)];
+  const to = stateCache[step];
+  if (!from || !to) return;
+  const t = Math.max(0, Math.min(1, animT));
+  const interp = from.verts3D.map((v, i) => [
+    v[0] + (to.verts3D[i][0] - v[0]) * t,
+    v[1] + (to.verts3D[i][1] - v[1]) * t,
+    v[2] + (to.verts3D[i][2] - v[2]) * t,
+  ]);
+  updateMesh({ verts3D: interp, faces: to.faces });
+  updateUI();
+}
+
+// 更新网格顶点
+function updateMesh(result) {
+  const mesh = paperGroup;
+  if (!mesh) return;
+  const pos = mesh.geometry.attributes.position.array;
+  for (let i = 0; i < result.verts3D.length; i++) {
+    const t = oe3dToThree(result.verts3D[i]);
+    pos[i*3] = t.x; pos[i*3+1] = t.y; pos[i*3+2] = t.z;
+  }
+  mesh.geometry.attributes.position.needsUpdate = true;
+  mesh.geometry.computeVertexNormals();
+  if (wireGroup) {
+    const lpos = wireGroup.geometry.attributes.position.array;
+    const lcol = wireGroup.geometry.attributes.color ? wireGroup.geometry.attributes.color.array : null;
+    const fc = foldableCache;
+    const active = activeCreaseEdges();
+    const COLOR = {
+      M: [0.72, 0.18, 0.15], V: [0.16, 0.35, 0.62],
+      B: [0.32, 0.30, 0.28], U: [0.62, 0.60, 0.56],
+    };
+    const bg = [0.953, 0.941, 0.918];
+    let li = 0;
+    if (fc) {
+      for (let i = 0; i < fc.edges.length; i++) {
+        const e = fc.edges[i];
+        const a = e[0], b = e[1];
+        if (a >= result.verts3D.length || b >= result.verts3D.length) continue;
+        const p1 = oe3dToThree(result.verts3D[a]), p2 = oe3dToThree(result.verts3D[b]);
+        lpos[li*6] = p1.x; lpos[li*6+1] = p1.y; lpos[li*6+2] = p1.z;
+        lpos[li*6+3] = p2.x; lpos[li*6+4] = p2.y; lpos[li*6+5] = p2.z;
+        if (lcol) {
+          const t2 = (fc.edgeTypes || [])[i] || 'U';
+          const c2 = COLOR[t2] || COLOR.U;
+          const isActive = active && active.has(i);
+          const isDone = active && !isActive && doneCreaseEdges().has(i);
+          let cc2;
+          if (isActive) cc2 = c2;
+          else {
+            const f2 = isDone ? 0.45 : 0.06;
+            cc2 = [c2[0]*f2+bg[0]*(1-f2), c2[1]*f2+bg[1]*(1-f2), c2[2]*f2+bg[2]*(1-f2)];
+          }
+          lcol[li*6] = cc2[0]; lcol[li*6+1] = cc2[1]; lcol[li*6+2] = cc2[2];
+          lcol[li*6+3] = cc2[0]; lcol[li*6+4] = cc2[1]; lcol[li*6+5] = cc2[2];
+        }
+        li++;
+      }
+    }
+    wireGroup.geometry.attributes.position.needsUpdate = true;
+    if (lcol) wireGroup.geometry.attributes.color.needsUpdate = true;
+  }
+}
+
+// 分步导航
+function nextStep() {
+  if (currentStep >= stepCount) return;
+  currentStep++;
+  animateToStep(currentStep);
+}
+function prevStep() {
+  if (currentStep <= 0) return;
+  currentStep--;
+  animateToStep(currentStep);
+}
+function goStep(s) {
+  currentStep = Math.max(0, Math.min(stepCount, s));
+  applyStepView(currentStep);
+}
+
+// 步骤动画：从当前插值到目标步骤（短暂、平滑）
+let stepAnimTimer = null;
+function animateToStep(target) {
+  if (stepAnimTimer) clearInterval(stepAnimTimer);
+  const from = currentStep > 0 ? currentStep - 1 : 0;
+  const to = currentStep;
+  let t = 0;
+  stepAnimTimer = setInterval(() => {
+    t += 0.1;
+    if (t >= 1) {
+      clearInterval(stepAnimTimer);
+      stepAnimTimer = null;
+      applyStepView(currentStep, 1);
+      return;
+    }
+    applyStepView(currentStep, easeInOut(t));
+  }, 30);
+}
+function easeInOut(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2) / 2; }
+
+function updateUI() {
+  $('stepLabel').textContent = `Step ${currentStep} / ${stepCount}`;
+  const pct = stepCount > 0 ? Math.round((currentStep / stepCount) * 100) : 0;
+  $('foldSlider').value = pct;
+  $('foldPct').textContent = pct + '%';
+  $('btnPrev').disabled = currentStep <= 0;
+  $('btnNext').disabled = currentStep >= stepCount;
+  document.querySelectorAll('.model-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.model === currentModelId);
+  });
+}
+
+// ── Animation ──
+function toggleAnim() {
+  if (animTimer) { stopAnim(); return; }
+  animDir = currentStep >= stepCount ? -1 : 1;
+  animTimer = setInterval(() => {
+    let s = currentStep + animDir;
+    if (s > stepCount) { s = stepCount; animDir = -1; }
+    if (s < 0) { s = 0; animDir = 1; }
+    goStep(s);
+  }, 500);
+  $('btnPlay').innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+}
+function stopAnim() {
+  if (animTimer) { clearInterval(animTimer); animTimer = null; }
+  if (stepAnimTimer) { clearInterval(stepAnimTimer); stepAnimTimer = null; }
+  $('btnPlay').innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+}
+
+// ═══════════ Panel collapse ═══════════
+function initPanels() {
+  document.querySelectorAll('.panel-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const body = $(h.dataset.target);
+      const chev = h.querySelector('.chev');
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      chev.classList.toggle('open', !open);
+      h.setAttribute('aria-expanded', !open);
+    });
+  });
+  // sidebar mobile toggle
+  $('btnSidebar').addEventListener('click', () => {
+    $('sidebar').classList.toggle('open');
+  });
+}
+
+// ═══════════ Init ═══════════
+function init() {
+  try {
+    initPanels();
+    if (!initThree()) {
+      $('loadError').style.display = 'flex';
+      $('loadErrMsg').textContent = 'Canvas not ready — please reload.';
+      return;
+    }
+    buildModelList();
+    const first = Object.keys(MODELS)[0];
+    loadModel(first);
+    var qs = new URLSearchParams(location.search);
+    var sp2 = qs.get('step');
+    if (sp2) { goStep(parseInt(sp2)); var at = parseFloat(qs.get('anim') || '1'); if (at < 1) applyStepView(parseInt(sp2), at); }
+
+
+
+
+    $('foldSlider').addEventListener('input', e => {
+      stopAnim();
+      const pct = parseInt(e.target.value);
+      goStep(Math.round(pct / 100 * stepCount));
+    });
+    $('btnPlay').addEventListener('click', toggleAnim);
+    $('btnPrev').addEventListener('click', () => { stopAnim(); prevStep(); });
+    $('btnNext').addEventListener('click', () => { stopAnim(); nextStep(); });
+    $('btnReset').addEventListener('click', () => { stopAnim(); goStep(0); });
+  } catch (e) {
+    console.error(e);
+    $('loadError').style.display = 'flex';
+    $('loadErrMsg').textContent = e.message;
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>

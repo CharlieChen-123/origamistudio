@@ -1,0 +1,65 @@
+{
+  "file_spec": 1.2,
+  "file_creator": "OE3D .ori decoder",
+  "file_title": "fishbase",
+  "frame_title": "fishbase",
+  "vertices_coords": [
+    [
+      0.0,
+      400
+    ],
+    [
+      400.0,
+      0
+    ],
+    [
+      0.0,
+      0
+    ],
+    [
+      400.0,
+      400
+    ],
+    [
+      165.6854,
+      400
+    ],
+    [
+      0,
+      282.7538
+    ],
+    [
+      400,
+      282.7538
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      5,
+      6
+    ]
+  ],
+  "edges_assignment": [
+    "V",
+    "V",
+    "V",
+    "U",
+    "V"
+  ]
+}

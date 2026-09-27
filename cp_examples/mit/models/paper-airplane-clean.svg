@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cleaned paper-airplane crease pattern adapted from the OrigamiSimulator
+  Paper Airplane example. The upstream asset contains repeated boundary and
+  crease segments plus several endpoints outside the paper; those produce an
+  unstable planar graph in the embedded importer. This version retains the
+  intended rectangular sheet and the unique in-sheet creases only.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 1024" width="768" height="1024">
+  <title>Paper Airplane — cleaned simulation pattern</title>
+  <rect x="0" y="0" width="768" height="1024" fill="none" stroke="#000000" stroke-width="2"/>
+  <g fill="none" stroke-width="2" stroke-linecap="round">
+    <line x1="384" y1="0" x2="384" y2="1024" stroke="#0000ff"/>
+    <line x1="0" y1="384" x2="384" y2="0" stroke="#0000ff"/>
+    <line x1="768" y1="384" x2="384" y2="0" stroke="#0000ff"/>
+    <line x1="384" y1="0" x2="0" y2="928" stroke="#0000ff"/>
+    <line x1="384" y1="0" x2="768" y2="928" stroke="#0000ff"/>
+    <line x1="384" y1="0" x2="0" y2="160" stroke="#ff0000"/>
+    <line x1="384" y1="0" x2="768" y2="160" stroke="#ff0000"/>
+    <line x1="384" y1="0" x2="0" y2="256" stroke="#ff0000"/>
+    <line x1="384" y1="0" x2="768" y2="256" stroke="#ff0000"/>
+  </g>
+</svg>

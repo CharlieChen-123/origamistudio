@@ -1,0 +1,49 @@
+<!doctype html><meta charset="utf-8"><title>Flat Crane handoff regression</title>
+<style>body{font:14px system-ui}iframe{width:900px;height:650px}pre{white-space:pre-wrap}</style>
+<pre id="report">Running…</pre><iframe id="designer" src="../../cp-designer_with%20constraints.html"></iframe><iframe id="lab" src="../../origami-3d.html"></iframe>
+<script type="module">
+const out=document.querySelector('#report');out.textContent='';
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+async function until(f){for(let i=0;i<250;i++){if(f())return;await pause(100);}throw Error('Timeout');}
+const assert=(v,m)=>{if(!v)throw Error(m);};
+const d=document.querySelector('#designer').contentWindow,w=document.querySelector('#lab').contentWindow;
+if(new URLSearchParams(location.search).has('plain')) document.querySelector('#designer').src='../../cp-designer.html';
+let saved;
+try{
+ await until(()=>d.CPDesignerHandoff && w.G?.model?.getNodes().length && !w.importBusy);
+ saved=localStorage.getItem('cp-designer-lines');
+ const preset=d.ORIGAMI_PRESETS.find(p=>p.id==='flat_crane');
+ const original=await (await fetch('../../'+preset.url)).text();
+ await d.loadSourcePreset(preset);
+ const payload=await d.CPDesignerHandoff.makePayload();
+ assert(payload.text===original,'Handoff changed original SVG');out.textContent+='PASS unchanged handoff is byte-identical to original SVG\n';
+ async function inspect(source){
+   assert(await w.importModelSource(source),'Import failed');
+   w.G.simulationRunning=false;
+   const f=JSON.parse(JSON.stringify(w.G.pattern.getFoldData(false)));
+   w.G.dynamicSolver.reset();w.setFoldPercent(50);w.G.dynamicSolver.solve(120);
+   return {f,positions:Array.from(w.G.model.getPositionsArray())};
+ }
+ const direct=await inspect({name:preset.name+'.svg',url:'../../'+preset.url,id:preset.id});
+ const handed=await inspect(payload);
+ assert(JSON.stringify(direct.f)===JSON.stringify(handed.f),'Direct and handoff meshes differ');
+ assert(direct.positions.every((v,i)=>Math.abs(v-handed.positions[i])<1e-5),'Deterministic fold poses differ');
+ out.textContent+='PASS direct and transferred Flat Crane: identical mesh, angles and 120-step GPU pose\n';
+ // Force the edited-drawing path without changing the physical crease pattern.
+ const cp=d.eval('cp');cp.lines.push({p1:{x:0,y:0},p2:{x:5,y:5},lt:'crease'});
+ const edited=await d.CPDesignerHandoff.makePayload();
+ assert(edited.name==='CP Designer pattern.svg','Edited drawing ignored');
+ const xml=new DOMParser().parseFromString(edited.text,'image/svg+xml');
+ assert(xml.querySelectorAll('[stroke="#ffff00"]').length===4,'Lost four triangulation edges');
+ assert(xml.querySelectorAll('[opacity="0.5"]').length===14,'Lost 90-degree folds');
+ const reexported=await inspect(edited);
+ for(const key of ['edges_assignment','edges_foldAngle','edges_vertices','faces_vertices'])assert(JSON.stringify(reexported.f[key])===JSON.stringify(direct.f[key]),'Edited export changed '+key);
+ assert(direct.positions.length===reexported.positions.length && direct.positions.every((v,i)=>Math.abs(v-reexported.positions[i])<1e-4),'Edited export pose differs');
+ out.textContent+='PASS edited export retains triangulation, topology and partial fold angles\n';
+ // Emulate the old coordinate-only local-storage format.
+ cp.lines=cp.lines.filter(l=>l.lt!=='crease').map(({p1,p2,lt})=>({p1,p2,lt}));cp.sourcePreset=null;
+ const recovered=await d.CPDesignerHandoff.makePayload();assert(recovered.text===original,'Legacy recovery failed');
+ out.textContent+='PASS old coordinate-only Flat Crane recovers original source and angles\nDONE';
+}catch(e){out.textContent+='FAIL '+e.stack;}finally{if(saved!==undefined){if(saved===null)localStorage.removeItem('cp-designer-lines');else localStorage.setItem('cp-designer-lines',saved);}}
+</script>
+

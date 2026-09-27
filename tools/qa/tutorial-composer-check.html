@@ -1,0 +1,37 @@
+<!doctype html><meta charset="utf-8"><title>Tutorial composer check</title>
+<style>body{font:14px system-ui;margin:8px}iframe{width:100%;height:790px;border:0}pre{white-space:pre-wrap}</style>
+<button id="run">Verify first-time authoring</button><pre id="report">Ready</pre><iframe id="app" src="../../origami-3d.html"></iframe>
+<script type="module">
+const app=document.querySelector('#app'),report=document.querySelector('#report');
+const fold={vertices_coords:[[0,0],[400,0],[400,400],[0,400]],faces_vertices:[[0,1,2,3]],edges_vertices:[[0,1],[1,2],[2,3],[3,0],[0,2]],edges_assignment:['B','B','B','B','V']};
+const assert=(ok,text)=>{if(!ok)throw Error(text)};
+function clickPaper(w,svg,p){const point=svg.createSVGPoint();point.x=p[0];point.y=p[1];const screen=point.matrixTransform(svg.getScreenCTM());for(const type of ['pointerdown','pointerup'])svg.dispatchEvent(new w.PointerEvent(type,{bubbles:true,clientX:screen.x,clientY:screen.y,button:0,pointerId:1}));}
+function dragPaper(w,svg,from,to){const screen=p=>{const point=svg.createSVGPoint();point.x=p[0];point.y=p[1];return point.matrixTransform(svg.getScreenCTM());};const a=screen(from),b=screen(to);for(const [type,p] of [['pointerdown',a],['pointermove',b],['pointerup',b]])svg.dispatchEvent(new w.PointerEvent(type,{bubbles:true,clientX:p.x,clientY:p.y,button:0,pointerId:2}));}
+document.querySelector('#run').onclick=async()=>{try{
+  const w=app.contentWindow;assert(w.StepStudio,'Editor did not load');
+  w.StepStudio.load({format:'fold-lab-tutorial',version:2,title:'First fold',fold,actions:[]});
+  const d=w.document,studio=w.StepStudio;
+  assert(!d.querySelector('#motionChooser').hidden&&d.querySelector('#markControls').hidden,'The first screen should only ask for a motion');
+  d.querySelector('#actionModeAxis').click();assert(d.querySelector('#motionChooser').hidden&&!d.querySelector('#markControls').hidden,'Selecting a motion should show only its marking instructions');
+  assert(d.querySelector('#actionAdvanced').tagName==='SECTION'&&!d.querySelector('#foldSettings').hidden,'Fold controls should stay open without another click');
+  const paper=d.querySelector('#paperEditor');clickPaper(w,paper,[100,100]);clickPaper(w,paper,[280,130]);
+  assert(!d.querySelector('#previewAction').disabled,'Selecting a line and moving side should enable preview');
+  d.querySelector('#previewAction').click();assert(studio.getState().phase==='preview'&&!d.querySelector('#authorReview').hidden,'Preview should show the motion and step explanation');
+  d.querySelector('#reviewTitle').value='Fold corner to corner';d.querySelector('#reviewCaption').value='Bring two corners together.';d.querySelector('#saveAction').click();
+  assert(studio.getState().steps===1&&d.querySelector('#motionChooser').hidden===false,'Adding a step should return to the next choice');
+  assert(!d.querySelector('#quickUnfold').hidden&&!d.querySelector('#saveLesson').disabled,'Unfold and save must be visible after the first step');
+  d.querySelector('#actionList .lesson-step').click();assert(!d.querySelector('#quickUnfoldPreview').hidden,'The final saved fold should offer an unfold shortcut');
+  d.querySelector('#editSavedText').click();d.querySelector('#savedTitle').value='First diagonal fold';d.querySelector('#savedCaption').value='Open this fold after marking it.';d.querySelector('#applySavedText').click();
+  assert(d.querySelector('#previewTitle').textContent==='First diagonal fold','Editing saved step wording should update the preview');
+  d.querySelector('#editAction').click();d.querySelector('#quickUnfold').click();assert(studio.getState().steps===2&&studio.getState().phase==='preview','Unfold shortcut should add and play the next step in one click');
+  const saved=JSON.parse(JSON.stringify(studio.tutorialData()));studio.load(saved);
+  assert(studio.getState().steps===2&&d.querySelector('#previewTitle').textContent==='First diagonal fold'&&d.querySelector('#previewCaption').textContent==='Open this fold after marking it.','Saved tutorial or edited wording did not reopen intact');
+  d.querySelector('#newAction').click();d.querySelector('#actionModeMatch').click();d.querySelector('#changeAction').click();
+  assert(studio.getState().steps===2&&!d.querySelector('#motionChooser').hidden,'Change move should cancel without removing existing steps');
+  studio.load({...saved,actions:saved.actions.slice(0,1)});assert(!d.querySelector('#quickUnfoldPreview').hidden,'Saved final fold should expose the unfold shortcut');
+  d.querySelector('#quickUnfoldPreview').click();assert(studio.getState().steps===2,'Unfold from a saved step should add and play the next step');
+  studio.load({...saved,actions:[]});d.querySelector('#actionModeMatch').click();assert(!d.querySelector('#matchHelp').hidden&&!d.querySelector('#foldSettings').hidden,'Point alignment should show drag instructions and open controls');
+  dragPaper(w,d.querySelector('#paperEditor'),[0,400],[0,0]);assert(!d.querySelector('#previewAction').disabled&&d.querySelector('#paperEditor').textContent.includes('A')&&d.querySelector('#paperEditor').textContent.includes('B'),'Dragging two corners should show labelled endpoints and enable preview');
+  report.textContent='PASS: guided fold, one-click unfold, point-drag guidance, saved wording, save/load, and cancel';
+}catch(e){report.textContent='FAIL '+e.stack;}};
+</script>
