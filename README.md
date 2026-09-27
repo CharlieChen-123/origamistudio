@@ -1,14 +1,18 @@
-# CP Designer · 3D Origami Simulation
+# Origami Studio — CP Designer & Fold Lab
 
 Create a crease pattern or import an SVG / FOLD file, then use Amanda Ghassaei’s [OrigamiSimulator](https://github.com/amandaghassaei/OrigamiSimulator) GPU solver to explore the fold in 3D. This is a static HTML project; it has no backend and does not upload your patterns.
 
-**[Open Origami Studio](https://charliechen-123.github.io/origami-website/)** — start in CP Designer, then switch to Fold Lab for 3D simulation and tutorials.
+## Use it online
 
-## Quick start
+**[Open Origami Studio in your browser](https://charliechen-123.github.io/origamistudio/)**. No download, installation, or account is needed.
 
-On Windows, double-click `start-origami.cmd`. It starts a local server and opens the **CP Designer with Constraints** page by default. Node.js is required, but no package installation is needed.
+The link opens **CP Designer with Constraints**. Draw a crease pattern, import an SVG / FOLD / CP file, or choose a preset. Select **Fold Lab** at the top to simulate the same pattern in 3D; there you can also open or make a folding tutorial. Switch back with **Design**.
 
-You can also start it manually:
+## Run locally (optional)
+
+If you want to work offline or develop the code, double-click `start-origami.cmd` on Windows. It starts a local server and opens CP Designer with Constraints. Node.js is required, but no package installation is needed.
+
+You can also start the local server manually:
 
 ```sh
 node tools/serve.mjs 8123
@@ -16,9 +20,9 @@ node tools/serve.mjs 8123
 
 Then open [CP Designer with Constraints](http://127.0.0.1:8123/cp-designer_with%20constraints.html), [CP Designer](http://127.0.0.1:8123/cp-designer.html), or [Fold Lab](http://127.0.0.1:8123/origami-3d.html). Use a modern Chrome or Edge browser with WebGL support.
 
-## Publish the website
+## Hosting a fork
 
-This project can be hosted as a static site on GitHub Pages. The root `index.html` opens CP Designer with Constraints, and its **Fold Lab** tab opens the simulator. The root `.nojekyll` file keeps the static files unprocessed by Jekyll.
+The official site above is hosted on GitHub Pages. If you fork this project, you can host your own copy the same way. The root `index.html` opens CP Designer with Constraints, and its **Fold Lab** tab opens the simulator. The root `.nojekyll` file keeps the static files unprocessed by Jekyll.
 
 Before publishing, run `npm test` inside `simulator/`, review the files about to be committed, confirm the copyright name in `LICENSE`, and check that every redistributed example has appropriate credit or permission. The Jun Mitani research inputs and GPL reference folder are excluded by `.gitignore`; local portfolio concept images are also excluded. This is a public beta: the simultaneous solver does not guarantee convergence or collision-free results for arbitrary CPs, and tutorial steps are authored rather than automatically inferred.
 
@@ -26,10 +30,10 @@ After committing and pushing to your own GitHub repository, open **Settings → 
 
 ## Use the simulator
 
-1. Open `cp-designer.html` and draw mountain and valley folds.
-2. Choose **3D Fold Simulation** in the upper-right corner. Your current paper and creases are sent directly to Fold Lab.
-3. Drag the Fold control or select Play Fold. The initial state is flat at `0%`.
-4. Choose Back to Designer to keep editing the same pattern.
+1. [Open the live site](https://charliechen-123.github.io/origamistudio/) and draw, import, or choose a crease pattern.
+2. Select **Fold Lab** in the top navigation. Your current paper and creases are sent to the simulator.
+3. Drag the Fold control or select **Play Fold**. The initial state is flat at `0%`.
+4. Select **Design** to return to the pattern editor.
 
 When an unchanged library preset is sent from CP Designer, Fold Lab receives its original SVG so partial fold angles, boundaries, and source geometry stay identical to opening that preset in Fold Lab itself. Once you edit the pattern, CP Designer sends its current drawing instead; per-line partial fold angles are retained.
 

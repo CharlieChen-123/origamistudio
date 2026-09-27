@@ -1,6 +1,6 @@
 # GitHub 开源发布清单（历史发布记录）
 
-> 文件已归档到 `docs/project/`。当前启动、测试和发布结构以根目录 `README.md` 为准。
+> 文件已归档到 `docs/project/`。当前网站是 https://charliechen-123.github.io/origamistudio/；当前启动、测试和发布结构以根目录 `README.md` 为准。
 
 > 目标：把折纸网站开源到 GitHub，让所有人通过网址访问。
 > ✅ = 我已帮你完成 · ⬜ = 需要你操作 · 📋 = 我提供的文件
@@ -27,7 +27,7 @@
 ```bash
 git init
 git add .
-git commit -m "init: origami website"
+git commit -m "init: Origami Studio"
 ```
 
 > 如果 git 提示要配置用户名（首次使用），先执行这两行（把名字邮箱换成你的）：
@@ -58,7 +58,7 @@ git commit -m "init: origami website"
 ## 第五步：创建 GitHub 仓库（约 2 分钟）
 
 1. 浏览器打开 https://github.com/new
-2. Repository name 填：`origami-website`
+2. Repository name 填：`origamistudio`
 3. 选 **Public**（公开）
 4. 不要勾选任何初始化选项（README/.gitignore/LICENSE 都不要勾，本地已经有了）
 5. 点 **Create repository**
@@ -68,7 +68,7 @@ git commit -m "init: origami website"
 回到 VSCode 终端，按提示输入（把 `你的用户名` 换成实际的）：
 
 ```bash
-git remote add origin https://github.com/你的用户名/origami-website.git
+git remote add origin https://github.com/你的用户名/origamistudio.git
 git branch -M main
 git push -u origin main
 ```
@@ -82,7 +82,7 @@ git push -u origin main
 3. Build and deployment → **Source** 选 `Deploy from a branch`
 4. **Branch** 选 `main` + 目录选 `/ (root)` → 点 **Save**
 5. 等 1-3 分钟，页面顶部会出现网址：
-   `https://你的用户名.github.io/origami-website/`
+   `https://你的用户名.github.io/origamistudio/`
 6. 手机浏览器打开这个网址，就是你的网站了！
 
 ## 第八步：可选美化（发布后再做）
@@ -97,7 +97,7 @@ git push -u origin main
 ## 完成后你的网站结构（预期）
 
 ```
-origami-website/          ← GitHub 仓库
+origamistudio/            ← GitHub 仓库
 ├── index.html            ← 门户页（跳转设计器/模拟器）
 ├── cp-designer.html      ← 原版设计器
 ├── cp-designer-modified.html ← 新版设计器
