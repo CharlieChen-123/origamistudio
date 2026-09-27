@@ -2,6 +2,8 @@
 
 Create a crease pattern or import an SVG / FOLD file, then use Amanda Ghassaei’s [OrigamiSimulator](https://github.com/amandaghassaei/OrigamiSimulator) GPU solver to explore the fold in 3D. This is a static HTML project; it has no backend and does not upload your patterns.
 
+**[Open Origami Studio](https://charliechen-123.github.io/origami-website/)** — start in CP Designer, then switch to Fold Lab for 3D simulation and tutorials.
+
 ## Quick start
 
 On Windows, double-click `start-origami.cmd`. It starts a local server and opens the **CP Designer with Constraints** page by default. Node.js is required, but no package installation is needed.
@@ -99,12 +101,12 @@ Rebuild Fold Lab after changing its template:
 
 ```sh
 node tools/build-origami3d.mjs
-node --test simulator/test/*.test.js
+npm --prefix simulator test
 ```
 
 Open `/tools/qa/action-check.html` on the local server for the current action editor integration checks. See [validation and known limits](docs/action-editor-validation.md).
 
-Open `/tools/qa/tutorial-composer-check.html` to verify the guided authoring flow, or `/tools/qa/complete-crane-check.html` to verify the crane lesson, template authoring, and tutorial save/load. The version before the tutorial composer redesign is preserved in [archive/snapshots/before-tutorial-editor-redesign-20260926-1518.zip](archive/snapshots/before-tutorial-editor-redesign-20260926-1518.zip).
+Open `/tools/qa/tutorial-composer-check.html` to verify the guided authoring flow, or `/tools/qa/complete-crane-check.html` to verify the crane lesson, template authoring, and tutorial save/load.
 
 `tools/test-cp-simulator.mjs` is an older browser integration test. It expects an isolated Chrome instance with remote debugging on port `9333`; see the script header for the setup. It checks SVG import, 3D displacement, play / pause, FOLD import, error recovery, every bundled example, the cleaned paper airplane, both designer handoffs, and mobile layout.
 
