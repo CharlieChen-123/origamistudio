@@ -202,7 +202,7 @@ body.tutorial-mode #status{display:none;}
   <div class="brand">
     Origami Studio
   </div>
-  <div class="workflow-switch"><a class="workspace-tab" href="cp-designer_with%20constraints.html">Design</a><span class="current">Fold Lab</span></div>
+  <div class="workflow-switch"><a class="workspace-tab" href="cp-designer_with%20constraints.html">Design</a><span class="current">Fold Lab</span><a href="credits.html" target="_blank" rel="noopener">Credits</a></div>
   <div class="workspace-name"><strong>WORKSPACE</strong> · <span id="headerPatternName">No pattern loaded</span></div>
   <div class="header-actions"><button id="tutorialToggle" class="tutorial-launch">Make a tutorial</button></div>
 </header>
@@ -213,6 +213,7 @@ body.tutorial-mode #status{display:none;}
   <div class="hint">Drop a file anywhere. Red: mountain. Blue: valley. Black: boundary. Grey guides are ignored.</div>
   <label class="hint">MERGE TOLERANCE (% OF PAPER) <input id="mergeTolerance" type="number" min="0.001" max="1" step="0.01" value="0.2" style="width:58px" title="Larger values merge nearby vertices more aggressively; small creases can be lost."></label>
   <div id="modelName">No pattern loaded</div>
+  <div id="modelCredit" class="hint"></div>
   <div id="notice" class="hint" role="status" aria-live="polite"></div>
   <div class="panel-title">Example patterns</div>
   <div id="modelGrid"></div>
@@ -258,7 +259,7 @@ body.tutorial-mode #status{display:none;}
     <input id="openTutorial" type="file" accept=".json,.origami-tutorial.json" hidden>
   </section>
   <div class="hint">This is a simultaneous-fold shape simulation. Some patterns can self-intersect or fail to converge; it is not a step-by-step folding tutorial.</div>
-  <div class="hint">Solver: <a href="https://github.com/amandaghassaei/OrigamiSimulator" target="_blank" rel="noopener">Amanda Ghassaei · OrigamiSimulator</a><br>Research: Ghassaei, Demaine, Gershenfeld<br><a href="vendor/origamisimulator/LICENSE" target="_blank">MIT License</a> · <a href="THIRD_PARTY_NOTICES.md" target="_blank">credits &amp; sources</a></div>
+  <div class="hint">Solver: <a href="https://github.com/amandaghassaei/OrigamiSimulator" target="_blank" rel="noopener">Amanda Ghassaei · OrigamiSimulator</a><br>Research: Ghassaei, Demaine, Gershenfeld<br><a href="vendor/origamisimulator/LICENSE" target="_blank">MIT License</a> · <a href="credits.html" target="_blank">credits &amp; sources</a></div>
 </aside>
 
 <footer id="bar">

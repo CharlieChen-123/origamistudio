@@ -116,4 +116,6 @@ Open `/tools/qa/tutorial-composer-check.html` to verify the guided authoring flo
 
 ## License and credits
 
+Browse the [Credits & Sources page](https://charliechen-123.github.io/origamistudio/credits.html) for individual designer credits and original CP links for all twenty presets.
+
 Project code is under the root [MIT License](LICENSE). OrigamiSimulator retains Amanda Ghassaei’s [upstream MIT License](vendor/origamisimulator/LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency and model credits.

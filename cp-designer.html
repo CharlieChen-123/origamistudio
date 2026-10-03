@@ -489,7 +489,7 @@ select:focus{ border-color: var(--accent); }
     </div>
     Origami Studio
   </div>
-  <div class="workflow-switch"><span class="current">Design</span></div>
+  <div class="workflow-switch"><span class="current">Design</span><a href="credits.html" target="_blank" rel="noopener">Credits</a></div>
   <div class="header-export">
     <button class="exp-btn" onclick="openImport()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1582,7 +1582,7 @@ function buildPresetGallery(){
     const {data}=job;
     if(job.kind==='source'){
       const card=document.createElement('div');card.className='pg-card';card.onclick=()=>loadSourcePreset(data);
-      card.innerHTML=`<div class="pg-preview" aria-label="${data.name} crease pattern"></div><div class="pg-meta"><span>Level ${job.difficulty}</span><span>${difficultyLabel(job.difficulty)}</span></div><div class="pg-name">${data.name}</div><div class="pg-desc">${data.desc}</div>`;
+      card.innerHTML=`<div class="pg-preview" aria-label="${data.name} crease pattern"></div><div class="pg-meta"><span>Level ${job.difficulty}</span><span>${difficultyLabel(job.difficulty)}</span></div><div class="pg-name">${data.name}</div><div class="pg-desc">${data.desc}</div><div class="pg-desc" style="font-size:11px">${data.credit}</div>`;
       renderSourcePreview(card.querySelector('.pg-preview'),data);grid.appendChild(card);return;
     }
     const key=job.key;

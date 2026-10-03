@@ -24,6 +24,16 @@ function finishImport(error) {
     document.getElementById('threeContainer').style.visibility = 'visible';
     currentId = pendingImport.id || null;
     markActive(currentId);
+    const credit = document.getElementById('modelCredit');
+    credit.replaceChildren();
+    const preset = (window.ORIGAMI_PRESETS || []).find(p => p.id === currentId);
+    if (preset) {
+      credit.append(document.createTextNode(preset.credit + ' '));
+      const link = document.createElement('a');
+      link.href = 'credits.html#' + preset.id;
+      link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Source & credits';
+      credit.append(link);
+    }
     window.dispatchEvent(new CustomEvent('foldlab:pattern-ready', { detail: { name: pendingImport.name } }));
   }
   pendingImport = null; loadState = null; setImportBusy(false);
@@ -33,6 +43,7 @@ async function importModelSource(source) {
   if (!G || importBusy) return false;
   const complete = new Promise(resolve => importResolve = resolve);
   setImportBusy(true); pendingImport = source;
+  document.getElementById('modelCredit').replaceChildren();
   playing = false; updatePlayButton(); setFoldPercent(0);
   document.getElementById('err').style.display = 'none';
   document.getElementById('notice').textContent = '';
