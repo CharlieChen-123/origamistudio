@@ -536,6 +536,7 @@ select:focus{ border-color: var(--accent); }
 .lcm-delete:hover{ background: #FEF2F2; }
 </style>
 <link rel="stylesheet" href="assets/designer-foldlab.css">
+<link rel="stylesheet" href="assets/credits.css">
 </head>
 <body>
 
@@ -554,7 +555,7 @@ select:focus{ border-color: var(--accent); }
     </div>
     Origami Studio
   </div>
-  <div class="workflow-switch"><span class="current">Design</span><a href="credits.html" target="_blank" rel="noopener">Credits</a></div>
+  <div class="workflow-switch"><span class="current">Design</span></div>
   <div class="header-export">
     <button class="exp-btn" onclick="openImport()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -700,9 +701,10 @@ select:focus{ border-color: var(--accent); }
 <!-- Presets Gallery Modal -->
 <div class="pg-overlay" id="presetsModal">
   <div class="pg-modal">
-    <h3>Preset Crease Patterns</h3>
-    <div class="pg-sub">Choose a crease pattern. Fold Lab library patterns use the same source file in both tools.</div>
+    <div class="pg-heading"><h3 id="pgTitle">Preset Crease Patterns</h3><button id="pgCreditsButton" class="credit-button" aria-controls="pgCredits" aria-expanded="false" onclick="OrigamiCredits.toggleGallery()">Credits</button></div>
+    <div id="pgSubtitle" class="pg-sub">Choose a crease pattern. Fold Lab library patterns use the same source file in both tools.</div>
     <div class="pg-grid" id="pgGrid"></div>
+    <div id="pgCredits" class="credit-content" hidden></div>
     <button class="pg-close" onclick="closePresetsGallery()">Close</button>
   </div>
 </div>
@@ -839,6 +841,7 @@ select:focus{ border-color: var(--accent); }
 </div>
 
 <script src="assets/preset-library.js"></script>
+<script src="assets/credits.js"></script>
 <script src="assets/crease-render.js"></script>
 <script>
   // Dock constraints in the sidebar so the drawing area and snap points remain unobstructed.
@@ -2528,6 +2531,7 @@ function buildPresetGallery(){
 }
 
 function openPresetsGallery(){
+  OrigamiCredits.resetGallery();
   buildPresetGallery();
   $('presetsModal').classList.add('show');
 }

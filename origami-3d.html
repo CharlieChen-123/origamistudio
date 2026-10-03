@@ -175,6 +175,7 @@ body.tutorial-mode #status{display:none;}
 @media(max-width:700px){header{padding:0 14px;}.badge,header nav{display:none;}.header-actions{margin-left:auto;}#panel{width:210px;top:64px;padding:16px 13px;}#threeContainer{left:210px;top:64px;}#tutorialCanvasGuide{left:calc(210px + (100vw - 210px)/2);}#bar{left:222px;right:10px;bottom:10px;}.header-actions button{padding:8px;font-size:9px;}body.tutorial-mode #stepStudio{top:64px;width:100%;padding:18px 16px 96px;}body.tutorial-mode #threeContainer{left:0;right:0;opacity:.16;}body.tutorial-mode #tutorialCanvasGuide{left:50%;z-index:8;}body.tutorial-mode #bar{left:8px;right:8px;z-index:9;}.workspace-name{display:none;}}
 </style>
 <link rel="stylesheet" href="assets/workspace.css">
+<link rel="stylesheet" href="assets/credits.css">
 </head>
 <body>
 
@@ -202,7 +203,7 @@ body.tutorial-mode #status{display:none;}
   <div class="brand">
     Origami Studio
   </div>
-  <div class="workflow-switch"><a class="workspace-tab" href="cp-designer_with%20constraints.html">Design</a><span class="current">Fold Lab</span><a href="credits.html" target="_blank" rel="noopener">Credits</a></div>
+  <div class="workflow-switch"><a class="workspace-tab" href="cp-designer_with%20constraints.html">Design</a><span class="current">Fold Lab</span></div>
   <div class="workspace-name"><strong>WORKSPACE</strong> · <span id="headerPatternName">No pattern loaded</span></div>
   <div class="header-actions"><button id="tutorialToggle" class="tutorial-launch">Make a tutorial</button></div>
 </header>
@@ -259,7 +260,7 @@ body.tutorial-mode #status{display:none;}
     <input id="openTutorial" type="file" accept=".json,.origami-tutorial.json" hidden>
   </section>
   <div class="hint">This is a simultaneous-fold shape simulation. Some patterns can self-intersect or fail to converge; it is not a step-by-step folding tutorial.</div>
-  <div class="hint">Solver: <a href="https://github.com/amandaghassaei/OrigamiSimulator" target="_blank" rel="noopener">Amanda Ghassaei · OrigamiSimulator</a><br>Research: Ghassaei, Demaine, Gershenfeld<br><a href="vendor/origamisimulator/LICENSE" target="_blank">MIT License</a> · <a href="credits.html" target="_blank">credits &amp; sources</a></div>
+  <div class="hint">Solver: <a href="https://github.com/amandaghassaei/OrigamiSimulator" target="_blank" rel="noopener">Amanda Ghassaei · OrigamiSimulator</a><br>Research: Ghassaei, Demaine, Gershenfeld<br><a href="vendor/origamisimulator/LICENSE" target="_blank">MIT License</a> · <button class="credit-button" onclick="OrigamiCredits.open()">Credits &amp; sources</button></div>
 </aside>
 
 <footer id="bar">
@@ -990,6 +991,7 @@ body.tutorial-mode #status{display:none;}
 <script src="vendor/origamisimulator/dependencies/numeric-1.2.6.js"></script>
 <script src="vendor/origamisimulator/dependencies/fold.js"></script>
 <script src="assets/preset-library.js"></script>
+<script src="assets/credits.js"></script>
 <script src="assets/cp-import.js"></script>
 
 <!-- ═══ 上游求解器模块（只取需要的子集，避开 Angular/jQuery-UI/VR 那一大堆） ═══ -->

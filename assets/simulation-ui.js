@@ -29,9 +29,9 @@ function finishImport(error) {
     const preset = (window.ORIGAMI_PRESETS || []).find(p => p.id === currentId);
     if (preset) {
       credit.append(document.createTextNode(preset.credit + ' '));
-      const link = document.createElement('a');
-      link.href = 'credits.html#' + preset.id;
-      link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Source & credits';
+      const link = document.createElement('button');
+      link.className = 'credit-button'; link.textContent = 'Source & credits';
+      link.onclick = () => OrigamiCredits.open(preset.id);
       credit.append(link);
     }
     window.dispatchEvent(new CustomEvent('foldlab:pattern-ready', { detail: { name: pendingImport.name } }));
