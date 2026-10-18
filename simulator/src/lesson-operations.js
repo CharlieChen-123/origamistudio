@@ -1,11 +1,12 @@
 import {compileActions,poseAction} from './action-fold.js';
 import {checkMotion} from './motion-quality.js';
 import {motionStages} from './motion-stages.js';
+import {validateTeaching,transformTeaching} from './teaching-tools.js';
 
 export function validateLesson(initial,actions){
   if(!Array.isArray(actions))throw Error('The tutorial needs a list of steps.');
   let sequence;
-  actions.forEach((a,i)=>{try{motionStages(a);}catch(e){throw Error(`Step ${i+1}: ${e.message}`);}});
+  actions.forEach((a,i)=>{try{motionStages(a);validateTeaching(a,initial);}catch(e){throw Error(`Step ${i+1}: ${e.message}`);}});
   try{sequence=compileActions(initial,actions);}catch(error){for(let i=0;i<actions.length;i++){try{compileActions(initial,actions.slice(0,i+1));}catch(e){throw Error(`Step ${i+1}: ${e.message}`);}}throw error;}
   actions.forEach((a,i)=>{if(a.duration!==undefined&&(!Number.isFinite(a.duration)||a.duration<=0||a.duration>120))throw Error(`Step ${i+1}: use an animation duration between 0 and 120 seconds.`);if(a.view&&(!Array.isArray(a.view.target)||a.view.target.length!==3||!a.view.target.every(Number.isFinite)||!['zoom','yaw','pitch'].every(k=>Number.isFinite(a.view[k]))||a.view.zoom<=0))throw Error(`Step ${i+1}: invalid camera view.`);});
   sequence.prepared.forEach((p,i)=>{try{if(p.kind!=='demo'&&p.kind!=='unfold')checkMotion(p,poseAction,{samples:16,tolerance:1e-4});}catch(e){throw Error(`Step ${i+1}: ${e.message}`);}});
@@ -40,6 +41,7 @@ export function applyRecipe(recipe,sheet,frame,offset){
     for(const k of ['frontRegions','leftRegions','rightRegions','backRegions'])if(a[k])a[k]=a[k].map(poly=>poly.map(xy));
     if(a.plane)a.plane.origin=xyz(a.plane.origin);
     if(a.kind==='unfold')a.foldIndex+=offset;
+    if(a.teaching)a.teaching=transformTeaching(a.teaching,xy);
     delete a.view;
   }
   return actions;

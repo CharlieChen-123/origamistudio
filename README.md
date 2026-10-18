@@ -49,6 +49,8 @@ Tutorial Studio includes point-to-point and edge-to-edge alignment, full guide f
 
 Select a saved fold to edit its motion, repeat it, or mirror it. Changes validate the remaining sequence and mark later steps for review. Undo/Redo, a recoverable local draft, reusable step sequences, and saved camera views support longer lessons. **Save tutorial** exports a self-contained version 2 JSON file; **File & paper → Open tutorial** restores it.
 
+Use **Moving paper → Inspect** to confirm which paper moves, and **Adjust on paper** to drag a fold line or its flap angle. **Teaching notes** adds material-attached labels, arrows, pause checkpoints and optional detail views. See the [direct editing and teaching guide](docs/direct-teaching-guide.md) for a walkthrough and a small example lesson. Crossing warnings are bounded samples, not a continuous collision solver.
+
 Try **Traditional Paper Crane** (33 steps), **Dart Airplane** (9 steps), or **Blintz Box** (18 steps). The box is a gusseted blintz variation with visible internal corner folds, not the traditional Masu tuck-and-lock sequence. Select **Make an editable copy through this step** to continue from any example stage.
 
 Under **Tutorials → Practice a fold**, try an inside reverse fold on triangular paper or **Squash & open sink** on a compatible symmetric pocket. Compound moves have three replayable teaching stages with editable timing, instructions and pauses. See the [compound tutorial guide](docs/compound-tutorial-guide.md) for supported starting shapes and a short authoring walkthrough.

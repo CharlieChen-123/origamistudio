@@ -3,7 +3,7 @@ function initFriendlyView(g) {
   const view=g.threeView, camera=view.camera, canvas=view.renderer.domElement;
   view.enableControls(false);
   let yaw=0, pitch=Math.PI/2-.001, distance=3.2, zoom=1, drag=null, enabled=true, target=[0,0,0],panMode=false;
-  function update(){camera.up.set(0,1,0);camera.zoom=zoom;camera.position.set(target[0]+distance*Math.cos(pitch)*Math.sin(yaw),target[1]+distance*Math.sin(pitch),target[2]+distance*Math.cos(pitch)*Math.cos(yaw));camera.lookAt(new THREE.Vector3(...target));camera.updateProjectionMatrix();}
+  function update(){camera.up.set(0,1,0);camera.zoom=zoom;camera.position.set(target[0]+distance*Math.cos(pitch)*Math.sin(yaw),target[1]+distance*Math.sin(pitch),target[2]+distance*Math.cos(pitch)*Math.cos(yaw));camera.lookAt(new THREE.Vector3(...target));camera.updateProjectionMatrix();camera.updateMatrixWorld();window.dispatchEvent(new Event('foldlab:camera-change'));}
   function resize(){const r=canvas.parentElement.getBoundingClientRect();if(r.width<1||r.height<1)return;camera.aspect=r.width/r.height;view.renderer.setSize(r.width,r.height);distance=2.65/Math.min(1,camera.aspect);update();}
   function top(){yaw=0;pitch=Math.PI/2-.001;zoom=1;target=[0,0,0];resize();}
   function perspective(){yaw=0;pitch=Math.PI/3;zoom=1;target=[0,0,0];resize();}

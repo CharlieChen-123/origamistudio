@@ -1,0 +1,186 @@
+{
+  "format": "fold-lab-tutorial",
+  "version": 2,
+  "title": "Teaching a fold",
+  "fold": {
+    "vertices_coords": [
+      [
+        0,
+        0
+      ],
+      [
+        400,
+        0
+      ],
+      [
+        400,
+        400
+      ],
+      [
+        0,
+        400
+      ]
+    ],
+    "faces_vertices": [
+      [
+        0,
+        1,
+        2,
+        3
+      ]
+    ],
+    "edges_vertices": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        0
+      ]
+    ],
+    "edges_assignment": [
+      "B",
+      "B",
+      "B",
+      "B"
+    ]
+  },
+  "paper": {
+    "vertices_coords": [
+      [
+        0,
+        0
+      ],
+      [
+        400,
+        0
+      ],
+      [
+        400,
+        400
+      ],
+      [
+        0,
+        400
+      ]
+    ],
+    "faces_vertices": [
+      [
+        0,
+        1,
+        2,
+        3
+      ]
+    ],
+    "edges_vertices": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        0
+      ]
+    ],
+    "edges_assignment": [
+      "B",
+      "B",
+      "B",
+      "B"
+    ]
+  },
+  "actions": [
+    {
+      "kind": "fold",
+      "axis": [
+        [
+          200,
+          0
+        ],
+        [
+          200,
+          400
+        ]
+      ],
+      "side": 1,
+      "angle": 90,
+      "title": "Lift the left flap",
+      "caption": "Lift the left half along the center line. Pause halfway to see the fold angle.",
+      "duration": 4,
+      "teaching": {
+        "marks": [
+          {
+            "kind": "label",
+            "from": {
+              "uv": [
+                200,
+                80
+              ]
+            },
+            "text": "Keep the center line still",
+            "start": 0,
+            "end": 1
+          },
+          {
+            "kind": "arrow",
+            "from": {
+              "uv": [
+                30,
+                280
+              ]
+            },
+            "to": {
+              "uv": [
+                180,
+                280
+              ]
+            },
+            "text": "Lift this flap",
+            "start": 0,
+            "end": 0.8
+          }
+        ],
+        "cues": [
+          {
+            "at": 0.5,
+            "text": "The flap is halfway up. Check the fixed hinge, then continue.",
+            "pause": true,
+            "focus": {
+              "anchor": {
+                "uv": [
+                  130,
+                  200
+                ]
+              },
+              "zoom": 1.6
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "unfold",
+      "foldIndex": 0,
+      "title": "Open the paper",
+      "caption": "Return to the flat sheet. The crease remains in the same material position.",
+      "duration": 3
+    }
+  ]
+}

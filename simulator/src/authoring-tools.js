@@ -1,5 +1,6 @@
 // Geometry shared by the editor and authored lessons. Material coordinates never
 // change; work planes only change how a user specifies an axis on the sheet.
+import {transformTeaching} from './teaching-tools.js';
 export const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0);
 export const sub=(a,b)=>a.map((x,i)=>x-b[i]);
 export const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -28,7 +29,7 @@ export function axisForEdges(source,target,alternate=false){
 }
 export function mirrorAction(action,x){
   if(action.kind!=='fold'||action.plane||action.flapSectors||action.scopeSectors)throw Error('Mirror a plain fold on the original work plane. Select new layers for a folded packet.');
-  const a=structuredClone(action);a.axis=a.axis.map(p=>[2*x-p[0],p[1]]);a.side=-a.side;a.angle=-a.angle;delete a.seed;delete a.seeds;a.title='Mirror: '+(a.title||'Fold');return a;
+  const a=structuredClone(action);a.axis=a.axis.map(p=>[2*x-p[0],p[1]]);a.side=-a.side;a.angle=-a.angle;if(a.teaching){a.teaching=transformTeaching(a.teaching,p=>[2*x-p[0],p[1]]);for(const m of a.teaching.marks||[]){delete m.from.faceId;if(m.to)delete m.to.faceId;}for(const c of a.teaching.cues||[])if(c.focus)delete c.focus.anchor.faceId;}delete a.seed;delete a.seeds;a.title='Mirror: '+(a.title||'Fold');return a;
 }
 
 export function reverseFromIntent(tip,pivot,destination){

@@ -100,6 +100,8 @@ Open `tools/qa/authoring-expansion-check.html` through the local server and run 
 
 ## Accuracy and research
 
+For moving-paper inspection, fold-line/tip handles, attached labels and arrows, pause checkpoints, and detail views, see the [direct editing and teaching guide](direct-teaching-guide.md). The accompanying [example lesson](examples/teaching-a-fold.json) can be opened through **File & paper → Open tutorial**.
+
 Animations preserve rigid material distances and check shared vertices plus vertex-to-edge seams (including mismatched subdivisions) through sampled frames. The system has no full collision/thickness solver, no guaranteed physical layer ordering, and no automatic CP-to-tutorial sequence inference. These limits apply to user-authored lessons too. Layer gaps and edge rims are display aids, not simulated paper thickness; they never alter saved material coordinates.
 
 The layer-access guard applies to ordinary rigid folds in a flat work plane. It combines exact material connectivity with overlap and the recorded stack order; it is a conservative guard for covered/interleaved paper, not a general 3D pocket-access solver. Supported compound folds still use explicit pocket-wall selection and material validation. New or edited ordinary folds save the access rule; existing lesson files keep their prior motion until edited.
