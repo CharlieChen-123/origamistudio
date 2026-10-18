@@ -9,7 +9,7 @@
   function render(container) {
     container.replaceChildren();
     const intro = document.createElement('p'); intro.className = 'credit-intro';
-    intro.textContent = 'With thanks to the artists, researchers, and open-source contributors behind these patterns. All 20 library CPs are supplied by Amanda Ghassaei’s OrigamiSimulator; individual designers are credited where identified by the source.';
+    intro.textContent = 'With thanks to the artists, researchers, and open-source contributors behind these patterns. The library includes upstream OrigamiSimulator patterns and the project creator’s original Bird. Individual source credits are listed below.';
     container.append(intro);
     (window.ORIGAMI_PRESETS || []).forEach(p => {
       const row = document.createElement('section'); row.className = 'credit-row'; row.id = 'credit-' + p.id;

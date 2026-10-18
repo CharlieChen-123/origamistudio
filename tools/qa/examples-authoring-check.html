@@ -1,0 +1,45 @@
+<!doctype html><meta charset="utf-8"><title>Rebuild example lessons through the editor</title>
+<style>body{font:14px system-ui}iframe{width:100%;height:800px;border:0}pre{white-space:pre-wrap}</style>
+<button id="run">Rebuild both lessons using authoring controls</button><pre id="report">Ready</pre><iframe id="app" src="../../origami-3d.html"></iframe>
+<script type="module">
+import {airplaneLesson,boxLesson} from '../../simulator/src/example-lessons.js';
+import {makeSheet,compileActions,prepareAction,flapCandidates,pointInPolygon} from '../../simulator/src/action-fold.js';
+const report=document.querySelector('#report'),app=document.querySelector('#app'),pause=ms=>new Promise(r=>setTimeout(r,ms)),assert=(ok,m)=>{if(!ok)throw Error(m);};
+document.querySelector('#run').onclick=async()=>{const w=app.contentWindow,d=w.document,$=id=>d.getElementById(id),saved=localStorage.getItem('foldlab.author-draft.v1');try{
+ report.textContent='Running…';for(let i=0;i<200&&(!w.StepStudio||w.importBusy);i++)await pause(100);
+ for(const build of [airplaneLesson,boxLesson]){
+  const expected=build(),reference=compileActions(makeSheet(expected.paper),expected.actions);w.StepStudio.load({...expected,actions:[]});
+  const click=p=>{const svg=$('paperEditor'),pt=svg.createSVGPoint();pt.x=p[0];pt.y=p[1];const q=pt.matrixTransform(svg.getScreenCTM());for(const type of ['pointerdown','pointerup'])svg.dispatchEvent(new w.PointerEvent(type,{bubbles:true,clientX:q.x,clientY:q.y,button:0,pointerId:1}));};
+  for(const [i,a] of expected.actions.entries()){
+   if(a.kind==='unfold'){$('quickUnfold').click();$('editAction').click();}
+   else{
+    if(a.kind==='fold'){
+     if(a.plane){$('workSurface').value='1';$('workSurface').dispatchEvent(new w.Event('change'));}
+     $('actionModeAxis').click();$('axisInput').value='guide';$('axisInput').dispatchEvent(new w.Event('change'));
+     const box=$('paperEditor').viewBox.baseVal,pad=box.width*.06,x=box.x+pad,y=box.y+pad,hiX=box.x+box.width-pad,hiY=box.y+box.height-pad;
+     const [p,q]=a.axis,dx=q[0]-p[0],dy=q[1]-p[1],cuts=[];
+     if(Math.abs(dx)>1e-8)for(const xx of [x,hiX]){const yy=p[1]+(xx-p[0])*dy/dx;if(yy>=y&&yy<=hiY)cuts.push([xx,yy]);}
+     if(Math.abs(dy)>1e-8)for(const yy of [y,hiY]){const xx=p[0]+(yy-p[1])*dx/dy;if(xx>=x&&xx<=hiX)cuts.push([xx,yy]);}
+     assert(cuts.length>=2,'Axis crosses editing view');click(cuts[0]);click(cuts.at(-1));
+     const face=prepareAction(reference.frames[i],a).pieces.find(f=>f.moving),center=[0,1].map(k=>face.vertices.reduce((n,v)=>n+v.p[k],0)/face.vertices.length);click(center);
+     $('actionAngle').value=String(Math.abs(a.angle));$('actionDirection').value=a.angle*a.side>0?'toward':'away';
+     if(a.seeds||a.seed){
+       $('openLayerPicker').click();const candidates=flapCandidates(reference.frames[i],a),wanted=a.seeds||[a.seed];
+       const inputs=[...d.querySelectorAll('#explodedLayerList input')];assert(inputs.length===candidates.length,'Every connected flap is available: actual '+inputs.length+', expected '+candidates.length+'; '+$('actionMessage').textContent+'; marks '+[...$('paperEditor').querySelectorAll('circle')].map(c=>c.getAttribute('cx')+','+c.getAttribute('cy')).join(';'));
+       inputs.forEach((input,j)=>{const checked=wanted.some(seed=>candidates[j].faces.some(f=>pointInPolygon(seed,f.vertices.map(v=>v.uv))));if(input.checked!==checked){input.checked=checked;input.dispatchEvent(new w.Event('change'));}});
+       $('applyPaperLayers').click();
+     }
+     $('previewAction').click();assert(w.StepStudio.getState().phase==='preview',expected.title+' step '+(i+1)+': '+$('actionMessage').textContent);
+    }else if(a.kind==='box')$('raiseBoxWalls').click();else $('rotateOnTable').click();
+    $('reviewTitle').value=a.title;$('reviewCaption').value=a.caption||'';$('saveAction').click();
+   }
+   assert(w.StepStudio.getState().steps===i+1,expected.title+' did not save step '+(i+1));report.textContent=`Rebuilding ${expected.title}: ${i+1} / ${expected.actions.length}`;
+   const current=w.StepStudio.tutorialData(),posed=compileActions(makeSheet(current.paper),current.actions).frames.at(-1);for(const uv of expected.paper.vertices_coords){const find=faces=>faces.flatMap(f=>f.vertices).find(v=>Math.hypot(...v.uv.map((x,k)=>x-uv[k]))<1e-5)?.p;const p=find(posed),q=find(reference.frames[i+1]);if(p&&q)assert(Math.hypot(...p.map((x,k)=>x-q[k]))<1e-4,`Step ${i+1} corner ${uv}: actual ${p}, expected ${q}; action ${JSON.stringify(current.actions[i])}`);}
+  }
+  const actual=w.StepStudio.tutorialData(),last=compileActions(makeSheet(actual.paper),actual.actions).frames.at(-1),target=reference.frames.at(-1);
+  for(const uv of expected.paper.vertices_coords){const find=faces=>faces.flatMap(f=>f.vertices).find(v=>Math.hypot(...v.uv.map((x,k)=>x-uv[k]))<1e-5).p;const p=find(last),q=find(target);assert(Math.hypot(...p.map((x,k)=>x-q[k]))<1e-4,expected.title+' endpoint differs');}
+ assert(last.every(f=>f.vertices.every(v=>{const match=target.flatMap(f=>f.vertices).find(w=>Math.hypot(...w.uv.map((x,k)=>x-v.uv[k]))<1e-5);return !match||Math.hypot(...match.p.map((x,k)=>x-v.p[k]))<1e-4;})),'All subdivided paper vertices match');
+ }
+ report.textContent='PASS: all 9 airplane steps and all 18 box steps recreated through public authoring controls, with matching final corner positions.';
+}catch(e){report.textContent+='\nFAIL '+e.stack;}finally{w.StepStudio?.exit();await pause(400);if(saved===null)localStorage.removeItem('foldlab.author-draft.v1');else localStorage.setItem('foldlab.author-draft.v1',saved);}};
+</script>

@@ -7,7 +7,7 @@ try {
     $taskReuse = $false
     while ($taskPort -lt 8140) {
         try {
-            $taskResponse = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$taskPort/cp-designer_with%20constraints.html" -TimeoutSec 1
+            $taskResponse = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$taskPort/studio-v2.html" -TimeoutSec 1
             if ($taskResponse.Headers['X-Origami-Project'] -eq [Uri]::EscapeDataString($taskRoot)) { $taskReuse = $true; break }
         } catch {}
         $taskSocket = [Net.Sockets.TcpClient]::new()
@@ -21,12 +21,12 @@ try {
     }
     $taskReady = $false
     for ($taskAttempt = 0; $taskAttempt -lt 30; $taskAttempt++) {
-        try { $taskResponse = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$taskPort/cp-designer_with%20constraints.html" -TimeoutSec 1; if ($taskResponse.StatusCode -eq 200) { $taskReady = $true; break } } catch {}
+        try { $taskResponse = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$taskPort/studio-v2.html" -TimeoutSec 1; if ($taskResponse.StatusCode -eq 200) { $taskReady = $true; break } } catch {}
         Start-Sleep -Milliseconds 200
     }
     if (-not $taskReady) { throw "Server startup failed. See TEMP/origami-$taskPort-error.log" }
-    Write-Output "http://127.0.0.1:$taskPort/cp-designer_with%20constraints.html"
-    if (-not $NoBrowser) { Start-Process "http://127.0.0.1:$taskPort/cp-designer_with%20constraints.html" }
+    Write-Output "http://127.0.0.1:$taskPort/studio-v2.html"
+    if (-not $NoBrowser) { Start-Process "http://127.0.0.1:$taskPort/studio-v2.html" }
 } catch {
     Write-Host "Unable to start Origami: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host 'Node.js is required. Alternatively run: node tools/serve.mjs 8123'

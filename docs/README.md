@@ -4,6 +4,14 @@ This directory holds product notes, development plans, and future-feature propos
 
 ## Product and feature notes
 
+- [Storyboard V2 workspace](storyboard-v2-guide.md): the new Designer, simulator, visual tutorial filmstrip, contextual settings, drafts, and local entry points.
+
+- [Compound folds and teaching stages](compound-tutorial-guide.md): inside-reverse crane head, symmetric squash/open sink, stage timing and pauses, practice lessons, and supported structures.
+- [Tutorial Studio authoring guide](tutorial-authoring-guide.md): current workflow, Bird, airplane and box examples, reusable sequences, local recovery, testing, and limitations.
+- [Paper clarity and playback validation](validation/playback-clarity-results.md): mountain/valley history, layer display, speed controls, checkpoints, preview adjustments, and saving.
+- [Pan, paper-group access and visual tutorial cards](validation/pan-layer-cards-results.md): camera translation, dependent layer selection, six generated previews and regression results.
+- [Tutorial usability validation](validation/tutorial-usability-results.md): Dart layer correction, exploded layer picker, intent-based reverse folds, responsive layout, and regression results.
+
 - [Complete crane and reusable templates](complete-crane-templates.md): 33-step lesson, supported compound actions, authoring, and validation.
 
 - [Square-base solver and dash validation](square-base-solver-validation.md): implemented motion, six continuation steps, research sources, and regression checks.

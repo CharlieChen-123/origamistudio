@@ -1,0 +1,61 @@
+<!doctype html><meta charset="utf-8"><title>Storyboard V2 workflow checks</title>
+<style>body{font:14px system-ui}iframe{width:100%;height:850px;border:1px solid #ddd}pre{white-space:pre-wrap}body.inspect{margin:0;overflow:hidden}body.inspect>:not(iframe){display:none}body.inspect iframe{width:100vw!important;height:100vh!important;border:0}</style>
+<button id="run">Run V2 workflow checks</button><button id="inspect" onclick="document.body.classList.add('inspect')">Inspect result</button><pre id="report">Ready</pre><iframe id="app" src="../../fold-lab-v2.html"></iframe>
+<script type="module">
+const wait=ms=>new Promise(r=>setTimeout(r,ms)),assert=(ok,message)=>{if(!ok)throw Error(message);};
+document.querySelector('#run').onclick=async()=>{
+ const frame=document.querySelector('#app'),report=document.querySelector('#report'),logs=[],keys=['foldlab.author-draft.v1','foldlab.storyboard.previous-draft','cp-designer-lines'],saved=keys.map(k=>localStorage.getItem(k));
+ let w=frame.contentWindow,d=w.document;const $=id=>d.getElementById(id),state=()=>w.StepStudio.getState();
+ async function until(fn,ms=20000){const t=performance.now();while(!fn()){if(performance.now()-t>ms)throw Error('Timed out: '+String(fn));await wait(60);}}
+ function scrub(p){$('stepScrub').value=p*100;$('stepScrub').dispatchEvent(new w.Event('input'));}
+ function change(id,value){$(id).value=value;$(id).dispatchEvent(new w.Event('change'));}
+ function clickPaper(x,y){const svg=$('paperEditor'),p=svg.createSVGPoint();p.x=x;p.y=y;const screen=p.matrixTransform(svg.getScreenCTM()),opts={clientX:screen.x,clientY:screen.y,bubbles:true,button:0};svg.dispatchEvent(new w.PointerEvent('pointerdown',opts));svg.dispatchEvent(new w.PointerEvent('pointerup',opts));}
+ async function idle(){await wait(150);}
+ async function checkInspector(phase){
+  for(const width of [1910,1440,1280,1024,800,390]){frame.style.width=width+'px';await wait(100);const rail=$('stepStudio');assert(rail.scrollWidth<=rail.clientWidth+1,phase+' inspector has no horizontal overflow at '+width+': '+rail.scrollWidth+'/'+rail.clientWidth);
+   if(width===1910){const luminance=c=>{const a=c.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return a[0]*.2126+a[1]*.7152+a[2]*.0722;};for(const n of [...rail.querySelectorAll('label,p,summary,button'),...d.querySelectorAll('.story-nav a,.story-nav button')]){if(!n.getClientRects().length||n.matches(':disabled')||!n.textContent.trim())continue;let bg=n;while(bg.parentElement&&Number(w.getComputedStyle(bg).backgroundColor.match(/[\d.]+/g)?.[3])===0)bg=bg.parentElement;const a=luminance(w.getComputedStyle(n).color),b=luminance(w.getComputedStyle(bg).backgroundColor),ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);assert(ratio>=4.5,phase+' text contrast '+n.id+' '+n.textContent.trim().slice(0,25)+': '+ratio.toFixed(2));}}
+   for(const b of rail.querySelectorAll('button'))if(b.getClientRects().length)assert(parseFloat(w.getComputedStyle(b).borderTopLeftRadius)<=4,phase+' small button radius '+b.id);
+   const green=[];for(const n of rail.querySelectorAll('*'))if(n.namespaceURI==='http://www.w3.org/1999/xhtml'&&n.getClientRects().length){const style=w.getComputedStyle(n);for(const property of ['color','backgroundColor','borderTopColor','borderLeftColor']){const c=style[property].match(/[\d.]+/g)?.map(Number);if(c&&c[3]!==0&&c[1]>c[0]+4&&c[1]>c[2]+2)green.push(n.tagName+'#'+n.id+'.'+n.className+' '+property+': '+style[property]);}}assert(!green.length,phase+' old green: '+green.join(','));
+  }frame.style.width='1200px';await idle();
+ }
+ try{
+  report.textContent='Running';await until(()=>w.Storyboard&&w.StepStudio&&!w.importBusy);
+  assert(d.querySelector('#storyBootStyle')&&!d.querySelector('#storyBootHeader'),'New header shell was replaced during hydration');assert(!d.querySelector('a[href="origami-3d.html"]'),'No classic-version action in V2');assert($('storyScene').hidden,'No large filename heading in Fold Lab');
+  $('browseTutorials').click();assert($('tutorialLibrary').open&&!$('tutorialLibrary').matches(':modal'),'Library is a page; main navigation remains available');
+  $('airplaneLesson').click();scrub(1);await idle();
+  assert(state().steps===9,'Dart lesson loads');assert(d.querySelectorAll('.story-step-preview').length===9,'Actual paper thumbnail for each step');await Promise.all([...d.querySelectorAll('.story-step-preview')].map(i=>i.decode()));
+  assert(new Set([...d.querySelectorAll('.story-step-preview')].map(i=>i.src)).size>5,'Thumbnails reflect different paper states');
+  assert(w.getComputedStyle($('nextStep')).display!=='none'&&!$('nextStep').disabled,'Next step is reachable outside the inspector');$('nextStep').click();assert(state().position===1,'Next step works');
+  d.querySelectorAll('.lesson-step')[8].click();scrub(1);$('storySettings').click();await idle();assert(d.body.classList.contains('story-inspector-open'),'Watch inspector can open');$('storySettings').click();assert(!d.body.classList.contains('story-inspector-open'),'Inspector closes');
+  logs.push('PASS nonmodal library, actual step thumbnails, playback navigation and inspector');
+  assert(w.getComputedStyle(d.querySelector('.story-nav [data-mode=design]')).fontWeight==='400','Design is not bold in other views');
+  $('storyMakeTutorial').click();assert($('storyStart').open,'Start choices open');const dialog=$('storyStart').getBoundingClientRect();assert(Math.abs(dialog.left+dialog.width/2-w.innerWidth/2)<2&&Math.abs(dialog.top+dialog.height/2-w.innerHeight/2)<2,'New tutorial dialog is centered');$('storyStartSquare').click();assert(state().phase==='define'&&state().steps===0,'Blank square starts authoring');
+  assert($('zoomIn').querySelector('svg')&&$('zoomOut').querySelector('svg'),'Paper zoom uses labeled magnifier icons');
+  await idle();await checkInspector('Choose move');$('moreMoves').open=true;await checkInspector('More moves');$('moreMoves').open=false;
+  $('actionModeAxis').click();change('axisInput','guide');clickPaper(200,0);clickPaper(200,400);clickPaper(300,200);
+  assert(!$('previewAction').disabled,'Full-size paper interaction defines a fold');$('previewAction').click();scrub(.42);$('reviewTitle').value='Fold the right half';$('reviewTitle').dispatchEvent(new w.Event('input'));await wait(400);
+  assert(state().phase==='preview','Actual fold preview');const draft=JSON.stringify(w.StepStudio.tutorialData());
+  await checkInspector('Preview');$('storyMotionOptions').open=true;await checkInspector('Motion settings');$('storyMotionOptions').open=false;logs.push('PASS inspector fits 1910/1440/1280/1024/800/390 without horizontal scrolling, green text or large button corners');
+  d.querySelector('.story-nav [data-mode="fold"]').click();assert(!state().active,'Fold Lab leaves tutorial canvas');
+  $('storyMakeTutorial').click();await idle();assert(state().active&&state().phase==='preview'&&Math.abs(state().progress-.42)<.001,'Switching back preserves the unsaved motion and progress');assert(JSON.stringify(w.StepStudio.tutorialData())===draft,'No motion data lost on navigation');
+  $('saveAction').click();await idle();assert(state().steps===1,'Save the authored motion');assert(w.StepStudio.tutorialData().actions[0].title==='Fold the right half','Wording saved');
+  logs.push('PASS blank paper → mark line/side → preview → suspend/resume → save');
+  const firstLesson=structuredClone(w.StepStudio.tutorialData());$('quickUnfold').click();scrub(1);await idle();assert(state().steps===2&&state().phase==='preview','Unfold appends a real teaching step');assert($('nextStep').hidden,'No duplicate add-step button beside playback');assert(!$('storyCommit').hidden&&$('editAction').textContent==='Add next step','Inspector exposes the next authoring action after unfold');$('editAction').click();await idle();assert(state().phase==='define'&&$('stepStudio').scrollTop===0,'Next action opens at the top of the move chooser');$('actionModeAxis').click();change('axisInput','guide');clickPaper(100,0);clickPaper(100,400);clickPaper(300,200);$('previewAction').click();scrub(1);$('saveAction').click();await idle();assert(state().steps===3,'A second fold can be authored after unfolding');w.StepStudio.load(firstLesson);await idle();scrub(1);logs.push('PASS fold → unfold → visible Add next step → second fold');
+  d.querySelector('.lesson-step').click();scrub(1);let exported;
+  const originalClick=w.HTMLAnchorElement.prototype.click;w.HTMLAnchorElement.prototype.click=function(){exported=fetch(this.href).then(r=>r.json());};try{$('saveLesson').click();}finally{w.HTMLAnchorElement.prototype.click=originalClick;}
+  assert(exported,'Save tutorial downloads');const data=await exported;assert(data.format==='fold-lab-tutorial'&&data.actions.length===1,'Portable format retained');
+  w.StepStudio.load(data);scrub(.6);await wait(500);
+  await new Promise(resolve=>{frame.onload=resolve;w.location.reload();});w=frame.contentWindow;d=w.document;await until(()=>w.Storyboard&&!w.importBusy);$('restoreDraft').click();await idle();assert(state().steps===1,'Local draft restored after reload');
+  logs.push('PASS Save tutorial, portable reopen and real draft recovery');
+  d.querySelectorAll('.lesson-step')[0].click();scrub(.5);
+  for(const [width,height]of [[1440,900],[1024,768],[800,600],[390,844]]){
+   frame.style.width=width+'px';frame.style.height=height+'px';await wait(300);
+   const scene=$('threeContainer').getBoundingClientRect(),player=$('lessonPlayer').getBoundingClientRect(),timeline=$('lessonTimeline').getBoundingClientRect(),save=$('saveLesson').getBoundingClientRect();
+   assert(scene.height>80,'Paper has usable height at '+width);assert(scene.bottom<=player.top+2,'Paper does not overlap playback at '+width);assert(player.right<=w.innerWidth+1&&player.left>=0,'Player fits '+width);assert(timeline.right<=w.innerWidth+1&&timeline.left>=0,'Filmstrip fits '+width);assert(save.right<=w.innerWidth+1&&save.left>=0,'Save fits '+width);assert(d.documentElement.scrollWidth<=w.innerWidth+1,'No horizontal page overflow '+width);
+  }
+  logs.push('PASS 1440/1024/800/390 layouts: paper, player, filmstrip and save');
+  frame.style.width='1200px';frame.style.height='850px';w.StepStudio.startStep();await idle();
+  report.textContent=logs.join('\n')+'\nALL PASS';
+ }catch(e){report.textContent=logs.join('\n')+'\nFAIL '+e.stack;}finally{w.StepStudio?.stop();await wait(400);keys.forEach((k,i)=>saved[i]===null?localStorage.removeItem(k):localStorage.setItem(k,saved[i]));}
+};
+</script>

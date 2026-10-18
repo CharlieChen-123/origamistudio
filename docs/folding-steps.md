@@ -1,5 +1,8 @@
 # Make a folding tutorial
 
+> Updated authoring workflow: see [Tutorial Studio guide](tutorial-authoring-guide.md). The notes below describe the earlier baseline; current work-surface selection and material-region pocket selection extend its restrictions.
+
+
 ## Start with one action
 
 Import your SVG or FOLD pattern in Fold Lab, then select **Make a tutorial**. The large paper view shows the state after your saved steps. CP lines are reference marks; a tutorial can also use temporary guide folds that are absent from the final CP.

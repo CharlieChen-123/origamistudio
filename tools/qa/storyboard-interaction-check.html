@@ -1,0 +1,29 @@
+<!doctype html><meta charset="utf-8"><title>Storyboard interaction layout</title>
+<style>body{font:14px system-ui}iframe{width:1200px;height:720px;border:0}pre{white-space:pre-wrap}body.inspect{margin:0;overflow:hidden}body.inspect>:not(iframe){display:none}body.inspect iframe{width:100vw!important;height:100vh!important}</style>
+<button id="run">Check author continuation</button><button id="inspect" onclick="document.body.classList.add('inspect')">Inspect result</button><pre id="report">Ready</pre><iframe src="../../fold-lab-v2.html"></iframe>
+<script type="module">
+import {rectanglePaper} from '../../simulator/src/example-lessons.js';
+const pause=ms=>new Promise(r=>setTimeout(r,ms)),assert=(ok,message)=>{if(!ok)throw Error(message);};
+document.querySelector('#run').onclick=async()=>{
+ const frame=document.querySelector('iframe'),w=frame.contentWindow,d=w.document,$=id=>d.getElementById(id),keys=['foldlab.author-draft.v1','foldlab.storyboard.previous-draft'],saved=keys.map(k=>localStorage.getItem(k)),report=document.querySelector('#report'),log=[];
+ try{
+  report.textContent='Running';for(let i=0;i<400&&(!w.Storyboard||w.importBusy);i++)await pause(60);
+  const paper=rectanglePaper(400,400),lesson={format:'fold-lab-tutorial',version:2,title:'Precrease',fold:paper,paper,actions:[{kind:'fold',axis:[[200,0],[200,400]],side:1,angle:180,assignment:'V',title:'Fold in half',caption:'Bring the right edge to the left edge.'},{kind:'unfold',foldIndex:0,title:'Open the paper',caption:'Open the paper, keeping the center crease.'}]};
+  w.StepStudio.load(lesson);w.StepStudio.selectStep(1);$('stepScrub').value=100;$('stepScrub').dispatchEvent(new w.Event('input'));await pause(200);
+  const initialView=w.G.friendlyView.capture();$('playbackOptions').querySelector('[aria-label="Zoom in"]').click();assert(w.G.friendlyView.capture().zoom>initialView.zoom,'3D magnifier zooms in');$('playbackOptions').querySelector('[aria-label="Zoom out"]').click();assert(Math.abs(w.G.friendlyView.capture().zoom-initialView.zoom)<1e-8,'3D magnifier zooms out without changing the view target');
+  for(const [width,height]of [[1440,900],[1200,720],[800,600],[390,844]]){
+   frame.style.width=width+'px';frame.style.height=height+'px';await pause(200);
+   const rail=$('stepStudio').getBoundingClientRect(),cta=$('editAction').getBoundingClientRect();
+   assert($('editAction').textContent==='Add next step'&&!$('editAction').hidden,'Inspector continuation is available');
+   assert($('nextStep').hidden,'Duplicate playback continuation removed '+width);
+   if(width>700)assert(cta.top>=rail.top&&cta.bottom<=rail.bottom+1,'Sticky sidebar continuation is visible '+width);
+   assert($('stepStudio').scrollWidth<=$('stepStudio').clientWidth+1,'No inspector horizontal scrolling '+width);
+   const zoom=$('playbackOptions').querySelector('.story-view-zoom');assert(zoom.querySelectorAll('button[aria-label] svg').length===2,'Labeled magnifiers in the playback options');
+  }
+  log.push('PASS one inspector Add next step; no duplicate beside playback at 1440/1200/800/390');
+  frame.style.width='1200px';frame.style.height='720px';await pause(150);$('editAction').click();await pause(120);assert(w.StepStudio.getState().phase==='define'&&$('stepStudio').scrollTop===0,'Continue starts the next move at the top');log.push('PASS next move opens directly from the unfolded paper');
+  w.StepStudio.selectStep(1);$('stepScrub').value=100;$('stepScrub').dispatchEvent(new w.Event('input'));await pause(150);$('viewAngle').click();await pause(150);
+  report.textContent=log.join('\n')+'\nALL PASS';
+ }catch(e){report.textContent=log.join('\n')+'\nFAIL '+e.stack;}finally{w.StepStudio?.stop();await pause(400);keys.forEach((k,i)=>saved[i]===null?localStorage.removeItem(k):localStorage.setItem(k,saved[i]));}
+};
+</script>

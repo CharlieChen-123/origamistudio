@@ -1,5 +1,6 @@
 // Reusable rigid motion recipes. Landmarks are in the current paper plane;
 // material sectors choose the pocket walls, independently of display layers.
+import {checkPlane,toPlane,fromPlane,mapSheet} from './authoring-tools.js';
 const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]);
 const mul=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -22,11 +23,18 @@ function triangleContains(p,tri){
   const signs=tri.map((a,i)=>{const b=tri[(i+1)%3];return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);});
   return signs.every(v=>v>=-1e-7)||signs.every(v=>v<=1e-7);
 }
+// Material polygons survive later splitting; no square-base sector IDs needed.
+function belongs(face,action,role){
+  const regions=action[role+'Regions'];
+  if(!regions)return (action[role+'Sectors']||[]).includes(face.sector);
+  const p=[0,1].map(k=>face.vertices.reduce((s,v)=>s+v.uv[k],0)/face.vertices.length);
+  return regions.some(poly=>{let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])inside=!inside;}return inside;});
+}
 // Assign creases from the actual relative rotation of adjacent material faces.
 // A valley is negative signed dihedral with respect to the original front face.
-export function templateCreases(prepared){
+export function templateCreases(prepared,pose=poseTemplate){
   if(prepared.template==='turn')return [];
-  const start=poseTemplate(prepared,0),posed=poseTemplate(prepared,.7),edges=new Map(),out=[];
+  const start=pose(prepared,0),posed=pose(prepared,.7),edges=new Map(),out=[];
   const normal=f=>{const a=f.vertices[0].p;for(let i=1;i<f.vertices.length-1;i++){const n=cross(sub(f.vertices[i].p,a),sub(f.vertices[i+1].p,a));if(Math.hypot(...n)>1e-10)return unit(n);}return [0,0,0];};
   posed.forEach((f,fi)=>f.vertices.forEach((v,i)=>{
     const w=f.vertices[(i+1)%f.vertices.length],key=[v.uv,w.uv].map(p=>p.map(x=>x.toFixed(6)).join(',')).sort().join('|');
@@ -44,6 +52,12 @@ export const motionTemplates=[
   {id:'turn',name:'Turn the paper',landmarks:['axis']}
 ];
 export function prepareTemplate(sheet,action,{splitFaces,creaseMarks}){
+  if(action.plane){
+    checkPlane(action.plane);const local=mapSheet(sheet,p=>toPlane(p,action.plane)),onSurface=f=>f.vertices.every(v=>Math.abs(v.p[2])<1e-5);
+    const prepared=prepareTemplate(local.filter(onSurface),{...action,plane:null},{splitFaces,creaseMarks});
+    prepared.pieces.push(...local.filter(f=>!onSurface(f)).map(f=>({...f,panel:null,wall:0,cap:false})));
+    return {...prepared,plane:action.plane};
+  }
   const id=action.template;
   if(id==='turn')return {kind:'template',template:id,pieces:sheet,action,creases:[]};
   if(sheet.some(f=>f.vertices.some(v=>Math.abs(v.p[2])>1e-5)))throw Error('Start this compound fold from a flat pose.');
@@ -55,9 +69,9 @@ export function prepareTemplate(sheet,action,{splitFaces,creaseMarks}){
     if(Math.abs(dot(u,v))>1e-6||Math.abs(Math.hypot(...sub(L,A))-halfWidth)>height*1e-5||Math.abs(Math.hypot(...sub(L,B))-height)>height*1e-5||Math.abs(Math.hypot(...sub(R,B))-height)>height*1e-5)throw Error('This petal template needs a symmetric square-base pocket and its angle-bisector guides.');
     const pieces=splitFaces(sheet,[[A,C],[A,B],[C,B]]).map(f=>{
       const p=centroid(f);let panel=null;
-      if(frontSectors.includes(f.sector))panel=triangleContains(p,[A,L,B])?'frontLeft':triangleContains(p,[C,R,B])?'frontRight':triangleContains(p,[A,C,B])?'center':null;
-      else if(leftSectors.includes(f.sector)&&triangleContains(p,[A,L,B]))panel='innerLeft';
-      else if(rightSectors.includes(f.sector)&&triangleContains(p,[C,R,B]))panel='innerRight';
+      if(belongs(f,action,'front'))panel=triangleContains(p,[A,L,B])?'frontLeft':triangleContains(p,[C,R,B])?'frontRight':triangleContains(p,[A,C,B])?'center':null;
+      else if(belongs(f,action,'left')&&triangleContains(p,[A,L,B]))panel='innerLeft';
+      else if(belongs(f,action,'right')&&triangleContains(p,[C,R,B]))panel='innerRight';
       return {...f,panel};
     });
     if(!pieces.some(f=>f.panel==='center')||!pieces.some(f=>f.panel==='innerLeft'))throw Error('The selected paper layers do not form a petal pocket.');
@@ -70,7 +84,7 @@ export function prepareTemplate(sheet,action,{splitFaces,creaseMarks}){
     if(Math.abs(qx)<1e-7||Math.abs(qy)<1e-7)throw Error('Choose an oblique reverse-fold hinge.');
     const pieces=splitFaces(sheet,[[P,add(P,v)],[P,Q]]).map(f=>{
       const c=sub(centroid(f),P),inSide=dot(c,u)*qx>1e-7;
-      const wall=action.frontSectors.includes(f.sector)?1:action.backSectors.includes(f.sector)?-1:0;
+      const wall=belongs(f,action,'front')?1:belongs(f,action,'back')?-1:0;
       const cap=(qx*dot(c,v)-qy*dot(c,u))*qx>1e-7;
       return {...f,wall:inSide?wall:0,cap:inSide&&cap};
     });
@@ -80,6 +94,7 @@ export function prepareTemplate(sheet,action,{splitFaces,creaseMarks}){
   throw Error('Unknown motion template: '+id);
 }
 export function poseTemplate(p,t){
+  if(p.plane)return mapSheet(poseTemplate({...p,plane:null},t),v=>fromPlane(v,p.plane));
   t=Math.max(0,Math.min(1,t));
   if(p.template==='turn')return p.pieces.map(f=>transformFace(f,v=>rotatePoint(v,p.action.axis,t*p.action.angle*Math.PI/180),t===1?-(f.renderLayer||0):f.renderLayer));
   if(p.template==='petal'){

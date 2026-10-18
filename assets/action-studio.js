@@ -1,48 +1,85 @@
 import {checkMotion} from '../simulator/src/motion-quality.js';
 import {craneActions} from '../simulator/src/crane-lesson.js';
-import {makeSheet,compileActions,poseSequence,prepareAction,poseAction,axisForMatch,sideOf,pointInPolygon} from '../simulator/src/action-fold.js';
+import {makeSheet,compileActions,poseSequence,prepareAction,poseAction,accessibleSeeds,axisForMatch,sideOf,pointInPolygon} from '../simulator/src/action-fold.js';
+import {mountEnhancements} from './studio-enhancements.js';
+import {mapSheet,toPlane} from '../simulator/src/authoring-tools.js';
+import {validateLesson} from '../simulator/src/lesson-operations.js';
+import {mergeCreaseHistory} from '../simulator/src/crease-history.js';
+import {posedCreaseSegments} from '../simulator/src/crease-display.js';
+import {createPaperDisplay} from '../simulator/src/paper-display.js';
+import {motionDuration,nextStageStop,motionSampleTimes} from '../simulator/src/motion-stages.js';
+let enhancements=null;const displayPaper=createPaperDisplay();let creaseCache={refs:[],value:[]},movingCache={prepared:null,flags:[]};
 const $=id=>document.getElementById(id), NS='http://www.w3.org/2000/svg';
-const state={active:false,builtIn:false,showCP:false,fold:null,initial:[],sequence:null,actions:[],draft:null,deletedStep:null,mode:'axis',authorTool:null,axisInput:'auto',points:[],matchEndpoints:null,side:0,seed:null,selectedIndex:-1,progress:0,playing:false,raf:0,group:null,zoom:1,pan:[0,0],phase:'define',visibility:null};
+const state={editIndex:-1,workPlane:null,seeds:null,active:false,builtIn:false,showCP:false,fold:null,initial:[],sequence:null,actions:[],draft:null,deletedStep:null,mode:'axis',authorTool:null,axisInput:'auto',points:[],matchEndpoints:null,side:0,seed:null,selectedIndex:-1,progress:0,playing:false,raf:0,group:null,zoom:1,pan:[0,0],phase:'define',visibility:null,speed:1,continuous:false,separateLayers:false,clearLayers:true,creaseView:'current'};
 const color={M:'#bf5a50',V:'#497bbb',B:'#414b55',F:'#c6cbd0',U:'#c6cbd0'};
+function notifyStudio(reason){if(document.documentElement.dataset.ui==='storyboard')window.dispatchEvent(new CustomEvent('foldlab:studio-change',{detail:{reason}}));}
 function svgEl(tag,attrs={}){const el=document.createElementNS(NS,tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el;}
 function message(text){$('actionMessage').textContent=text;}
 function sourceFold(){const f=G.pattern.getFoldData(true);if(!f?.faces_vertices?.length)throw Error('Import a crease pattern first.');return JSON.parse(JSON.stringify(f));}
 function frame(){return state.frame;}
-function sheet(){return state.sequence?.frames.at(-1)||state.initial;}
-function compile(){state.sequence=compileActions(state.initial,state.actions);}
+function sheet(){return (state.editIndex>=0?state.sequence.frames[state.editIndex]:state.sequence?.frames.at(-1))||state.initial;}
+function editorSheet(){return state.workPlane?mapSheet(sheet(),p=>toPlane(p,state.workPlane)):sheet();}
+function compile(){state.sequence=validateLesson(state.initial,state.actions);}
 function toScene(p){const f=frame();return [(p[0]-f.cx)/f.r,p[2]/f.r,(p[1]-f.cy)/f.r];}
 function clearGroup(){if(!state.group)return;while(state.group.children.length){const c=state.group.children[0];state.group.remove(c);c.geometry?.dispose();(Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m?.dispose());}}
-function lineObject(points,colorValue,opacity=.78){if(!points.length)return;const geometry=new THREE.BufferGeometry();geometry.addAttribute('position',new THREE.Float32BufferAttribute(points,3));const object=new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:colorValue,transparent:true,opacity,depthTest:true}));object.renderOrder=4;state.group.add(object);}
+function lineObject(points,colorValue,opacity=.78){if(!points.length)return;const geometry=new THREE.BufferGeometry();geometry.addAttribute('position',new THREE.Float32BufferAttribute(points,3));const object=new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:colorValue,transparent:true,opacity,depthTest:true,depthWrite:false}));object.renderOrder=4;state.group.add(object);}
 function revealedCreases(){
   const refs=[];
   state.actions.forEach((action,index)=>{
-    if(index<(state.selectedIndex<0?state.actions.length:state.selectedIndex)||(index===state.selectedIndex&&state.progress>.03))refs.push(...(state.sequence?.prepared[index]?.creases||[]));
+    const end=state.editIndex>=0?state.editIndex:state.selectedIndex<0?state.actions.length:state.selectedIndex;
+    if(index<end||(state.editIndex<0&&index===state.selectedIndex&&state.progress>.03))refs.push(...(state.sequence?.prepared[index]?.creases||[]).filter(r=>index<end||state.progress>=(r.at??.02)));
   });
-  if(state.draft&&state.progress>.03)refs.push(...(state.preparedDraft?.creases||[]));
-  const latest=new Map();for(const r of refs){const key=[r.a,r.b].map(p=>p.map(x=>x.toFixed(5)).join(',')).sort().join('|');latest.set(key,r);}return [...latest.values()];
+  if(state.draft&&state.progress>.03)refs.push(...(state.preparedDraft?.creases||[]).filter(r=>state.progress>=(r.at??.02)));
+  if(refs.length!==creaseCache.refs.length||refs.some((r,i)=>r!==creaseCache.refs[i]))creaseCache={refs,value:mergeCreaseHistory(refs)};return creaseCache.value;
 }
 function render3D(faces){
-  if(!state.group){state.group=new THREE.Group();G.threeView.scene.add(state.group);}state.group.visible=true;clearGroup();
+  const story=document.documentElement.dataset.ui==='storyboard';
+  const current=state.phase==='preview'?(state.draft?state.preparedDraft:state.sequence?.prepared[state.selectedIndex]):null,prepared=current?.kind==='unfold'?current.ref:current;
+  if(prepared&&prepared.kind!=='demo'&&movingCache.prepared!==prepared){const a=poseAction(prepared,0),b=poseAction(prepared,.5);movingCache={prepared,flags:a.map((f,i)=>f.vertices.some((v,j)=>Math.hypot(...v.p.map((x,k)=>x-b[i].vertices[j].p[k]))>1e-6))};}
+
+  if(!state.group){state.group=new THREE.Group();state.group.name='tutorial-paper';G.threeView.scene.add(state.group);}state.group.visible=true;clearGroup();
   state.group.add(new THREE.AmbientLight(0xffffff,.7));
-  const displayPoint=(p,layer=0)=>{const q=toScene(p);q[1]+=layer*.00003;return q;};
-  const positions=[],boundary=[],mountains=[],valleys=[];faces.forEach(f=>{for(let i=1;i<f.vertices.length-1;i++)for(const v of [f.vertices[0],f.vertices[i],f.vertices[i+1]])positions.push(...displayPoint(v.p,f.renderLayer));});
+  faces=displayPaper(faces,frame().r,{separate:state.separateLayers,clear:state.clearLayers});
+  state.group.add(new THREE.HemisphereLight(0xffffff,0x60747a,.45));
+  const light=new THREE.DirectionalLight(0xffffff,.45);light.position.set(-2,4,3);state.group.add(light);
+  const displayOffsets=new Map(),displayPoint=p=>toScene(p);
+  const positions=[],movingPositions=[],boundary=[],mountains=[],valleys=[];faces.forEach((f,fi)=>{for(let i=1;i<f.vertices.length-1;i++)for(const v of [f.vertices[0],f.vertices[i],f.vertices[i+1]])(prepared&&movingCache.flags[fi]&&state.progress<1?movingPositions:positions).push(...displayPoint(v.p,displayOffsets.get(f)));});
   const geo=new THREE.BufferGeometry();geo.addAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.computeVertexNormals();
-  state.group.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0xf6f3ea,side:THREE.FrontSide,roughness:.9,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1})));
-  state.group.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x8aa8bd,side:THREE.BackSide,roughness:.9,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1})));
-  const edges=new Map();faces.forEach(f=>f.vertices.forEach((v,i)=>{const w=f.vertices[(i+1)%f.vertices.length];const k=[v.uv.map(x=>x.toFixed(5)).join(','),w.uv.map(x=>x.toFixed(5)).join(',')].sort().join('|');const entry=edges.get(k);if(entry)entry.count++;else edges.set(k,{v,w,count:1,layer:f.renderLayer||0});}));
-  for(const {v,w,count,layer} of edges.values())if(count===1)boundary.push(...displayPoint(v.p,layer),...displayPoint(w.p,layer));
-  const refs=state.showCP?state.refs:revealedCreases();
-  for(const {a,b,type,renderLayer} of posedCreases(faces,refs))if(type==='M'||type==='V')(type==='M'?mountains:valleys).push(...displayPoint(a,renderLayer),...displayPoint(b,renderLayer));
-  lineObject(boundary,0x435367,.7);lineObject(mountains,0xd95755,.95);lineObject(valleys,0x4c82db,.95);
+  state.group.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:story?0xffffff:0xf6f3ea,side:THREE.FrontSide,roughness:.9,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1})));
+  state.group.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:story?0xffffff:0x8aa8bd,side:THREE.BackSide,roughness:.9,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1})));
+  if(movingPositions.length){const highlight=new THREE.BufferGeometry();highlight.addAttribute('position',new THREE.Float32BufferAttribute(movingPositions,3));highlight.computeVertexNormals();state.group.add(new THREE.Mesh(highlight,new THREE.MeshStandardMaterial({color:story?0xffffff:0xf8efd8,side:THREE.FrontSide,roughness:.95,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1})));state.group.add(new THREE.Mesh(highlight,new THREE.MeshStandardMaterial({color:story?0xffffff:0x6f9ba6,side:THREE.BackSide,roughness:.95,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1})));}
+  const edges=new Map();faces.forEach(f=>f.vertices.forEach((v,i)=>{const w=f.vertices[(i+1)%f.vertices.length];const k=[v.uv.map(x=>x.toFixed(5)).join(','),w.uv.map(x=>x.toFixed(5)).join(',')].sort().join('|');const entry=edges.get(k);if(entry)entry.count++;else edges.set(k,{v,w,count:1,face:f,shift:displayOffsets.get(f)});}));
+  for(const {v,w,count,shift} of edges.values())if(count===1)boundary.push(...displayPoint(v.p,shift),...displayPoint(w.p,shift));
+  if(state.clearLayers){
+    const rim=[];for(const {v,w,count,face} of edges.values())if(count===1){
+      const a=toScene(v.p),b=toScene(w.p),edge=new THREE.Vector3(...b).sub(new THREE.Vector3(...a));let normal;
+      for(const q of face.vertices){const n=new THREE.Vector3().crossVectors(edge,new THREE.Vector3(...toScene(q.p)).sub(new THREE.Vector3(...a)));if(n.lengthSq()>1e-12){normal=n.normalize().multiplyScalar(.0017);break;}}
+      if(!normal)continue;const n=[normal.x,normal.y,normal.z],up=p=>p.map((x,k)=>x+n[k]),down=p=>p.map((x,k)=>x-n[k]);for(const p of [up(a),down(a),up(b),up(b),down(a),down(b)])rim.push(...p);
+    }
+    if(rim.length){const g=new THREE.BufferGeometry();g.addAttribute('position',new THREE.Float32BufferAttribute(rim,3));g.computeVertexNormals();state.group.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:0xb2afa3,side:THREE.DoubleSide,roughness:1})));}
+  }
+  const refs=revealedCreases(),mode=state.creaseView||'current';
+  if(state.showCP){const reference=[];for(const {a,b,type} of posedCreaseSegments(faces,state.refs,{deduplicate:true}))if(type==='M'||type==='V')reference.push(...toScene(a),...toScene(b));lineObject(reference,0x899293,.25);}
+  if(mode!=='none'){
+    if(mode==='current'){
+      const history=[];for(const {a,b} of posedCreaseSegments(faces,refs,{deduplicate:true}))history.push(...toScene(a),...toScene(b));
+      lineObject(history,0x687582,.18);
+    }
+    // Unfolding keeps the original material assignment. A whole-paper turn has
+    // no active crease; it must not light up the complete crease history.
+    const active=mode==='all'?refs:mergeCreaseHistory((prepared?.creases||[]).filter(r=>current?.kind==='unfold'||state.progress>=(r.at??.02)));
+    for(const {a,b,type} of posedCreaseSegments(faces,active,{deduplicate:true}))if(type==='M'||type==='V')(type==='M'?mountains:valleys).push(...toScene(a),...toScene(b));
+  }
+  lineObject(boundary,0x475569,.65);lineObject(mountains,0xc15b52,.85);lineObject(valleys,0x507db5,.85);
 }
 function referenceSegments(){const f=state.fold;return f.edges_vertices.map(([a,b],i)=>({a:point(f.vertices_coords[a]),b:point(f.vertices_coords[b]),type:f.edges_assignment[i]}));}
 function point(p){return p.length===2?p:[p[0],p[2]];}
 function posedCreases(faces,refs=state.refs){
   const output=[];
   for(const face of faces){const vs=face.vertices,uv=vs.map(v=>v.uv),orientation=Math.sign(uv.reduce((sum,p,i)=>{const q=uv[(i+1)%uv.length];return sum+p[0]*q[1]-q[0]*p[1];},0));
-    const a=vs[0],b=vs[1],c=vs[2],det=(b.uv[0]-a.uv[0])*(c.uv[1]-a.uv[1])-(b.uv[1]-a.uv[1])*(c.uv[0]-a.uv[0]);if(Math.abs(det)<1e-9)continue;
+    const a=vs[0],b=vs[1],c=vs.slice(2).find(v=>Math.abs((b.uv[0]-a.uv[0])*(v.uv[1]-a.uv[1])-(b.uv[1]-a.uv[1])*(v.uv[0]-a.uv[0]))>1e-9);if(!c)continue;const det=(b.uv[0]-a.uv[0])*(c.uv[1]-a.uv[1])-(b.uv[1]-a.uv[1])*(c.uv[0]-a.uv[0]);if(Math.abs(det)<1e-9)continue;
     const map=p=>{const x=p[0]-a.uv[0],y=p[1]-a.uv[1],s=(x*(c.uv[1]-a.uv[1])-y*(c.uv[0]-a.uv[0]))/det,t=((b.uv[0]-a.uv[0])*y-(b.uv[1]-a.uv[1])*x)/det;return a.p.map((v,i)=>v+s*(b.p[i]-v)+t*(c.p[i]-v));};
-    for(const line of refs){let lo=0,hi=1;for(let i=0;i<uv.length;i++){const edge=[uv[i],uv[(i+1)%uv.length]],d=sideOf(line.a,edge)*orientation,e=sideOf(line.b,edge)*orientation,delta=e-d;if(Math.abs(delta)<1e-9){if(d<-1e-7){hi=-1;break;}}else if(delta>0)lo=Math.max(lo,-d/delta);else hi=Math.min(hi,-d/delta);}if(hi-lo>1e-7){const p=t=>line.a.map((v,i)=>v+(line.b[i]-v)*t);output.push({a:map(p(lo)),b:map(p(hi)),type:line.type,renderLayer:face.renderLayer||0});}}
+    for(const line of refs){let lo=0,hi=1;for(let i=0;i<uv.length;i++){const edge=[uv[i],uv[(i+1)%uv.length]],d=sideOf(line.a,edge)*orientation,e=sideOf(line.b,edge)*orientation,delta=e-d;if(Math.abs(delta)<1e-9){if(d<-1e-7){hi=-1;break;}}else if(delta>0)lo=Math.max(lo,-d/delta);else hi=Math.min(hi,-d/delta);}if(hi-lo>1e-7){const p=t=>line.a.map((v,i)=>v+(line.b[i]-v)*t);output.push({a:map(p(lo)),b:map(p(hi)),type:line.type,face,renderLayer:face.renderLayer||0});}}
   }return output;
 }
 function guidedGeometry(stage){
@@ -106,17 +143,27 @@ function renderGuidedModel(action,progress){
 function setupFold(fold,paper=null){state.fold=fold;state.paper=paper;state.initial=makeSheet(paper||fold);state.refs=referenceSegments();const pts=state.initial.flatMap(f=>f.vertices.map(v=>v.uv));const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;state.frame={x,y,w,h,cx:x+w/2,cy:y+h/2,r:Math.hypot(w,h)/2};}
 function hideGPU(){state.visibility={mesh:G.meshVisible,edges:G.edgesVisible,running:G.simulationRunning};G.meshVisible=false;G.edgesVisible=false;G.simulationRunning=false;G.model.updateMeshVisibility();G.model.updateEdgeVisibility();}
 function restoreGPU(){if(!state.visibility)return;G.meshVisible=state.visibility.mesh;G.edgesVisible=state.visibility.edges;G.simulationRunning=state.visibility.running;G.model.updateMeshVisibility();G.model.updateEdgeVisibility();state.visibility=null;}
-function setPattern(){if(state.active)exit();setupFold(sourceFold());state.actions=[];state.draft=null;state.deletedStep=null;state.points=[];state.side=0;state.seed=null;state.selectedIndex=-1;state.zoom=1;state.pan=[0,0];state.showCP=false;if($('showTutorialCP'))$('showTutorialCP').checked=false;compile();}
-function activate(){try{window.SeamLab?.exit();if(!state.fold)setPattern();if(!state.initial.length)throw Error('No paper faces found.');window.playing=false;window.updatePlayButton?.();state.active=true;document.body.classList.add('action-mode');$('stepStudio').classList.add('active');$('tutorialToggle').textContent='Exit tutorial';hideGPU();define();G.friendlyView.top();}catch(e){window.showError(e.message);}}
+function setPattern(){if(state.active)exit();state.suspended=null;setupFold(sourceFold());state.actions=[];state.draft=null;state.deletedStep=null;state.points=[];state.side=0;state.seed=null;state.selectedIndex=-1;state.zoom=1;state.pan=[0,0];state.showCP=false;if($('showTutorialCP'))$('showTutorialCP').checked=false;compile();}
+function activate(){try{state.suspended=null;window.SeamLab?.exit();if(!state.fold)setPattern();if(!state.initial.length)throw Error('No paper faces found.');window.playing=false;window.updatePlayButton?.();state.active=true;document.body.classList.add('action-mode');$('stepStudio').classList.add('active');$('tutorialToggle').textContent='Exit tutorial';hideGPU();define();G.friendlyView.top();notifyStudio('mode');}catch(e){window.showError(e.message);}}
 function setBuiltIn(on){state.builtIn=on;document.body.classList.toggle('builtin-lesson',on);$('lessonTitle').readOnly=on;}
-function exit(){stop();state.active=false;setBuiltIn(false);document.body.classList.remove('action-mode');$('stepStudio').classList.remove('active');$('actionCanvas').hidden=true;$('lessonPlayer').hidden=true;$('tutorialToggle').textContent='Make a tutorial';if(state.group)state.group.visible=false;restoreGPU();G.friendlyView?.enable(true);G.friendlyView?.top();}
+function exit(){stop();state.active=false;enhancements?.playbackFrame?.();setBuiltIn(false);document.body.classList.remove('action-mode');$('stepStudio').classList.remove('active');$('actionCanvas').hidden=true;$('lessonPlayer').hidden=true;$('tutorialToggle').textContent='Make a tutorial';if(state.group)state.group.visible=false;restoreGPU();G.friendlyView?.enable(true);G.friendlyView?.top();}
+// Navigation can leave the tutorial canvas without discarding an unfinished move.
+function suspendStudio(){if(!state.active)return;if(state.phase==='preview'&&state.draft){state.draft.title=$('reviewTitle').value;state.draft.caption=$('reviewCaption').value;}const saved={builtIn:state.builtIn,view:G.friendlyView.capture()};exit();state.suspended=saved;notifyStudio('mode');}
+function resumeStudio(){
+ if(state.active)return;
+ if(!state.suspended){activate();return;}
+ const saved=state.suspended;state.suspended=null;state.active=true;setBuiltIn(saved.builtIn);hideGPU();document.body.classList.add('action-mode');$('stepStudio').classList.add('active');$('tutorialToggle').textContent='Exit tutorial';
+ if(state.phase==='preview')showPreview();
+ else{$('actionCanvas').hidden=false;$('defineControls').hidden=false;$('previewControls').hidden=true;$('lessonPlayer').hidden=true;G.friendlyView.enable(false);render3D(sheet());renderEditor();updateHint();}
+ renderSteps();G.friendlyView.frame(saved.view);notifyStudio('mode');
+}
 function setComposerPane(pane){$('motionChooser').hidden=pane!=='choose';$('markControls').hidden=pane!=='mark';}
 function canUnfoldLast(){const last=state.actions.at(-1);return !!last&&!['unfold','demo'].includes(last.kind);}
-function define(){stop();state.templateType=null;state.authorTool=null;state.mode='axis';state.axisInput='auto';state.phase='define';state.draft=null;state.points=[];state.matchEndpoints=null;state.matchDrag=null;state.side=0;state.seed=null;state.selectedIndex=-1;state.zoom=1;state.pan=[0,0];$('actionTitle').value='';$('actionCaption').value='';$('axisInput').value='auto';$('actionLayers').value='all';$('actionDirection').value='toward';$('actionAngle').value='180';$('matchHelp').hidden=true;$('defineControls').hidden=false;$('previewControls').hidden=true;$('actionCanvas').hidden=false;$('lessonPlayer').hidden=true;setComposerPane('choose');message('');G.friendlyView.enable(false);render3D(sheet());renderEditor();renderSteps();updateHint();}
-function chooseMotion(mode){state.authorTool=mode;state.mode=mode;state.templateType=null;state.points=[];state.matchEndpoints=null;state.side=0;state.seed=null;$('selectedActionName').textContent=mode==='match'?'Bring points together':'Fold along a line';$('matchHelp').hidden=mode!=='match';$('templateGuide').hidden=true;$('undoLandmark').hidden=true;$('foldSettings').hidden=false;$('templateSettings').hidden=true;$('flipSide').hidden=false;setComposerPane('mark');message('');renderEditor();updateHint();}
-function updateHint(){
+function define(){stop();state.separateLayers=false;state.editIndex=-1;state.workPlane=null;state.seeds=null;enhancements?.reset();state.templateType=null;state.authorTool=null;state.mode='axis';state.axisInput='auto';state.phase='define';state.draft=null;state.points=[];state.matchEndpoints=null;state.matchDrag=null;state.side=0;state.seed=null;state.selectedIndex=-1;state.zoom=1;state.pan=[0,0];$('actionTitle').value='';$('actionCaption').value='';$('axisInput').value='auto';$('actionLayers').value='all';$('actionDirection').value='toward';$('actionAngle').value='180';$('matchHelp').hidden=true;$('defineControls').hidden=false;$('previewControls').hidden=true;$('actionCanvas').hidden=false;$('lessonPlayer').hidden=true;setComposerPane('choose');message('');G.friendlyView.enable(false);render3D(sheet());renderEditor();renderSteps();updateHint();enhancements?.playbackFrame?.();notifyStudio('phase');}
+function chooseMotion(mode){state.seeds=null;state.authorTool=mode;state.mode=mode;state.templateType=null;state.points=[];state.matchEndpoints=null;state.side=0;state.seed=null;$('selectedActionName').textContent=mode==='match'?'Bring points together':'Fold along a line';$('matchHelp').hidden=mode!=='match';$('templateGuide').hidden=true;$('undoLandmark').hidden=true;$('foldSettings').hidden=false;$('templateSettings').hidden=true;$('flipSide').hidden=false;setComposerPane('mark');message('');renderEditor();updateHint();}
+function updateHint(){notifyStudio('hint');if(enhancements?.hint())return;
   if(!state.authorTool){$('canvasInstruction').textContent='Choose a move on the right to begin the next step.';$('previewAction').disabled=true;return;}
-  if(state.templateType){const names=state.templateType==='petal'?['bottom tip','left shoulder','right shoulder','left guide hinge','right guide hinge']:['pivot where the point joins the body','current tip','point on the new diagonal hinge'];const n=state.points.length;const text=n<names.length?`Click ${n+1} of ${names.length}: ${names[n]}.`:'All landmarks selected. Preview the motion.';$('canvasInstruction').textContent=text;$('markProgress').textContent=`${Math.min(n+1,names.length)} / ${names.length} · ${text}`;$('previewAction').disabled=n!==names.length;$('flipSide').disabled=true;$('clearAxis').disabled=!n;$('undoLandmark').disabled=!n;$('templateGuide').querySelectorAll('[data-landmark]').forEach((item,i)=>{item.classList.toggle('active',i===n);item.classList.toggle('done',i<n);});return;}
+  if(state.templateType){const names=state.templateType==='petal'?['bottom tip','left shoulder','right shoulder','left guide hinge','right guide hinge']:['tip you want to turn','pivot where the point joins the body','new direction for the tip'];const n=state.points.length;const text=n<names.length?`Click ${n+1} of ${names.length}: ${names[n]}.`:'All landmarks selected. Preview the motion.';$('canvasInstruction').textContent=text;$('markProgress').textContent=`${Math.min(n+1,names.length)} / ${names.length} · ${text}`;$('previewAction').disabled=n!==names.length;$('flipSide').disabled=true;$('clearAxis').disabled=!n;$('undoLandmark').disabled=!n;$('templateGuide').querySelectorAll('[data-landmark]').forEach((item,i)=>{item.classList.toggle('active',i===n);item.classList.toggle('done',i<n);});return;}
   const n=state.points.length,ready=n===2&&state.side;let text=state.mode==='match'?'Press a paper point, drag it to another point, then release.':'Click a colored crease, or click two points to draw a guide line.';
   if(state.mode==='match'&&ready)text='Point A will land on B. Preview the motion.';
   else if(n===1)text='Click the second point of your fold line.';
@@ -124,20 +171,20 @@ function updateHint(){
   else if(ready)text='The highlighted paper will move. Preview the result.';
   $('canvasInstruction').textContent=text;$('markProgress').textContent=`${ready?'Ready':state.mode==='match'?'Select alignment':n===2?'2 / 2':`${n+1} / 2`} · ${text}`;$('previewAction').disabled=!ready;$('flipSide').disabled=n!==2;$('clearAxis').disabled=!n;$('axisSource').hidden=state.mode!=='axis';
 }
-function visibleBox(){const f=frame(),w=Math.max(f.w,f.h)*1.35/state.zoom;return [f.cx-w/2+state.pan[0],f.cy-w/2+state.pan[1],w,w];}
+function visibleBox(){const f=enhancements?.editorFrame()||frame(),w=Math.max(f.w,f.h)*1.35/state.zoom;return [f.cx-w/2+state.pan[0],f.cy-w/2+state.pan[1],w,w];}
 function worldPoint(e){const svg=$('paperEditor'),p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());return [q.x,q.y];}
-function pointNear(p){const all=sheet().flatMap(f=>f.vertices.map(v=>v.p.slice(0,2))),f=frame();all.push([f.cx,f.cy]);let best=p,dist=visibleBox()[2]*.025;all.forEach(v=>{const d=Math.hypot(p[0]-v[0],p[1]-v[1]);if(d<dist){best=v;dist=d;}});return [...best];}
+function pointNear(p){const all=editorSheet().flatMap(f=>f.vertices.map(v=>v.p.slice(0,2))),f=enhancements?.editorFrame()||frame();all.push([f.cx,f.cy]);let best=p,dist=visibleBox()[2]*.025;all.forEach(v=>{const d=Math.hypot(p[0]-v[0],p[1]-v[1]);if(d<dist){best=v;dist=d;}});return [...best];}
 function closestCrease(p){let best=null,distance=visibleBox()[2]*.016;for(const l of state.posedRefs||[]){if(!['M','V'].includes(l.type))continue;const dx=l.b[0]-l.a[0],dy=l.b[1]-l.a[1],length=dx*dx+dy*dy;if(length<1e-12)continue;const t=Math.max(0,Math.min(1,((p[0]-l.a[0])*dx+(p[1]-l.a[1])*dy)/length));const d=Math.hypot(p[0]-l.a[0]-t*dx,p[1]-l.a[1]-t*dy);if(d<distance){best=l;distance=d;}}return best;}
-function clickedSeed(p){const faces=sheet();for(let i=faces.length-1;i>=0;i--){const vs=faces[i].vertices;if(!pointInPolygon(p,vs.map(v=>v.p)))continue;const [a,b,c]=vs;const d=(b.p[0]-a.p[0])*(c.p[1]-a.p[1])-(b.p[1]-a.p[1])*(c.p[0]-a.p[0]);if(Math.abs(d)<1e-9)continue;const x=p[0]-a.p[0],y=p[1]-a.p[1],s=(x*(c.p[1]-a.p[1])-y*(c.p[0]-a.p[0]))/d,t=((b.p[0]-a.p[0])*y-(b.p[1]-a.p[1])*x)/d;return a.uv.map((v,k)=>v+s*(b.uv[k]-v)+t*(c.uv[k]-v));}return null;}
-function actionFromForm(){if(state.templateType)return templateFromPoints();return {kind:'fold',axis:state.points.map(p=>[...p]),side:state.side,seed:$('actionLayers').value==='flap'?state.seed:null,angle:Number($('actionAngle').value)*state.side*($('actionDirection').value==='toward'?1:-1),title:$('actionTitle').value.trim()||`Fold ${state.actions.length+1}`,caption:$('actionCaption').value.trim(),duration:2.4};}
+function clickedSeed(p){const faces=editorSheet().filter(f=>!state.workPlane||f.vertices.every(v=>Math.abs(v.p[2])<1e-5));for(let i=faces.length-1;i>=0;i--){const vs=faces[i].vertices;if(!pointInPolygon(p,vs.map(v=>v.p)))continue;const [a,b,c]=vs;const d=(b.p[0]-a.p[0])*(c.p[1]-a.p[1])-(b.p[1]-a.p[1])*(c.p[0]-a.p[0]);if(Math.abs(d)<1e-9)continue;const x=p[0]-a.p[0],y=p[1]-a.p[1],s=(x*(c.p[1]-a.p[1])-y*(c.p[0]-a.p[0]))/d,t=((b.p[0]-a.p[0])*y-(b.p[1]-a.p[1])*x)/d;return a.uv.map((v,k)=>v+s*(b.uv[k]-v)+t*(c.uv[k]-v));}return null;}
+function actionFromForm(){if(state.templateType)return templateFromPoints();const action={kind:'fold',enforceLayerAccess:true,...state.sourceExtras,...state.editMetadata,plane:state.workPlane,seeds:state.seeds,axis:state.points.map(p=>[...p]),side:state.side,seed:$('actionLayers').value==='flap'?state.seed:null,angle:Number($('actionAngle').value)*state.side*($('actionDirection').value==='toward'?1:-1),title:$('actionTitle').value.trim()||`Fold ${state.actions.length+1}`,caption:$('actionCaption').value.trim(),duration:state.editMetadata?.duration||2.4};if(action.seed||action.seeds?.length){action.seeds=accessibleSeeds(sheet(),action);action.seed=null;state.seeds=action.seeds;}return action;}
 function renderEditor(){
-  const svg=$('paperEditor');svg.replaceChildren();svg.setAttribute('viewBox',visibleBox().join(' '));const faces=sheet();
+  const svg=$('paperEditor');svg.replaceChildren();svg.setAttribute('viewBox',visibleBox().join(' '));const faces=editorSheet();
   faces.forEach(f=>svg.appendChild(svgEl('polygon',{points:f.vertices.map(v=>v.p.slice(0,2).join(',')).join(' '),fill:'#fffdf7',stroke:'none'})));
   const show=$('showReference').checked;
   state.posedRefs=posedCreases(faces,show?state.refs:[...state.refs.filter(r=>r.type==='B'),...revealedCreases()]);
   state.posedRefs.forEach(l=>{svg.appendChild(svgEl('line',{x1:l.a[0],y1:l.a[1],x2:l.b[0],y2:l.b[1],stroke:color[l.type]||'#bbc1c6','stroke-width':l.type==='B'?1.8:1,'vector-effect':'non-scaling-stroke',opacity:l.type==='B'?1:.65,'pointer-events':'none'}));});
   if(state.points.length===2&&!state.templateType){const [a,b]=state.points,dx=b[0]-a[0],dy=b[1]-a[1],extension=visibleBox()[2]*2/Math.hypot(dx,dy);
-    if(state.side){try{prepareAction(faces,actionFromForm()).pieces.filter(f=>f.moving).forEach(f=>svg.appendChild(svgEl('polygon',{points:f.vertices.map(v=>v.p.slice(0,2).join(',')).join(' '),fill:'#286b64',opacity:.22,'pointer-events':'none'})));}catch{}}
+    if(state.side){try{prepareAction(sheet(),actionFromForm()).pieces.filter(f=>f.moving).forEach(f=>svg.appendChild(svgEl('polygon',{points:f.vertices.map(v=>v.p.slice(0,2).join(',')).join(' '),fill:'#286b64',opacity:.22,'pointer-events':'none'})));}catch{}}
     svg.appendChild(svgEl('line',{x1:a[0]-dx*extension,y1:a[1]-dy*extension,x2:b[0]+dx*extension,y2:b[1]+dy*extension,stroke:'#1e625c','stroke-width':2.5,'stroke-dasharray':'9 5','vector-effect':'non-scaling-stroke','pointer-events':'none'}));
   }
   const dotRadius=visibleBox()[2]*.009;
@@ -151,8 +198,9 @@ function renderEditor(){
   if(state.matchDrag)svg.appendChild(svgEl('line',{x1:state.matchDrag.start[0],y1:state.matchDrag.start[1],x2:state.matchDrag.end[0],y2:state.matchDrag.end[1],stroke:'#1e625c','stroke-width':2,'vector-effect':'non-scaling-stroke','pointer-events':'none'}));
   if(state.mode==='match'&&state.matchEndpoints)state.matchEndpoints.forEach((p,i)=>{svg.appendChild(svgEl('circle',{cx:p[0],cy:p[1],r:dotRadius*1.35,fill:i?'#b3534f':'#286b64',stroke:'white','stroke-width':2,'vector-effect':'non-scaling-stroke','pointer-events':'none'}));const label=svgEl('text',{x:p[0]+dotRadius*1.6,y:p[1]-dotRadius*1.6,fill:i?'#a33f3c':'#225c53','font-size':dotRadius*2.8,'font-weight':'bold','pointer-events':'none'});label.textContent=i?'B':'A';svg.appendChild(label);});
   $('editorZoom').textContent=Math.round(state.zoom*100)+'%';
+  enhancements?.render();
 }
-function preview(){try{stop();const a=actionFromForm();if(!state.templateType&&$('actionLayers').value==='flap'&&!a.seed)throw Error('Click inside the flap to choose it, then preview again.');state.preparedDraft=compileActions(sheet(),[a]).prepared[0];checkMotion(state.preparedDraft,poseAction,{tolerance:frame().r*1e-5});state.draft=a;state.phase='preview';state.selectedIndex=-1;state.progress=0;showPreview();play();}catch(e){message(e.message);}}
+function preview(){try{stop();const a=actionFromForm();if(!state.templateType&&$('actionLayers').value==='flap'&&!a.seed&&!a.seeds?.length)throw Error('Click inside the flap to choose it, then preview again.');state.preparedDraft=compileActions(sheet(),[a]).prepared[0];checkMotion(state.preparedDraft,poseAction,{tolerance:frame().r*1e-5});state.draft=a;state.phase='preview';state.selectedIndex=-1;state.progress=0;showPreview();play();}catch(e){message(e.message);}}
 function demoDiagram(kind){
   const diagrams={
     collapse:`<svg viewBox="0 0 240 120"><rect x="14" y="14" width="92" height="92"/><path d="M14 14L106 106M106 14L14 106M60 14V106M14 60H106"/><path class="arrow" d="M122 60H152"/><path d="M176 18L222 60L176 102L130 60Z"/></svg>`,
@@ -163,7 +211,7 @@ function demoDiagram(kind){
   };return diagrams[kind]||diagrams.kite;
 }
 function renderDemoCard(action){const card=$('demoFoldCard');if(!card)return;const demo=action?.kind==='demo';card.hidden=!demo;if(!demo)return;$('demoType').textContent=action.foldType||'Guided compound fold';$('demoDiagram').innerHTML=demoDiagram(action.diagram);}
-function showPreview(){
+function showPreview(){enhancements?.previewUI();
   $('actionCanvas').hidden=true;$('defineControls').hidden=true;$('previewControls').hidden=false;$('lessonPlayer').hidden=false;
   $('saveAction').hidden=!state.draft;$('authorReview').hidden=!state.draft;$('copyLesson').hidden=!state.builtIn;
   $('savedStepActions').hidden=!!state.draft||state.builtIn;$('quickUnfoldPreview').hidden=!!state.draft||state.builtIn||state.selectedIndex!==state.actions.length-1||!canUnfoldLast();$('savedTextForm').hidden=true;
@@ -173,22 +221,47 @@ function showPreview(){
   $('lessonPosition').textContent=state.selectedIndex>=0?`Step ${state.selectedIndex+1} of ${state.actions.length}`:`Preview · step ${state.actions.length+1}`;
   $('lessonKind').textContent=kind;$('previewTitle').textContent=action?.title||'';$('previewCaption').textContent=action?.caption||'';$('previewCaption').hidden=!!state.draft;
   if(state.draft){$('reviewTitle').value=action.title||'';$('reviewCaption').value=action.caption||'';}
-  $('showTutorialCP').checked=state.showCP;renderDemoCard(action);$('lessonPlayer').classList.remove('static-step');$('staticStepLabel').hidden=action?.kind!=='demo';G.friendlyView.enable(true);updatePose();
+  $('showTutorialCP').checked=state.showCP;renderDemoCard(action);$('lessonPlayer').classList.remove('static-step');$('staticStepLabel').hidden=action?.kind!=='demo';G.friendlyView.enable(true);updatePose();if(state.draft){if(state.draft.view)G.friendlyView.frame(state.draft.view);else fitTutorialView(true);}enhancements?.previewReady();notifyStudio('phase');
 }
 function draftFaces(t){return state.draft?.kind==='unfold'?poseAction(state.preparedDraft.ref,1-t):poseAction(state.preparedDraft,t);}
-function updatePose(){state.progress=Math.max(0,Math.min(1,Number.isFinite(state.progress)?state.progress:0));const action=state.draft||state.actions[state.selectedIndex];if(action?.kind==='demo')renderGuidedModel(action,state.progress);else render3D(state.draft?draftFaces(state.progress):poseSequence(state.sequence,state.selectedIndex,state.progress));$('stepScrub').value=state.progress*100;$('stepPercent').textContent=Math.round(state.progress*100)+'%';$('replayAction').textContent=state.playing?'Pause':state.progress>=1?'Replay':'Play';}
+function updatePose(){state.progress=Math.max(0,Math.min(1,Number.isFinite(state.progress)?state.progress:0));const action=state.draft||state.actions[state.selectedIndex];if(action?.kind==='demo')renderGuidedModel(action,state.progress);else render3D(state.draft?draftFaces(state.progress):poseSequence(state.sequence,state.selectedIndex,state.progress));$('stepScrub').value=state.progress*100;$('stepPercent').textContent=Math.round(state.progress*100)+'%';enhancements?.playbackFrame?.();$('replayAction').textContent=state.playing?'Pause':state.progress>=1?'Replay':'Play';notifyStudio('frame');}
 function stop(){state.playing=false;cancelAnimationFrame(state.raf);$('replayAction')&&($('replayAction').textContent='Play');}
-function play(){if(state.playing){stop();return;}if(state.progress>=1)state.progress=0;state.playing=true;const duration=((state.draft||state.actions[state.selectedIndex])?.duration||3.2)*1000;const start=performance.now()-state.progress*duration;const tick=now=>{if(!state.playing)return;state.progress=Math.max(0,Math.min(1,(now-start)/duration));updatePose();if(state.progress<1)state.raf=requestAnimationFrame(tick);else {state.playing=false;updatePose();}};state.raf=requestAnimationFrame(tick);}
+function play(until=null){
+  if(state.playing){stop();return;}state.separateLayers=false;if($('separatePaper'))$('separatePaper').setAttribute('aria-pressed','false');
+  if(state.progress>=1)state.progress=0;state.playing=true;const end=typeof until==='number'?until:1;let last=performance.now();
+  const tick=now=>{if(!state.playing)return;const elapsed=Math.min(200,Math.max(0,now-last));last=now;const action=state.draft||state.actions[state.selectedIndex],duration=motionDuration(action)*1000,from=state.progress,target=Math.min(end,state.progress+elapsed*state.speed/duration),checkpoint=nextStageStop(action,from,target);state.progress=checkpoint??target;updatePose();
+    if(state.progress<end&&checkpoint===undefined)state.raf=requestAnimationFrame(tick);else{state.playing=false;updatePose();if(state.progress===1&&typeof until!=='number'&&checkpoint===undefined&&!state.draft&&state.continuous&&!action?.pauseAfter&&state.selectedIndex<state.actions.length-1){state.raf=requestAnimationFrame(()=>{if(state.active&&state.phase==='preview'&&state.continuous&&!state.draft)selectStep(state.selectedIndex+1);});}else enhancements?.playbackComplete?.(action);}
+  };state.raf=requestAnimationFrame(tick);
+}
 function saveAction(){
   if(!state.draft)return;
   stop();state.draft.title=$('reviewTitle').value.trim()||`Step ${state.actions.length+1}`;
   state.draft.caption=$('reviewCaption').value.trim();
-  state.actions.push(state.draft);
-  try{compile();state.draft=null;define();}catch(e){state.actions.pop();compile();message(e.message);}
+  const before=state.actions,edited=state.editIndex,actions=structuredClone(before);
+  if(edited>=0){actions[edited]=state.draft;actions.slice(edited+1).forEach(a=>a.needsReview=true);}else actions.push(state.draft);
+  if(edited<0&&$('foldThenOpen')?.checked&&state.draft.kind==='fold')actions.push({kind:'unfold',foldIndex:actions.length-1,title:'Open the fold',caption:'Open the paper, keeping the new crease.',duration:2.4});
+  try{const sequence=validateLesson(state.initial,actions);state.actions=actions;state.sequence=sequence;state.draft=null;define();if(edited>=0)stepNotice('Motion updated. Review the following steps before sharing.');}catch(e){window.showError('Could not save: '+e.message);}
 }
-function fitTutorialView(){const faces=state.draft?draftFaces(state.progress):poseSequence(state.sequence,state.selectedIndex,state.progress);const pts=faces.flatMap(f=>f.vertices.map(v=>toScene(v.p)));const lo=[0,1,2].map(i=>Math.min(...pts.map(p=>p[i]))),hi=[0,1,2].map(i=>Math.max(...pts.map(p=>p[i])));G.friendlyView.frame({target:lo.map((v,i)=>(v+hi[i])/2),zoom:Math.min(2.6,2/Math.max(...hi.map((v,i)=>v-lo[i]))),yaw:.65,pitch:.38});}
-function selectStep(i){stop();state.draft=null;state.selectedIndex=Math.max(0,Math.min(state.actions.length-1,i));state.progress=0;state.phase='preview';showPreview();renderSteps();if(state.actions[state.selectedIndex]?.title==='Your paper crane'){state.progress=1;fitTutorialView();state.progress=0;}play();}
-function actionLabel(a){return a?.kind==='demo'?'Guided illustration':a?.kind==='unfold'?'Unfold':a?.kind==='squareBase'?'Base collapse':a?.template==='petal'?'Petal fold':a?.template==='reverse'?'Inside reverse fold':a?.template==='turn'?'Turn paper':'Fold';}
+function fitTutorialView(wholeMotion=false,settled=false){
+ if(document.documentElement.dataset.ui==='storyboard'&&!settled){
+  // Wait for V2's inspector/player layout before measuring the real canvas.
+  // A hidden 3D view still has the previous camera, which cannot be fitted.
+  const sequence=state.sequence,draft=state.draft,index=state.selectedIndex;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{if(state.active&&state.phase==='preview'&&state.sequence===sequence&&state.draft===draft&&state.selectedIndex===index)fitTutorialView(wholeMotion,true);}));return;
+ }
+ const at=t=>state.draft?draftFaces(t):poseSequence(state.sequence,state.selectedIndex,t),times=document.documentElement.dataset.ui==='storyboard'?motionSampleTimes(state.draft||state.actions[state.selectedIndex],[0,.125,.25,.375,.5,.625,.75,.875,1]):[0,.5,1],faces=wholeMotion?times.flatMap(at):at(state.progress),pts=faces.flatMap(f=>f.vertices.map(v=>toScene(v.p)));
+ const lo=[0,1,2].map(i=>Math.min(...pts.map(p=>p[i]))),hi=[0,1,2].map(i=>Math.max(...pts.map(p=>p[i]))),target=lo.map((v,i)=>(v+hi[i])/2);
+ if(document.documentElement.dataset.ui==='storyboard'){
+  // Fit the visible projection, so a wide V2 canvas does not make the paper
+  // unnecessarily small. Whole-motion bounds still prevent preview clipping.
+  G.friendlyView.frame({target,zoom:1,yaw:.65,pitch:.38});const camera=G.threeView.camera;camera.updateMatrixWorld();
+  const projected=pts.map(p=>new THREE.Vector3(...p).project(camera)),extentX=Math.max(...projected.map(p=>Math.abs(p.x))),extentY=Math.max(...projected.map(p=>Math.abs(p.y)));
+  G.friendlyView.frame({target,zoom:Math.min(4.5,.76/Math.max(extentX,1e-6),.76/Math.max(extentY,1e-6)),yaw:.65,pitch:.38});return;
+ }
+ G.friendlyView.frame({target,zoom:Math.min(2.6,2/Math.max(...hi.map((v,i)=>v-lo[i]))),yaw:.65,pitch:.38});
+}
+function selectStep(i){stop();state.separateLayers=false;state.editIndex=-1;state.workPlane=null;state.draft=null;state.selectedIndex=Math.max(0,Math.min(state.actions.length-1,i));state.progress=0;state.phase='preview';showPreview();renderSteps();if(state.actions[state.selectedIndex]?.view)G.friendlyView.frame(state.actions[state.selectedIndex].view);else fitTutorialView(true);if(document.documentElement.dataset.ui!=='storyboard'&&state.actions[state.selectedIndex]?.title==='Your paper crane'){state.progress=1;fitTutorialView();state.progress=0;}play();}
+function actionLabel(a){return a?.kind==='demo'?'Guided illustration':a?.kind==='unfold'?'Unfold':a?.kind==='box'?'Raise box walls':a?.kind==='squareBase'?'Base collapse':a?.template==='squash'?'Squash pockets':a?.template==='openSink'?'Open sink':a?.template==='petal'?'Petal fold':a?.template==='reverse'?'Inside reverse fold':a?.template==='turn'?'Turn paper':'Fold';}
 function stepNotice(text,canUndo=false){$('stepNoticeText').textContent=text;$('undoStepDelete').hidden=!canUndo;$('stepNotice').hidden=!text;}
 function undoStepDelete(){const saved=state.deletedStep;if(!saved||state.actions!==saved.after||state.actions.length!==saved.afterLength){stepNotice('The lesson has changed since that deletion. Open a saved tutorial to restore an older version.');return;}stop();state.actions=saved.before;state.sequence=saved.sequence;state.deletedStep=null;stepNotice('Step restored.');if(saved.phase==='define')define();else selectStep(saved.index);}
 function closeStepMenu(){const menu=$('stepContextMenu');if(menu)menu.hidden=true;}
@@ -217,8 +290,8 @@ function renderSteps(){
     const wrapper=document.createElement('div'),b=document.createElement('button'),number=document.createElement('span'),description=document.createElement('span'),kind=document.createElement('small');
     wrapper.className='lesson-step-wrap';
     b.className='lesson-step'+(a.kind==='demo'?' guided':'')+(i===state.selectedIndex?' current':'');
-    b.type='button';b.setAttribute('aria-label',`Play step ${i+1}: ${a.title||`Step ${i+1}`}`);
-    number.textContent=i+1;kind.textContent=actionLabel(a);description.append(kind,document.createTextNode(a.title||`Step ${i+1}`));b.append(number,description);
+    b.type='button';b.setAttribute('aria-current',i===state.selectedIndex?'step':'false');b.setAttribute('aria-label',`Play step ${i+1}: ${a.title||`Step ${i+1}`}`);
+    number.textContent=i+1;kind.textContent=(a.needsReview?'Review · ':'')+actionLabel(a);description.append(kind,document.createTextNode(a.title||`Step ${i+1}`));b.append(number,description);
     b.onclick=()=>selectStep(i);wrapper.oncontextmenu=event=>openStepMenu(event,i);wrapper.appendChild(b);
     if(!state.builtIn){const remove=document.createElement('button');remove.type='button';remove.className='lesson-step-delete';remove.textContent='×';remove.title=`Delete step ${i+1}`;remove.setAttribute('aria-label',`Delete step ${i+1}: ${a.title||`Step ${i+1}`}`);remove.onclick=event=>{event.stopPropagation();deleteStep(i);};wrapper.appendChild(remove);}
     list.appendChild(wrapper);
@@ -227,7 +300,9 @@ function renderSteps(){
   if(state.actions.length)$('lastStepContext').textContent=`Step ${state.actions.length} saved: ${state.actions.at(-1).title||`Step ${state.actions.length}`}.`;
   $('actionCount').textContent=`Step ${state.actions.length+1}`;$('timelineCount').textContent=state.actions.length?`${state.actions.length} ${state.actions.length===1?'step':'steps'}`:'No steps yet';$('newAction').hidden=!state.actions.length||state.phase==='define'||!!state.draft||state.builtIn||state.selectedIndex!==state.actions.length-1;
   $('lessonTimeline').classList.toggle('empty',!state.actions.length);
+  enhancements?.changed();
   list.querySelector('.current')?.scrollIntoView({block:'nearest',inline:'nearest'});
+  notifyStudio('steps');
 }
 function unfold(){try{
   const ref=state.sequence.prepared.at(-1);
@@ -242,8 +317,8 @@ function quickAddUnfold(){
   try{compile();state.draft=null;state.authorTool=null;selectStep(state.actions.length-1);}catch(e){state.actions.pop();compile();window.showError(e.message);}
 }
 function tutorialData(){return {format:'fold-lab-tutorial',version:2,title:$('lessonTitle').value,fold:state.fold,paper:state.paper,actions:state.actions};}
-function save(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(tutorialData(),null,2)],{type:'application/json'}));a.download='folding-lesson.origami-tutorial.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
-function load(data){if(data.format!=='fold-lab-tutorial'||data.version!==2)throw Error('This editor opens version 2 action tutorials. Older crease-only files need the archived editor.');const initial=makeSheet(data.paper||data.fold),sequence=compileActions(initial,data.actions);if(state.active)exit();setupFold(data.fold,data.paper);state.actions=data.actions;state.sequence=sequence;activate();$('lessonTitle').value=data.title||'Folding lesson';if(state.actions.length)selectStep(0);}
+function save(){if(state.draft){saveAction();if(state.draft)return;}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(tutorialData(),null,2)],{type:'application/json'}));a.download='folding-lesson.origami-tutorial.json';a.click();if($('tutorialSaveStatus')){$('tutorialSaveStatus').textContent='Tutorial download started · '+state.actions.length+' saved steps';setTimeout(()=>{$('tutorialSaveStatus').textContent='';},5000);}setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function load(data){if(data.format!=='fold-lab-tutorial'||data.version!==2)throw Error('This editor opens version 2 action tutorials. Older crease-only files need the archived editor.');const initial=makeSheet(data.paper||data.fold),sequence=validateLesson(initial,data.actions);if(state.active)exit();setupFold(data.fold,data.paper);state.actions=data.actions;state.sequence=sequence;activate();$('lessonTitle').value=data.title||'Folding lesson';if(state.actions.length)selectStep(0);enhancements?.loaded();}
 async function craneLesson(){try{if(state.active)exit();const ok=await window.importModelSource({name:'Traditional Crane.svg',url:'cp_examples/mit/models/traditionalCrane.svg',id:'traditionalCrane'});if(!ok)return;setPattern();
     // The tutorial uses one exact square. The imported illustration contains
     // rounded / tolerance-merged vertices, which must not distort the paper.
@@ -255,20 +330,21 @@ async function craneLesson(){try{if(state.active)exit();const ok=await window.im
     state.actions=craneActions(f);compile();setBuiltIn(true);$('lessonTitle').value='Traditional Paper Crane';G.friendlyView.perspective();renderSteps();selectStep(0);
   }catch(e){message(e.message);}}
 function templateFromPoints(){
+  if(enhancements?.customTemplate())return enhancements.customTemplate();
   const back=$('pocketSide').value==='back',front=back?[4,5,6,3]:[0,1,2,7],other=back?[0,1,2,7]:[4,5,6,3];
   const a={kind:'template',template:state.templateType,title:$('actionTitle').value.trim()||(state.templateType==='petal'?'Petal fold':'Inside reverse fold'),caption:$('actionCaption').value.trim(),duration:6};
   if(state.templateType==='petal'){const [tip,left,right,hingeLeft,hingeRight]=state.points;return {...a,tip,left,right,hingeLeft,hingeRight,frontSectors:back?[4,5]:[0,1],leftSectors:back?[6]:[2],rightSectors:back?[3]:[7]};}
   const [pivot,spine,hinge]=state.points;return {...a,pivot,spine,hinge,frontSectors:front,backSectors:other};
 }
 function templateGuide(id){
-  if(id==='petal')return `<strong>Petal fold · open one pocket</strong><p>First collapse a square base and flatten the kite precreases. Keep that base flat. Pick the pocket facing you.</p><svg class="template-diagram" viewBox="0 0 150 150" role="img" aria-label="Petal landmarks: 1 bottom tip, 2 left shoulder, 3 right shoulder, 4 left guide hinge, 5 right guide hinge"><path d="M75 8L130 72L75 142L20 72Z M20 72L130 72 M75 8L75 142 M38 52L75 142L112 52"/><g><circle cx="75" cy="142" r="10"/><text x="75" y="146">1</text><circle cx="20" cy="72" r="10"/><text x="20" y="76">2</text><circle cx="130" cy="72" r="10"/><text x="130" y="76">3</text><circle cx="38" cy="52" r="10"/><text x="38" y="56">4</text><circle cx="112" cy="52" r="10"/><text x="112" y="56">5</text></g></svg><ol><li data-landmark>Bottom open tip</li><li data-landmark>Left shoulder</li><li data-landmark>Right shoulder</li><li data-landmark>Left precrease hinge</li><li data-landmark>Right precrease hinge</li></ol><small>Lift only the front pocket; the side folds tuck in as the tip rises.</small>`;
-  return `<strong>Inside reverse fold · turn a narrow point</strong><p>First prepare a flat two-layer point, such as the crane’s neck or tail. The point must have two walls to open.</p><svg class="template-diagram" viewBox="0 0 150 150" role="img" aria-label="Reverse fold landmarks: 1 pivot, 2 current tip, 3 point on the new diagonal hinge"><path d="M30 28L75 82L120 28 M75 82L75 142 M75 82L105 112"/><path class="fold-guide" d="M75 82L105 112"/><g><circle cx="75" cy="82" r="10"/><text x="75" y="86">1</text><circle cx="75" cy="142" r="10"/><text x="75" y="146">2</text><circle cx="105" cy="112" r="10"/><text x="105" y="116">3</text></g></svg><ol><li data-landmark>Pivot at the base of the point</li><li data-landmark>Current tip, along its center spine</li><li data-landmark>Point on the new diagonal hinge</li></ol><small>Open the two walls, push the point between them, then close the packet.</small>`;
+  if(id==='petal')return `<strong>Petal fold · open one pocket</strong><p>Prepare a symmetric pocket and its guide creases. Choose its paper layers, then mark the five landmarks.</p><svg class="template-diagram" viewBox="0 0 150 150" role="img" aria-label="Petal landmarks: 1 bottom tip, 2 left shoulder, 3 right shoulder, 4 left guide hinge, 5 right guide hinge"><path d="M75 8L130 72L75 142L20 72Z M20 72L130 72 M75 8L75 142 M38 52L75 142L112 52"/><g><circle cx="75" cy="142" r="10"/><text x="75" y="146">1</text><circle cx="20" cy="72" r="10"/><text x="20" y="76">2</text><circle cx="130" cy="72" r="10"/><text x="130" y="76">3</text><circle cx="38" cy="52" r="10"/><text x="38" y="56">4</text><circle cx="112" cy="52" r="10"/><text x="112" y="56">5</text></g></svg><ol><li data-landmark>Bottom open tip</li><li data-landmark>Left shoulder</li><li data-landmark>Right shoulder</li><li data-landmark>Left precrease hinge</li><li data-landmark>Right precrease hinge</li></ol><small>Lift only the front pocket; the side folds tuck in as the tip rises.</small>`;
+  return `<strong>Inside reverse fold</strong><p>Start with a two-wall point. Choose where its tip should face; the hinge is calculated for you.</p><ol><li data-landmark>Tip to turn</li><li data-landmark>Pivot at the base of the point</li><li data-landmark>New direction for the tip</li></ol><small>The blue marker shows the final tip. Open Choose pocket walls to select both sides of the point.</small>`;
 }
 function setupTemplate(){try{
   stop();const id=$('compoundTemplate').value;
   if(id==='petal'||id==='reverse'){
-    if(!sheet().every(f=>Number.isInteger(f.sector)))throw Error('First add Square-base collapse. These pocket templates currently support that base family.');
-    if(sheet().some(f=>f.vertices.some(v=>Math.abs(v.p[2])>frame().r*1e-5)))throw Error('Return to a flat step before selecting a pocket.');
+    enhancements?.preparePocket(id);
+    if(!state.workPlane&&sheet().some(f=>f.vertices.some(v=>Math.abs(v.p[2])>frame().r*1e-5)))throw Error('Choose the pocket’s Work surface before marking this fold.');
     state.authorTool=id;state.mode='axis';state.templateType=id;state.points=[];state.side=0;
     $('pocketSide').value=state.actions.filter(a=>a.template==='turn'&&Math.abs(a.angle)===180).length%2?'back':'front';
     $('selectedActionName').textContent=id==='petal'?'Petal fold':'Inside reverse fold';$('templateGuide').innerHTML=templateGuide(id);$('templateGuide').hidden=false;$('undoLandmark').hidden=false;$('foldSettings').hidden=true;$('templateSettings').hidden=false;$('axisSource').hidden=true;$('flipSide').hidden=true;$('cancelTemplate').hidden=false;
@@ -309,7 +385,7 @@ function mount(){
       <input id="actionTitle" type="hidden"><textarea id="actionCaption" hidden></textarea>
     </div>
     <div id="previewControls" hidden>
-      <div class="lesson-preview-head"><div class="lesson-progress"><span id="lessonPosition">New step</span><span id="lessonKind">Animated fold</span></div><label class="cp-visibility"><input id="showTutorialCP" type="checkbox"> Show full CP</label></div>
+      <div class="lesson-preview-head"><div class="lesson-progress"><span id="lessonPosition">New step</span><span id="lessonKind">Animated fold</span></div><label class="cp-visibility"><input id="showTutorialCP" type="checkbox"> Original CP (gray)</label></div>
       <h2 id="previewTitle"></h2><div id="demoFoldCard" hidden><div id="demoType"></div><div id="demoDiagram"></div><p>Guided illustration · follow the written alignment cues</p></div>
       <div id="stepNavigation" class="minor-actions"><button id="previousStep">Previous step</button><button id="nextStep">Next step</button></div>
       <p id="previewCaption"></p>
@@ -328,7 +404,7 @@ function mount(){
   $('setupTemplate').onclick=setupTemplate;
   const changeMotion=()=>{state.authorTool=null;state.templateType=null;state.mode='axis';state.points=[];state.matchEndpoints=null;state.matchDrag=null;state.side=0;state.seed=null;$('cancelTemplate').hidden=true;$('matchHelp').hidden=true;$('templateGuide').hidden=true;$('undoLandmark').hidden=true;$('moreMoves').open=false;setComposerPane('choose');message('');renderEditor();updateHint();};
   $('changeAction').onclick=changeMotion;$('cancelTemplate').onclick=changeMotion;
-  $('copyLesson').onclick=()=>{const end=state.selectedIndex+1;stop();state.actions=JSON.parse(JSON.stringify(state.actions.slice(0,end)));setBuiltIn(false);$('lessonTitle').value='My crane lesson';compile();define();$('showReference').checked=false;renderEditor();};
+  $('copyLesson').onclick=()=>{const end=state.selectedIndex+1;stop();state.actions=JSON.parse(JSON.stringify(state.actions.slice(0,end)));setBuiltIn(false);$('lessonTitle').value='My '+$('lessonTitle').value.replace(/^My /,'');compile();define();$('showReference').checked=false;renderEditor();};
   $('actionModeAxis').onclick=()=>chooseMotion('axis');$('actionModeMatch').onclick=()=>chooseMotion('match');
   $('moreMoves').querySelectorAll('[data-template]').forEach(button=>button.onclick=()=>{$('compoundTemplate').value=button.dataset.template;setupTemplate();});
   $('clearAxis').onclick=()=>{state.points=[];state.matchEndpoints=null;state.side=0;state.seed=null;renderEditor();updateHint();};$('undoLandmark').onclick=()=>{state.points.pop();renderEditor();updateHint();};$('flipSide').onclick=()=>{state.side=-(state.side||1);state.seed=null;renderEditor();updateHint();};
@@ -338,7 +414,7 @@ function mount(){
   $('cancelSavedText').onclick=()=>$('savedTextForm').hidden=true;
   $('applySavedText').onclick=()=>{const action=state.actions[state.selectedIndex];if(!action||state.builtIn)return;action.title=$('savedTitle').value.trim()||`Step ${state.selectedIndex+1}`;action.caption=$('savedCaption').value.trim();$('previewTitle').textContent=action.title;$('previewCaption').textContent=action.caption;$('savedTextForm').hidden=true;renderSteps();};
   $('editAction').onclick=()=>{if(!state.draft||['squareBase','turn','unfold'].includes(state.authorTool)){define();return;}stop();state.phase='define';$('actionTitle').value=$('reviewTitle').value;$('actionCaption').value=$('reviewCaption').value;state.draft=null;G.friendlyView.enable(false);$('actionCanvas').hidden=false;$('defineControls').hidden=false;$('previewControls').hidden=true;$('lessonPlayer').hidden=true;setComposerPane('mark');renderEditor();updateHint();};
-  $('previousStep').onclick=()=>selectStep(state.selectedIndex-1);$('nextStep').onclick=()=>selectStep(state.selectedIndex+1);$('replayAction').onclick=play;$('stepScrub').oninput=e=>{stop();state.progress=Number(e.target.value)/100;updatePose();};$('viewPaper').onclick=()=>G.friendlyView.top();$('viewAngle').onclick=fitTutorialView;
+  $('previousStep').onclick=()=>selectStep(state.selectedIndex-1);$('nextStep').onclick=()=>selectStep(state.selectedIndex+1);$('replayAction').onclick=play;$('stepScrub').oninput=e=>{stop();state.progress=Number(e.target.value)/100;updatePose();};$('viewPaper').onclick=()=>G.friendlyView.top();$('viewAngle').onclick=()=>fitTutorialView();
   $('showTutorialCP').onchange=e=>{state.showCP=e.target.checked;updatePose();};
   $('undoAction').onclick=()=>{if(!state.builtIn&&state.actions.length)deleteStep(state.actions.length-1);};$('saveLesson').onclick=save;$('openLesson').onclick=()=>$('openLessonFile').click();$('openLessonFile').onchange=async e=>{if(!e.target.files.length)return;try{load(JSON.parse(await e.target.files[0].text()));}catch(error){window.showError(error.message);}e.target.value='';};
   $('axisInput').onchange=e=>{state.axisInput=e.target.value;state.points=[];state.matchEndpoints=null;state.side=0;renderEditor();updateHint();};$('showReference').onchange=renderEditor;$('actionLayers').onchange=()=>{renderEditor();updateHint();};
@@ -349,7 +425,7 @@ function mount(){
   svg.addEventListener('pointerdown',e=>{if(!state.authorTool&&e.button!==2)return;if(e.buttons)svg.setPointerCapture(e.pointerId);const p=pointNear(worldPoint(e));drag={start:p,pixel:[e.clientX,e.clientY],pan:[...state.pan],button:e.button};if(e.button===0&&state.mode==='match')state.matchDrag={start:p,end:p};});
   svg.addEventListener('pointermove',e=>{if(!drag)return;if(drag.button===2){const scale=visibleBox()[2]/Math.min(svg.clientWidth,svg.clientHeight);state.pan=[drag.pan[0]-(e.clientX-drag.pixel[0])*scale,drag.pan[1]-(e.clientY-drag.pixel[1])*scale];renderEditor();}else if(state.mode==='match'){state.matchDrag.end=pointNear(worldPoint(e));renderEditor();}});
   svg.addEventListener('pointerup',e=>{if(!drag)return;const start=drag.start,button=drag.button;drag=null;if(button!==0||!state.authorTool)return;const p=pointNear(worldPoint(e));message('');if(state.templateType){const limit=state.templateType==='petal'?5:3;if(state.points.length>=limit)state.points=[];state.points.push(p);renderEditor();updateHint();return;}if(state.mode==='match'){try{const result=axisForMatch(start,p);state.points=result.axis;state.matchEndpoints=[start,p];state.side=result.side;state.seed=clickedSeed(start);state.matchDrag=null;renderEditor();updateHint();}catch(error){state.matchDrag=null;message('Drag a paper point onto a different destination point, then release.');}return;}
-    if(state.points.length===2){const raw=worldPoint(e);state.side=Math.sign(sideOf(raw,state.points));state.seed=clickedSeed(raw);if(!state.seed){state.side=0;message('Click on the paper to choose the moving side.');return;}}
+    if(state.points.length===2){const raw=worldPoint(e);state.seeds=null;state.side=Math.sign(sideOf(raw,state.points));state.seed=clickedSeed(raw);if(!state.seed){state.side=0;message('Click on the paper to choose the moving side.');return;}}
     else if(!state.points.length){const line=state.axisInput==='guide'||e.shiftKey?null:closestCrease(worldPoint(e));if(state.axisInput==='crease'&&!e.shiftKey&&!line){message('No crease there. Choose another crease or change Line under More control.');return;}state.points=line?[line.a.slice(0,2),line.b.slice(0,2)]:[p];}
     else if(Math.hypot(p[0]-state.points[0][0],p[1]-state.points[0][1])>frame().r*1e-4)state.points.push(p);
     renderEditor();updateHint();
@@ -358,7 +434,8 @@ function mount(){
   const viewTools=document.createElement('div');viewTools.id='viewTools';viewTools.innerHTML='<button id="homeCamera">Top view</button><button id="angleCamera">3D view</button>';document.body.appendChild(viewTools);$('homeCamera').onclick=()=>G.friendlyView.top();$('angleCamera').onclick=()=>G.friendlyView.perspective();
   const hints=[...$('panel').children].filter(el=>el.classList.contains('hint'));const detail=document.createElement('details');detail.className='workspace-details';detail.innerHTML='<summary>Import settings & credits</summary>';hints.forEach(el=>detail.appendChild(el));$('panel').appendChild(detail);
   window.addEventListener('foldlab:pattern-ready',()=>{try{if(state.active)exit();setPattern();G.friendlyView.top();}catch(e){message(e.message);}});
-  window.StepStudio={activate,exit,load,craneLesson,getState:()=>({active:state.active,steps:state.actions.length,position:state.selectedIndex,progress:state.progress,phase:state.phase}),tutorialData};
+  enhancements=mountEnhancements({state,$,sheet,editorSheet,frame,visibleBox,worldPoint,pointNear,posedCreases,renderEditor,renderSteps,render3D,define,chooseMotion,updateHint,actionFromForm,preview,showPreview,stop,play,load,tutorialData,setBuiltIn,selectStep,message,setupTemplate,setComposerPane,clickedSeed,updatePose,fitTutorialView,saveAction,poseAction,draftFaces});
+  window.StepStudio={activate,exit,load,craneLesson,suspend:suspendStudio,resume:resumeStudio,stop,selectStep,startStep:define,getState:()=>({active:state.active,steps:state.actions.length,position:state.selectedIndex,progress:state.progress,phase:state.phase}),getPresentation:()=>({active:state.active,builtIn:state.builtIn,phase:state.phase,position:state.selectedIndex,progress:state.progress,actions:state.actions,frames:state.sequence?.frames||[],initial:state.initial,draft:state.draft,suspended:!!state.suspended,suspendedBuiltIn:!!state.suspended?.builtIn}),tutorialData};
+  window.dispatchEvent(new Event('foldlab:studio-ready'));
 }
 mount();
-

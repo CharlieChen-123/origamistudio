@@ -19,6 +19,8 @@
 
 3. `js/pattern.js`：`loadSVG` 增加可选的第三个参数 `{ complete, error }`，供本站显示导入完成或失败；加载后的临时 SVG 在 `finally` 中清理。原来两个参数的调用方式保持兼容，几何与 GPU 求解算法未改写。
 
+4. `js/threeView.js`：只有 Trackball 控制器启用时才执行 `controls.update()`。旧控制器的 update 不检查 enabled，会每帧覆盖本站纸张镜头的平移目标，导致取景偏移。上游原始页面的启用控制器仍正常更新。
+
 `assets/`、`dependencies/`、`css/`、`fonts/` 均未改动。本站模拟页额外加载原有的 `numeric-1.2.6.js`，以支持 SVG 分组坐标变换。
 
 ## 怎么跑

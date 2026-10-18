@@ -9,6 +9,7 @@ function setImportBusy(busy) {
   importBusy = busy;
   document.querySelectorAll('#bar button,#foldRange,#cpFile,#mergeTolerance,.model-btn').forEach(el => el.disabled = busy);
   document.querySelector('.import-button').style.opacity = busy ? '.5' : '1';
+  window.dispatchEvent(new CustomEvent('foldlab:import-busy',{detail:{busy}}));
 }
 function finishImport(error) {
   if (waitTimer) { clearInterval(waitTimer); waitTimer = null; }

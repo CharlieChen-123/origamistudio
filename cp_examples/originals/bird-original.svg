@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-220 -220 440 440" width="440" height="440">
+  <!-- Origami Crease Pattern — 29 lines — Export from CP Designer -->
+  <!-- Paper shape: square -->
+  <rect x="-200" y="-200" width="400" height="400" fill="#FAF8F2" stroke="#000000" stroke-width="1"/>
+
+  <!-- Mountain folds (solid red) -->
+  <g stroke="#ff0000" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="none" fill="none">
+    <line x1="-200.00" y1="200.00" x2="200.00" y2="-200.00" data-lt="mountain" opacity="1"/>
+    <line x1="-200.00" y1="-150.00" x2="-125.00" y2="-125.00" data-lt="mountain" opacity="1"/>
+    <line x1="-150.00" y1="-200.00" x2="-125.00" y2="-125.00" data-lt="mountain" opacity="1"/>
+    <line x1="-125.00" y1="-125.00" x2="-50.00" y2="-50.00" data-lt="mountain" opacity="1"/>
+    <line x1="0.00" y1="0.00" x2="50.00" y2="50.00" data-lt="mountain" opacity="1"/>
+    <line x1="-100.00" y1="0.00" x2="-50.00" y2="50.00" data-lt="mountain" opacity="1"/>
+    <line x1="0.00" y1="-100.00" x2="50.00" y2="-50.00" data-lt="mountain" opacity="1"/>
+    <line x1="125.42" y1="125.28" x2="154.97" y2="201.17" data-lt="mountain" opacity="1"/>
+    <line x1="125.28" y1="125.42" x2="201.17" y2="154.97" data-lt="mountain" opacity="1"/>
+    <line x1="125.52" y1="125.52" x2="200.00" y2="200.00" data-lt="mountain" opacity="1"/>
+    <line x1="-50.00" y1="200.00" x2="200.00" y2="-50.00" data-lt="mountain" opacity="1"/>
+    <line x1="0.00" y1="100.00" x2="25.00" y2="125.00" data-lt="mountain" opacity="1"/>
+    <line x1="100.00" y1="0.00" x2="125.00" y2="25.00" data-lt="mountain" opacity="1"/>
+    <line x1="75.00" y1="75.00" x2="125.52" y2="125.52" data-lt="mountain" opacity="1"/>
+  </g>
+
+  <!-- Valley folds (dashed blue) -->
+  <g stroke="#0000ff" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="8,4" fill="none">
+    <line x1="-200.00" y1="100.00" x2="100.00" y2="-200.00" data-lt="valley" opacity="1"/>
+    <line x1="200.00" y1="-100.00" x2="-100.00" y2="200.00" data-lt="valley" opacity="1"/>
+    <line x1="-200.00" y1="-200.00" x2="-125.00" y2="-125.00" data-lt="valley" opacity="1"/>
+    <line x1="0.00" y1="0.00" x2="-50.00" y2="-50.00" data-lt="valley" opacity="1"/>
+    <line x1="-200.00" y1="-100.00" x2="-100.00" y2="0.00" data-lt="valley" opacity="1"/>
+    <line x1="-100.00" y1="-200.00" x2="0.00" y2="-100.00" data-lt="valley" opacity="1"/>
+    <line x1="-50.00" y1="50.00" x2="0.00" y2="100.00" data-lt="valley" opacity="1"/>
+    <line x1="50.00" y1="-50.00" x2="100.00" y2="0.00" data-lt="valley" opacity="1"/>
+    <line x1="50.00" y1="150.00" x2="100.00" y2="200.00" data-lt="valley" opacity="1"/>
+    <line x1="150.00" y1="50.00" x2="200.00" y2="100.00" data-lt="valley" opacity="1"/>
+    <line x1="124.27" y1="124.12" x2="135.56" y2="200.30" data-lt="valley" opacity="1"/>
+    <line x1="124.12" y1="124.27" x2="200.30" y2="135.56" data-lt="valley" opacity="1"/>
+    <line x1="50.00" y1="50.00" x2="75.00" y2="75.00" data-lt="valley" opacity="1"/>
+    <line x1="125.00" y1="25.00" x2="152.33" y2="52.33" data-lt="valley" opacity="1"/>
+    <line x1="50.00" y1="150.00" x2="25.00" y2="125.00" data-lt="valley" opacity="1"/>
+  </g>
+</svg>

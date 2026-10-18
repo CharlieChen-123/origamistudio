@@ -1,0 +1,28 @@
+<!doctype html><meta charset="utf-8"><title>Storyboard camera bounds</title>
+<style>body{font:14px system-ui}iframe{width:1200px;height:850px;border:1px solid #ddd}pre{white-space:pre-wrap}</style>
+<button id="run">Check camera bounds</button><pre id="report">Ready</pre><iframe src="../../fold-lab-v2.html"></iframe>
+<script type="module">
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+document.querySelector('#run').onclick=async()=>{
+ const f=document.querySelector('iframe'),w=f.contentWindow,d=w.document,$=id=>d.getElementById(id),log=[],report=document.querySelector('#report'),keys=['foldlab.author-draft.v1','foldlab.storyboard.previous-draft'],saved=keys.map(k=>localStorage.getItem(k));
+ try{
+  report.textContent='Running';for(let i=0;i<300&&(!w.Storyboard||w.importBusy);i++)await pause(60);
+  $('browseTutorials').click();$('craneLesson').click();for(let i=0;i<300&&w.StepStudio.getState().steps!==33;i++)await pause(60);if(w.StepStudio.getState().steps!==33)throw Error('Crane lesson did not load');await pause(250);
+  for(const index of [0,8,15,27,29,32]){
+   d.querySelectorAll('.lesson-step')[index].click();await pause(300);const fitted=w.G.friendlyView.capture();
+   for(const t of [0,.25,.5,.75,1]){
+    $('stepScrub').value=t*100;$('stepScrub').dispatchEvent(new w.Event('input'));await pause(70);
+    const group=w.G.threeView.scene.getObjectByName('tutorial-paper'),camera=w.G.threeView.camera;camera.updateMatrixWorld();let max=0;
+    for(const mesh of group.children){const positions=mesh.geometry?.attributes?.position?.array;if(!positions)continue;mesh.updateMatrixWorld();for(let i=0;i<positions.length;i+=3){const p=new w.THREE.Vector3(positions[i],positions[i+1],positions[i+2]).applyMatrix4(mesh.matrixWorld).project(camera);max=Math.max(max,Math.abs(p.x),Math.abs(p.y));}}
+    if(max>1.01)throw Error('Paper clips at step '+(index+1)+', progress '+t+': '+max.toFixed(3)+'\nFitted '+JSON.stringify(fitted)+'\nNow '+JSON.stringify(w.G.friendlyView.capture()));
+   }
+   log.push('PASS crane step '+(index+1)+' remains in frame at five animation points');
+  }
+  const canvas=w.G.threeView.renderer.domElement,r=canvas.getBoundingClientRect(),before=w.G.friendlyView.capture();$('panTutorialView').click();
+  for(const [type,x,y] of [['pointerdown',r.x+r.width*.5,r.y+r.height*.5],['pointermove',r.x+r.width*.5+40,r.y+r.height*.5+24],['pointerup',r.x+r.width*.5+40,r.y+r.height*.5+24]])canvas.dispatchEvent(new w.PointerEvent(type,{bubbles:true,pointerId:1,button:0,clientX:x,clientY:y}));
+  await pause(200);const after=w.G.friendlyView.capture(),camera=w.G.threeView.camera,desired=new w.THREE.Vector3(...after.target).sub(camera.position).normalize(),actual=camera.getWorldDirection(new w.THREE.Vector3());
+  if(Math.hypot(...after.target.map((v,i)=>v-before.target[i]))<.001||desired.dot(actual)<.99999)throw Error('Pan was overridden during rendering');
+  log.push('PASS pan remains stable across renderer frames');report.textContent=log.join('\n')+'\nALL PASS';
+ }catch(e){report.textContent=log.join('\n')+'\nFAIL '+e.stack;}finally{w.StepStudio?.stop();await pause(400);keys.forEach((k,i)=>saved[i]===null?localStorage.removeItem(k):localStorage.setItem(k,saved[i]));}
+};
+</script>

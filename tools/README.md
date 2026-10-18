@@ -3,7 +3,12 @@
 ## Current application
 
 - `serve.mjs`: local static server (`node tools/serve.mjs 8123`).
-- `build-origami3d.mjs` + `origami3d.template.html`: build the generated Fold Lab page.
+- `build-storyboard.mjs`: generate `studio-v2.html` and `fold-lab-v2.html` from `designer.template.html` and `origami3d.generated.html`. Run after `build-origami3d.mjs` when changing the Fold Lab template.
+- `check-storyboard-build.mjs`: parse generated inline application scripts and check V2 module placement, including the Designer's embedded print document.
+- `test-designer-snap.mjs`: compare the actual snap implementation with the previous behavior, test geometry-cache invalidation and report an isolated dense-pattern benchmark.
+- `qa/storyboard-interaction-check.html`: check visible authoring continuation after unfolding, inspector/player bounds and magnifier controls at desktop, compact and mobile sizes.
+- `qa/storyboard-v2-check.html`, `qa/storyboard-designer-check.html`, `qa/storyboard-compound-check.html`, `qa/storyboard-camera-check.html`: real local V2 workflows, SVG handoff, compound folds, responsive layouts and camera bounds.
+- `build-origami3d.mjs` + `origami3d.template.html`: build the shader-inclusive intermediate source for Fold Lab.
 - `qa/action-check.html`: open in the local browser to test action tutorials, imports, optional local seam models, narrow layouts and version 1 compatibility.
 - `convert-mitani.py`: extract two specific Mitani vector PDFs using `pdfplumber`; see `cp_examples/mitani/README.md` for local inputs and artwork terms.
 - `test-cp-simulator.mjs`: earlier integration checks for the original simultaneous-fold view.

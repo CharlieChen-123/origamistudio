@@ -25,7 +25,10 @@
   async function restorePresetMetadata() {
     const library=window.ORIGAMI_PRESETS || [];
     const known=library.find(p=>p.url===cp.sourcePreset?.url);
-    if(known && cp.sourcePreset.support) return;
+    if(known && cp.sourcePreset.support){cp.needsPresetRecovery=false;return;}
+    // New custom drawings have no missing preset metadata. Only old saved
+    // drawings need the complete library migration, once per page session.
+    if(!known&&!cp.needsPresetRecovery)return;
     const candidates=known?[known]:library;
     for(const preset of candidates){
       const response=await fetch(preset.url);
@@ -38,16 +41,22 @@
       if(matches){
         cp.lines.forEach((l,i)=>l.opacity=lines[i].opacity);
         cp.sourcePreset={name:preset.name,url:preset.url,paper:cp.paperShape,aspect:cp.paperAspect||1,lines:cloneSourceLines(lines),support:lines.support};
-        saveToLocal();return;
+        cp.needsPresetRecovery=false;saveToLocal();return;
       }
-      if(known){cp.sourcePreset.support=lines.support;saveToLocal();return;}
+      if(known){cp.sourcePreset.support=lines.support;cp.needsPresetRecovery=false;saveToLocal();return;}
     }
+    cp.needsPresetRecovery=false;
   }
   window.CPDesignerHandoff={makePayload};
   button.onclick = async () => {
     button.disabled = true;
     try { payload = await makePayload(); }
     catch (error) { toastMsg(error.message); button.disabled = false; return; }
+    if(document.documentElement.dataset.ui==='storyboard'){
+      try{sessionStorage.setItem('origami.storyboard.handoff',JSON.stringify(payload));location.href='fold-lab-v2.html';}
+      catch(error){toastMsg('Could not open Fold Lab: '+error.message);button.disabled=false;}
+      return;
+    }
     overlay = document.createElement('section');
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-label', '3D fold simulation');

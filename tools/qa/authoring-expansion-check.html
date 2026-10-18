@@ -1,0 +1,41 @@
+<!doctype html><meta charset="utf-8"><title>Authoring expansion checks</title>
+<style>body{font:14px system-ui;margin:12px}iframe{width:100%;height:850px;border:1px solid #ccc}pre{white-space:pre-wrap}</style>
+<button id="run">Run authoring regression</button><pre id="report">Ready</pre><iframe id="app" src="../../origami-3d.html"></iframe>
+<script type="module">
+import {rectanglePaper,airplaneLesson} from '../../simulator/src/example-lessons.js';
+const iframe=document.querySelector('#app'),report=document.querySelector('#report'),assert=(yes,text)=>{if(!yes)throw Error(text);};
+function clickPaper(w,p){const svg=w.document.querySelector('#paperEditor'),point=svg.createSVGPoint();point.x=p[0];point.y=p[1];const screen=point.matrixTransform(svg.getScreenCTM());for(const type of ['pointerdown','pointerup'])svg.dispatchEvent(new w.PointerEvent(type,{bubbles:true,clientX:screen.x,clientY:screen.y,button:0,pointerId:1}));}
+document.querySelector('#run').onclick=async()=>{let w=iframe.contentWindow,d=w.document,studio=w.StepStudio;const $=id=>d.getElementById(id);
+  const draft=w.localStorage.getItem('foldlab.author-draft.v1'),recipes=w.localStorage.getItem('foldlab.recipes.v1');const log=[];
+  const ready=async()=>{for(let i=0;i<200;i++){if(w.StepStudio&&!w.importBusy)return;await new Promise(r=>setTimeout(r,100));}throw Error('Initial pattern import did not finish.');};
+  try{
+    await ready();
+    assert(studio,'Studio loaded');const paper=rectanglePaper(400,400),blank={format:'fold-lab-tutorial',version:2,title:'QA lesson',fold:paper,paper,actions:[]};studio.load(blank);
+    $('actionModeEdges').click();clickPaper(w,[0,180]);clickPaper(w,[400,180]);assert(!$('previewAction').disabled,'Edges enable preview');$('previewAction').click();assert(studio.getState().phase==='preview','Edge preview');
+    $('reviewTitle').value='Align opposite edges';$('foldThenOpen').checked=true;$('saveAction').click();assert(studio.getState().steps===2,'Fold/unfold pair');log.push('PASS edge alignment + fold/unfold pair');
+    $('historyUndo').click();assert(studio.getState().steps===0,'Undo pair');$('historyRedo').click();assert(studio.getState().steps===2,'Redo pair');log.push('PASS atomic undo/redo');
+    d.querySelector('#actionList .lesson-step').click();$('editSavedMotion').click();$('actionAngle').value='90';$('previewAction').click();$('saveAction').click();assert(Math.abs(studio.tutorialData().actions[0].angle)===90,'Saved motion replaced');assert(studio.tutorialData().actions[1].needsReview,'Later steps flagged');log.push('PASS edit motion + downstream review');
+    $('historyUndo').click();assert(Math.abs(studio.tutorialData().actions[0].angle)===180,'Undo edit');
+    $('recipeName').value='QA fold pair';$('recipeFrom').value='1';$('recipeTo').value='2';$('saveRecipe').click();assert($('recipeStatus').textContent.includes('saved'),'Save recipe');$('recipeItems').querySelector('button').click();assert(studio.getState().steps===4,'Apply recipe');log.push('PASS reusable sequence');
+    $('actionModeAxis').click();$('axisInput').value='guide';$('axisInput').dispatchEvent(new w.Event('change'));clickPaper(w,[0,100]);clickPaper(w,[400,100]);clickPaper(w,[200,50]);await new Promise(r=>setTimeout(r,450));
+    const saved=w.localStorage.getItem('foldlab.author-draft.v1');assert(JSON.parse(saved).form.points.length===2,'Draft retains unfinished line');
+    await new Promise(resolve=>{iframe.onload=resolve;iframe.contentWindow.location.reload();});w=iframe.contentWindow;d=w.document;studio=w.StepStudio;
+    await ready();
+    $('restoreDraft').click();assert(studio.getState().steps===4&&!$('previewAction').disabled,'Resume unfinished draft after reload');log.push('PASS local draft survives reload with unfinished selection');
+    $('previewAction').click();$('reviewTitle').value='Unsaved preview';$('reviewCaption').value='Keep these instructions after refresh.';$('reviewCaption').dispatchEvent(new w.Event('input'));await new Promise(r=>setTimeout(r,350));
+    await new Promise(resolve=>{iframe.onload=resolve;iframe.contentWindow.location.reload();});w=iframe.contentWindow;d=w.document;studio=w.StepStudio;await ready();$('restoreDraft').click();
+    assert(studio.getState().phase==='preview'&&$('reviewTitle').value==='Unsaved preview'&&$('reviewCaption').value==='Keep these instructions after refresh.','Preview and wording survive refresh');log.push('PASS unsaved preview recovery');
+    // Public authoring controls reproduce both independent airplane wings.
+    const plane=airplaneLesson();studio.load({...plane,actions:plane.actions.slice(0,7)});$('newAction').click();$('actionModeAxis').click();$('axisInput').value='guide';$('axisInput').dispatchEvent(new w.Event('change'));clickPaper(w,[105,0]);clickPaper(w,[120,297]);clickPaper(w,[145,260]);$('actionAngle').value='90';$('actionDirection').value='toward';$('layerInspector').open=true;await new Promise(r=>setTimeout(r,30));
+    const cards=[...d.querySelectorAll('#layerCards input')];assert(cards.length>=2,'Separate wing candidates');for(const input of cards.slice(1)){input.checked=false;input.dispatchEvent(new w.Event('change'));}
+    $('previewAction').click();assert(studio.getState().phase==='preview','Single wing preview');$('saveAction').click();assert(studio.getState().steps===8,'First wing authored');
+    $('workSurface').value='1';$('workSurface').dispatchEvent(new w.Event('change'));$('actionModeAxis').click();$('axisInput').value='guide';$('axisInput').dispatchEvent(new w.Event('change'));clickPaper(w,[105,0]);clickPaper(w,[120,297]);clickPaper(w,[145,260]);$('actionAngle').value='90';$('actionDirection').value='away';$('previewAction').click();assert(studio.getState().phase==='preview','Second wing on remaining flat surface');$('saveAction').click();assert(studio.getState().steps===9,'Second wing authored');log.push('PASS individual layers and nonflat continuation via UI');
+    d.querySelectorAll('#actionList .lesson-step')[8].click();$('viewAngle').click();$('saveStepView').click();const view=structuredClone(studio.tutorialData().actions[8].view);assert(view?.target.length===3,'Camera stored');studio.load(JSON.parse(JSON.stringify(studio.tutorialData())));d.querySelectorAll('#actionList .lesson-step')[8].click();assert(JSON.stringify(w.G.friendlyView.capture())===JSON.stringify(view),'Camera restored');log.push('PASS saved camera and JSON roundtrip');
+    d.querySelectorAll('#actionList .lesson-step')[2].click();$('editSavedMotion').click();$('actionAngle').value='90';$('previewAction').click();$('saveAction').click();assert(Math.abs(studio.tutorialData().actions[2].angle)===180,'Invalid downstream edit did not replace the original');log.push('PASS invalid downstream edit keeps original lesson');
+    studio.exit();$('boxLesson').click();assert(studio.getState().steps===18&&d.body.classList.contains('builtin-lesson'),'Box example');assert($('savedStepActions').hidden&&!$('copyLesson').hidden,'Viewer hides author tools');log.push('PASS example viewer separation');
+    studio.exit();const ok=await w.importModelSource({name:'Bird.svg',url:'cp_examples/originals/bird.svg',id:'originalBird'});assert(ok,'Bird imports');studio.activate();assert(d.querySelector('#paperEditor polygon'),'Bird paper exists');log.push('PASS Bird SVG import → tutorial');
+    report.textContent=log.join('\n')+'\nALL PASS';
+  }catch(e){report.textContent=log.join('\n')+'\nFAIL '+e.stack;}
+  finally{studio?.exit();await new Promise(r=>setTimeout(r,400));for(const [key,value] of [['foldlab.author-draft.v1',draft],['foldlab.recipes.v1',recipes]]){if(value===null)w.localStorage.removeItem(key);else w.localStorage.setItem(key,value);}}
+};
+</script>

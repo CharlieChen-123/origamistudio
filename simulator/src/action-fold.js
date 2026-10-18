@@ -2,6 +2,13 @@
 // a temporary action axis can extend across the whole sheet. No vertex averaging.
 import {poseSquareBase,squareSector} from './square-base.js';
 import {prepareTemplate,poseTemplate,templateCreases} from './motion-templates.js';
+import {checkPlane,toPlane,fromPlane,mapSheet} from './authoring-tools.js';
+import {prepareBox,poseBox} from './box-motion.js';
+import {materialAdjacency} from './material-topology.js';
+import {motionCreases} from './crease-history.js';
+import {annotateLayerAccess,layerClosure} from './layer-access.js';
+import {preparePocketMotion,posePocketMotion} from './pocket-motion.js';
+import {motionProgress,motionStages} from './motion-stages.js';
 const EPS = 1e-7;
 const clone = v => ({ p: [...v.p], uv: [...v.uv] });
 export const sideOf = (p, axis) => (axis[1][0]-axis[0][0])*(p[1]-axis[0][1])-(axis[1][1]-axis[0][1])*(p[0]-axis[0][0]);
@@ -45,25 +52,55 @@ export function axisForMatch(from,to) {
   const axis=[[mid[0]-dy,mid[1]+dx],[mid[0]+dy,mid[1]-dx]];
   return {axis,side:Math.sign(sideOf(from,axis))};
 }
-function edgeKey(a,b) { const p=a.uv.map(v=>v.toFixed(5)).join(','),q=b.uv.map(v=>v.toFixed(5)).join(','); return p<q?p+'|'+q:q+'|'+p; }
+export function flapCandidates(sheet,action,point=null){
+  const base=prepareAction(sheet,{...action,seed:null,seeds:null,enforceLayerAccess:false}),moving=base.pieces.filter(f=>f.moving),found=[],seen=new Set();
+  // Build the material graph once for the whole stack. Rebuilding it for every
+  // visible polygon makes selection needlessly slow on dense imported CPs.
+  const adjacency=materialAdjacency(moving,(v,w)=>Math.abs(sideOf(v.p,base.axis))<EPS*10&&Math.abs(sideOf(w.p,base.axis))<EPS*10);
+  for(const {face,index} of moving.map((face,index)=>({face,index})).sort((a,b)=>(b.face.renderLayer||0)-(a.face.renderLayer||0))){
+    if(seen.has(index))continue;
+    if(point&&!pointInPolygon(point,face.vertices.map(v=>v.p)))continue;
+    const seed=[0,1].map(k=>face.vertices.reduce((n,v)=>n+v.uv[k],0)/face.vertices.length);
+    const component=new Set([index]),stack=[index];while(stack.length)for(const j of adjacency[stack.pop()])if(!component.has(j)){component.add(j);stack.push(j);}
+    component.forEach(i=>seen.add(i));found.push({seed,faces:moving.filter((_,i)=>component.has(i)),rank:face.renderLayer||0});
+  }
+  return annotateLayerAccess(found,Math.sign(action.angle*action.side)||1);
+}
+export function accessibleSeeds(sheet,action){
+ const seeds=action.seeds?.length?action.seeds:action.seed?[action.seed]:null;if(!seeds)return null;
+ const candidates=flapCandidates(sheet,action),selected=new Set();
+ for(const s of seeds){const index=candidates.findIndex(c=>c.faces.some(f=>pointInPolygon(s,f.vertices.map(v=>v.uv))));if(index<0)throw Error('A selected flap no longer exists here. Select its paper layer again.');selected.add(index);}
+ return [...layerClosure(candidates,selected)].map(i=>candidates[i].seed);
+}
 export function prepareAction(sheet,action) {
-  const {axis,side=1}=action;
+  if(action.enforceLayerAccess&&(action.seed||action.seeds?.length))action={...action,seed:null,seeds:accessibleSeeds(sheet,action),enforceLayerAccess:false};
+  if(action.plane){checkPlane(action.plane);const local=mapSheet(sheet,p=>toPlane(p,action.plane));const prepared=prepareAction(local,{...action,plane:null,localSurface:true});return {...prepared,plane:action.plane};}
+  let {axis,side=1}=action;
   if(!Array.isArray(axis)||axis.length!==2||axis.some(p=>p.length!==2||!p.every(Number.isFinite))||Math.hypot(axis[1][0]-axis[0][0],axis[1][1]-axis[0][1])<EPS)throw Error('Choose two different points for the fold line.');
   if(![1,-1].includes(side)||!Number.isFinite(action.angle)||Math.abs(action.angle)>180)throw Error('The fold angle or moving side is invalid.');
-  const eligible=f=>!action.scopeSectors||action.scopeSectors.includes(f.sector);
+  const eligible=f=>(!action.scopeSectors||action.scopeSectors.includes(f.sector))&&(!action.localSurface||f.vertices.every(v=>Math.abs(v.p[2])<1e-5));
   const allPoints=sheet.filter(eligible).flatMap(f=>f.vertices.map(v=>v.p));
   const span=Math.max(...allPoints.map(p=>p[0]))-Math.min(...allPoints.map(p=>p[0]));
+  // SVG pointer coordinates round to float32. Remove sub-pixel slivers at a
+  // hinge endpoint instead of treating them as a bridge between paper layers.
+  const tolerance=Math.max(1,span)*1e-6,length=Math.hypot(axis[1][0]-axis[0][0],axis[1][1]-axis[0][1]);
+  const near=allPoints.filter(p=>Math.abs(sideOf(p,axis))/length<tolerance);
+  if(near.length){
+    const anchor=near.reduce((best,p)=>Math.abs(sideOf(p,axis))<Math.abs(sideOf(best,axis))?p:best,near[0]);
+    const other=near.reduce((best,p)=>Math.hypot(p[0]-anchor[0],p[1]-anchor[1])>Math.hypot(best[0]-anchor[0],best[1]-anchor[1])?p:best,anchor);
+    if(Math.hypot(other[0]-anchor[0],other[1]-anchor[1])>tolerance*10){axis=[anchor.slice(0,2),other.slice(0,2)];if((axis[1][0]-axis[0][0])*(action.axis[1][0]-action.axis[0][0])+(axis[1][1]-axis[0][1])*(action.axis[1][1]-action.axis[0][1])<0)axis.reverse();}
+    else {const d=sideOf(anchor,axis)/(length*length),dx=axis[1][0]-axis[0][0],dy=axis[1][1]-axis[0][1];axis=axis.map(p=>[p[0]-dy*d,p[1]+dx*d]);}
+  }
   if(allPoints.some(p=>Math.abs(p[2])>Math.max(1,span)*1e-5))throw Error('Finish this fold flat (180°), or unfold it, before defining the next fold. Non-flat multi-axis actions are not supported yet.');
   const pieces=[];
   sheet.forEach(f=>{if(!eligible(f)){pieces.push({...f,moving:false});return;}[-1,1].forEach(sign=>{const vertices=clip(f.vertices,axis,sign);if(vertices.length>=3&&Math.abs(area2(vertices.map(v=>v.p)))>EPS)pieces.push({...f,vertices,moving:sign===side});});});
   if(!pieces.some(f=>f.moving)||!pieces.some(f=>!f.moving))throw Error('The fold line must cross the paper, with paper on both sides.');
-  if(action.seed) {
+  if(action.seed||action.seeds?.length) {
     // A clicked flap is a material-connected component, not all coincident layers.
-    const moving=pieces.filter(f=>f.moving), adjacency=moving.map(()=>[]),edges=new Map();
-    moving.forEach((f,i)=>f.vertices.forEach((v,j)=>{const w=f.vertices[(j+1)%f.vertices.length];if(Math.abs(sideOf(v.p,axis))<EPS*10&&Math.abs(sideOf(w.p,axis))<EPS*10)return;const key=edgeKey(v,w);if(edges.has(key)){const k=edges.get(key);adjacency[i].push(k);adjacency[k].push(i);}else edges.set(key,i);}));
-    const start=moving.findIndex(f=>pointInPolygon(action.seed,f.vertices.map(v=>v.uv)));
-    if(start<0)throw Error('Click inside the flap you want to move.');
-    const component=new Set([start]),stack=[start];while(stack.length)for(const k of adjacency[stack.pop()])if(!component.has(k)){component.add(k);stack.push(k);}
+    const moving=pieces.filter(f=>f.moving), adjacency=materialAdjacency(moving,(v,w)=>Math.abs(sideOf(v.p,axis))<EPS*10&&Math.abs(sideOf(w.p,axis))<EPS*10);
+    const starts=(action.seeds||[action.seed]).map(seed=>moving.findIndex(f=>pointInPolygon(seed,f.vertices.map(v=>v.uv))));
+    if(starts.some(i=>i<0))throw Error('A selected flap no longer exists here. Select its paper layer again.');
+    const component=new Set(starts),stack=[...starts];while(stack.length)for(const k of adjacency[stack.pop()])if(!component.has(k)){component.add(k);stack.push(k);}
     moving.forEach((f,i)=>f.moving=component.has(i));
   }
   if(action.flapSectors)pieces.forEach(f=>{f.moving=f.moving&&action.flapSectors.includes(f.sector);});
@@ -81,6 +118,10 @@ export function prepareAction(sheet,action) {
   return {pieces,axis,angle:action.angle,side,creases};
 }
 export function poseAction(prepared,t) {
+  if(prepared.plane)return mapSheet(poseAction({...prepared,plane:null},t),p=>fromPlane(p,prepared.plane));
+  if(prepared.action?.stages)t=motionProgress(prepared.action,t);
+  if(prepared.kind==='pocket')return posePocketMotion(prepared,t);
+  if(prepared.kind==='box')return poseBox(prepared,t);
   if(prepared.kind==='template')return poseTemplate(prepared,t);
   if(prepared.kind==='squareBase')return poseSquareBase(prepared,t);
   if(t<=0)return prepared.pieces.map(f=>({...f,vertices:f.vertices.map(clone)}));
@@ -103,7 +144,12 @@ export function pointInPolygon(p,points) {
 export function compileActions(sheet,actions) {
   const frames=[sheet],prepared=[];
   actions.forEach(a=>{
-    if(a.kind==='template') {
+    if(a.kind==='box') {
+      const p=prepareBox(frames.at(-1),a,splitFaces);p.creases=templateCreases(p,poseBox);prepared.push(p);frames.push(poseBox(p,1));
+    }else if(a.kind==='template'&&['squash','openSink'].includes(a.template)) {
+      motionStages(a);const p=preparePocketMotion(frames.at(-1),a,splitFaces);prepared.push(p);frames.push(posePocketMotion(p,1));
+    }else if(a.kind==='template') {
+      motionStages(a);
       const p=prepareTemplate(frames.at(-1),a,{splitFaces,creaseMarks});p.creases=templateCreases(p);prepared.push(p);frames.push(poseTemplate(p,1));
     }else if(a.kind==='squareBase') {
       const p=prepareSquareBase(frames.at(-1));prepared.push(p);frames.push(poseSquareBase(p,1));
@@ -113,6 +159,7 @@ export function compileActions(sheet,actions) {
       prepared.push({kind:'unfold',ref});frames.push(poseAction(ref,0));
     }else {const p=prepareAction(frames.at(-1),a);prepared.push(p);frames.push(poseAction(p,1));}
   });
+  prepared.forEach((p,i)=>{if(!['unfold','demo'].includes(p.kind)&&!actions[i].assignment)p.creases=motionCreases(p,poseAction);});
   return {frames,prepared};
 }
 

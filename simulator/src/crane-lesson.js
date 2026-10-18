@@ -1,10 +1,11 @@
 // Authored teaching sequence; coordinates follow the solved material geometry.
+import {reverseFromIntent} from './authoring-tools.js';
 export function craneActions({x,y,w,h}){
   const cx=x+w/2,cy=y+h/2,q=w/(2*Math.SQRT2),guideY=cy-q*(Math.SQRT2-1);
   const actions=[];
   const fold=(axis,side,angle,assignment,title,caption,extra={})=>actions.push({kind:'fold',axis,side,angle,assignment,title,caption,...extra});
   const open=(title,caption)=>actions.push({kind:'unfold',foldIndex:actions.length-1,title,caption});
-  fold([[x,y],[x+w,y+h]],1,180,'V','Fold the first diagonal','Start with the blue side up. Bring one corner onto the opposite corner.');
+  fold([[x,y],[x+w,y+h]],1,180,'V','Fold the first diagonal','Start with the colored side up. Bring one corner onto the opposite corner.');
   open('Open the paper','Keep the first diagonal crease.');
   fold([[x+w,y],[x,y+h]],1,180,'V','Fold the second diagonal','Bring the other pair of opposite corners together.');
   open('Open the paper again','The two diagonal creases meet at the center.');
@@ -39,9 +40,7 @@ export function craneActions({x,y,w,h}){
   actions.push({kind:'template',template:'reverse',pivot:[cx,rootY],spine:[cx,rootY+q],hinge:[cx+q,rootY+q*.5],frontSectors:[0,1,2,7],backSectors:[3,4,5,6],duration:6,title:'Inside-reverse fold the tail',caption:'Repeat with the right narrow point. The two long points now rise on either side of the wings.'});
   const neckLength=cy+q-rootY,neck=[-2*.42/(1+.42*.42),( .42*.42-1)/(1+.42*.42)];
   const H=[cx+neck[0]*neckLength*.78,rootY+neck[1]*neckLength*.78],tip=[cx+neck[0]*neckLength,rootY+neck[1]*neckLength];
-  const hx=neck[0]-.9,hy=neck[1]+Math.sqrt(1-.9*.9),hinge=[[H[0]-hx*q,H[1]-hy*q],[H[0]+hx*q,H[1]+hy*q]];
-  const side=Math.sign((hinge[1][0]-hinge[0][0])*(tip[1]-hinge[0][1])-(hinge[1][1]-hinge[0][1])*(tip[0]-hinge[0][0]));
-  fold(hinge,side,180*side,'V','Fold a small beak','Fold the last fifth of the neck tip down and outward. This lesson uses a simple tip fold for the head.',{scopeSectors:[2,3],seed:[x+w*.001,y+h*.999]});
+  actions.push({kind:'template',template:'reverse',...reverseFromIntent(tip,H,[H[0]-.9*q,H[1]+Math.sqrt(1-.9*.9)*q]),frontSectors:[0,1,2,7],backSectors:[3,4,5,6],duration:7,title:'Inside-reverse fold the head',caption:'Ease the connected packet open. Turn the last fifth of the neck inward, then close both walls around the beak. The connected body layers move with the neck.'});
   // Lower the wing roots slightly toward the open end of the bird base.
   const wingY=cy-q*.83;
   fold([[cx-q,wingY],[cx+q,wingY]],-1,-90,'V','Lower the first wing','Hold the body and lower the broad front flap. Leave the neck and tail in place.',{scopeSectors:[0,1,2,7],seed:[x+w*.99,y+h*.99],duration:4});

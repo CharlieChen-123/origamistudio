@@ -2,15 +2,21 @@
 
 Create a crease pattern or import an SVG / FOLD file, then use Amanda Ghassaei’s [OrigamiSimulator](https://github.com/amandaghassaei/OrigamiSimulator) GPU solver to explore the fold in 3D. This is a static HTML project; it has no backend and does not upload your patterns.
 
+## Storyboard V2
+
+Double-click `start-origami.cmd` to open the new workspace. [Design](studio-v2.html), [Fold Lab](fold-lab-v2.html), and [Tutorials](fold-lab-v2.html?view=tutorials) share a quiet top navigation and a large paper canvas. Tutorial steps appear as a filmstrip with thumbnails generated from each saved paper state. Open **Step settings** when you want to edit a move, its wording, paper layers, timing or recommended view.
+
+Choose **Make tutorial** to start with the current pattern, a new sheet or your saved draft. Switching to Fold Lab and back preserves an unfinished move. **Save tutorial** keeps the existing portable JSON format. Read the [V2 guide](docs/storyboard-v2-guide.md) for the complete workflow.
+
 ## Use it online
 
 **[Open Origami Studio in your browser](https://charliechen-123.github.io/origamistudio/)**. No download, installation, or account is needed.
 
-The link opens **CP Designer with Constraints**. Draw a crease pattern, import an SVG / FOLD / CP file, or choose a preset. Select **Fold Lab** at the top to simulate the same pattern in 3D; there you can also open or make a folding tutorial. Switch back with **Design**.
+The link opens the new **Storyboard Designer**, including drawing constraints. Draw a crease pattern, import an SVG / FOLD / CP file, or choose a preset. Select **Fold Lab** at the top to simulate the same pattern in 3D; there you can also open or make a folding tutorial. Switch back with **Design**.
 
 ## Run locally (optional)
 
-If you want to work offline or develop the code, double-click `start-origami.cmd` on Windows. It starts a local server and opens CP Designer with Constraints. Node.js is required, but no package installation is needed.
+If you want to work offline or develop the code, double-click `start-origami.cmd` on Windows. It starts a local server and opens Storyboard V2's Designer with drawing constraints. Node.js is required, but no package installation is needed.
 
 You can also start the local server manually:
 
@@ -18,11 +24,11 @@ You can also start the local server manually:
 node tools/serve.mjs 8123
 ```
 
-Then open [CP Designer with Constraints](http://127.0.0.1:8123/cp-designer_with%20constraints.html), [CP Designer](http://127.0.0.1:8123/cp-designer.html), or [Fold Lab](http://127.0.0.1:8123/origami-3d.html). Use a modern Chrome or Edge browser with WebGL support.
+Then open [Design V2](http://127.0.0.1:8123/studio-v2.html), [Fold Lab V2](http://127.0.0.1:8123/fold-lab-v2.html), or [Tutorials](http://127.0.0.1:8123/fold-lab-v2.html?view=tutorials). Old application URLs redirect to the new workspace. Use a modern Chrome or Edge browser with WebGL support.
 
 ## Hosting a fork
 
-The official site above is hosted on GitHub Pages. If you fork this project, you can host your own copy the same way. The root `index.html` opens CP Designer with Constraints, and its **Fold Lab** tab opens the simulator. The root `.nojekyll` file keeps the static files unprocessed by Jekyll.
+The official site above is hosted on GitHub Pages. If you fork this project, you can host your own copy the same way. The local root `index.html` opens Storyboard V2's Designer, and its **Fold Lab** tab opens the simulator. The root `.nojekyll` file keeps the static files unprocessed by Jekyll.
 
 Before publishing, run `npm test` inside `simulator/`, review the files about to be committed, confirm the copyright name in `LICENSE`, and check that every redistributed example has appropriate credit or permission. The Jun Mitani research inputs and GPL reference folder are excluded by `.gitignore`; local portfolio concept images are also excluded. This is a public beta: the simultaneous solver does not guarantee convergence or collision-free results for arbitrary CPs, and tutorial steps are authored rather than automatically inferred.
 
@@ -39,17 +45,15 @@ When an unchanged library preset is sent from CP Designer, Fold Lab receives its
 
 ## Create a step-by-step tutorial
 
-Fold Lab now includes a built-in tutorial editor. It is intended for authors who want to demonstrate a fold, and for anyone who wants to open a tutorial shared by another author.
+Tutorial Studio includes point-to-point and edge-to-edge alignment, full guide folds, visual layer selection, and continued folding on a chosen planar surface. Start with **Make a tutorial**, choose a move, mark it on the large paper view, preview, then add the step. **Fold, then unfold** records a preparation crease in one operation.
 
-1. Import an SVG or FOLD pattern and choose **Make a tutorial**. Start by choosing a move from the simple menu.
-2. For **Fold along a line**, click a colored CP crease or two paper points for a temporary guide line, then click the paper on the side to move. For **Bring points together**, press and hold a paper corner (A), drag it onto the destination (B), and release; the editor calculates the halfway fold line. The always-visible **More control** section sets the layer, direction, and angle. Towards you marks a blue valley; away from you marks a red mountain when the original front faces you.
-3. Choose **Preview motion** to see the animation. Enter a step title and a short instruction for the learner, then choose **Add step**. **Change move** lets you start over before saving.
-4. After a fold, choose the visible **Unfold and add step** shortcut to add and play its opening animation in one click. Use the bottom timeline to visit saved steps; **Edit title & instructions** revises their teaching text. **More moves** contains square-base collapse, petal fold, inside reverse fold, and paper turning.
-5. **Save tutorial** at the top exports a self-contained version 2 JSON file. **Open a lesson or remove a step → Open tutorial** restores it.
+Select a saved fold to edit its motion, repeat it, or mirror it. Changes validate the remaining sequence and mark later steps for review. Undo/Redo, a recoverable local draft, reusable step sequences, and saved camera views support longer lessons. **Save tutorial** exports a self-contained version 2 JSON file; **File & paper → Open tutorial** restores it.
 
-Try **Traditional Paper Crane** for the complete 33-step lesson: precreases, square-base collapse, both petal folds, narrowing, neck and tail reverse folds, a simple folded beak, and opening the wings. Every stage animates the same connected paper. Red mountain and blue valley marks build up as you fold; **Show full CP** is optional. Use **Fit 3D view** to inspect the result. See [complete crane and reusable templates](docs/complete-crane-templates.md) for authoring and limitations.
+Try **Traditional Paper Crane** (33 steps), **Dart Airplane** (9 steps), or **Blintz Box** (18 steps). The box is a gusseted blintz variation with visible internal corner folds, not the traditional Masu tuck-and-lock sequence. Select **Make an editable copy through this step** to continue from any example stage.
 
-The editor rotates rigid paper regions around a full fold axis, even when the final CP only marks a short segment. All layers on one side or one material-connected flap can move. New axes currently require the preceding state to be flat. The built-in inside-reverse template supports the square-base family; arbitrary reverse folds, full collision handling, reliable layer ordering, and automatic sequence generation are not implemented. The archived version 1 editor is no longer linked from Fold Lab.
+Under **Tutorials → Practice a fold**, try an inside reverse fold on triangular paper or **Squash & open sink** on a compatible symmetric pocket. Compound moves have three replayable teaching stages with editable timing, instructions and pauses. See the [compound tutorial guide](docs/compound-tutorial-guide.md) for supported starting shapes and a short authoring walkthrough.
+
+Read the [Tutorial Studio guide](docs/tutorial-authoring-guide.md) for the complete workflow, supported pocket shapes, recovery, and local testing. Material-region selection removes the templates' dependence on square-base sector IDs, but petal and reverse motions still require compatible geometry. Thickness, general collision handling, physical layer ordering, and automatic CP-to-instruction solving remain outside the implementation.
 
 ### Jun Mitani reference patterns
 
@@ -82,7 +86,7 @@ PNG and JPG images are not imported directly. Trace them to a vector CP first. C
 
 Fold Lab's simultaneous view cannot guarantee that every pattern converges or avoids self-intersection. `100%` applies the full requested target angles; it does not mean the solver has reached them. The tutorial mode adds author-defined whole-paper or flap actions, but does not automatically infer a human folding sequence.
 
-The shared example library contains twenty verified patterns in both tools, ordered from introductory bases to dense expert models. Source-paper presets preserve their actual boundary ratio in Designer instead of being forced into a square or fixed 2:1 sheet. The library includes attributed animal models, a rigid train, a Polygami object, and a cleaned Paper Airplane CP. Credits are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The shared example library contains twenty upstream patterns plus the creator’s original Bird preset in both tools, ordered from introductory bases to dense expert models. Source-paper presets preserve their actual boundary ratio in Designer instead of being forced into a square or fixed 2:1 sheet. The library includes attributed animal models, a rigid train, a Polygami object, and a cleaned Paper Airplane CP. Credits are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 For details of the editable tutorial format and its current limits, read [docs/folding-steps.md](docs/folding-steps.md). A full documentation index is in [docs/README.md](docs/README.md).
 
@@ -90,9 +94,10 @@ For details of the editable tutorial format and its current limits, read [docs/f
 
 | File or directory | Purpose |
 |---|---|
-| `cp-designer.html` | Main CP Designer |
-| `cp-designer_with constraints.html` | Designer with constraints |
-| `origami-3d.html` | Generated Fold Lab page |
+| `studio-v2.html` | Storyboard Designer with constraints |
+| `fold-lab-v2.html` | Fold Lab and tutorial workspace |
+| `tools/designer.template.html` | Maintained Designer source |
+| Old HTML entry points | Redirects to Storyboard V2 |
 | `assets/` | Import compatibility, UI orchestration, and test fixtures |
 | `tools/origami3d.template.html` | Fold Lab template; rebuild after changes |
 | `vendor/origamisimulator/` | Upstream solver, dependencies, assets, and license |
@@ -105,6 +110,8 @@ Rebuild Fold Lab after changing its template:
 
 ```sh
 node tools/build-origami3d.mjs
+node tools/build-storyboard.mjs
+node tools/check-storyboard-build.mjs
 npm --prefix simulator test
 ```
 

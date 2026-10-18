@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>Bird preset and Designer handoff</title>
+<style>body{font:14px system-ui}iframe{width:100%;height:650px;border:1px solid #ddd}pre{white-space:pre-wrap}</style>
+<button id="run">Verify Bird in both Designers</button><pre id="report">Ready</pre><iframe id="designer" src="../../cp-designer_with%20constraints.html"></iframe><iframe id="lab" src="../../origami-3d.html"></iframe>
+<script type="module">
+const report=document.querySelector('#report'),designer=document.querySelector('#designer'),lab=document.querySelector('#lab'),pause=ms=>new Promise(r=>setTimeout(r,ms));
+async function until(fn){for(let i=0;i<150;i++){if(fn())return;await pause(100);}throw Error('Timed out waiting for the workspace.');}
+const assert=(ok,text)=>{if(!ok)throw Error(text);};
+document.querySelector('#run').onclick=async()=>{const saved=localStorage.getItem('cp-designer-lines'),draft=localStorage.getItem('foldlab.author-draft.v1');try{
+ report.textContent='Running…';const results=[];
+ for(const path of ['cp-designer_with%20constraints.html','cp-designer.html']){
+  if(!designer.src.endsWith(path)){designer.src='../../'+path;await new Promise(r=>designer.onload=r);}
+  const d=designer.contentWindow,w=lab.contentWindow;await until(()=>d.CPDesignerHandoff&&w.StepStudio);
+  const preset=d.ORIGAMI_PRESETS.find(p=>p.id==='originalBird');assert(preset?.name==='Bird','Bird preset metadata');await d.loadSourcePreset(preset);
+  const payload=await d.CPDesignerHandoff.makePayload(),original=await(await fetch('../../'+preset.url)).text();assert(payload.text===original,'Source preset SVG preserved');
+  assert(await w.importModelSource(payload),'Designer SVG imports');w.G.simulationRunning=false;const fold=w.G.pattern.getFoldData(true);assert(fold.faces_vertices.length>0,'Paper faces exist');
+  w.StepStudio.activate();assert(w.document.querySelector('#paperEditor polygon'),'Paper visible in tutorial');w.StepStudio.exit();
+  results.push('PASS '+decodeURIComponent(path)+': Bird → SVG handoff → Fold Lab → tutorial paper');report.textContent=results.join('\n');
+ }
+ report.textContent+='\nALL PASS';
+}catch(e){report.textContent+='\nFAIL '+e.stack;}finally{await pause(450);for(const [key,value] of [['cp-designer-lines',saved],['foldlab.author-draft.v1',draft]]){if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}}};
+</script>

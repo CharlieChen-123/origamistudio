@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 400 400" fill="none"><title>Bird</title><desc>Original design supplied by the project creator. Lines clipped to the original paper boundary; original file retained alongside this preset.</desc><rect x="-200" y="-200" width="400" height="400" stroke="#000000"/>
+<line x1="-200" y1="200" x2="200" y2="-200" stroke="#ff0000"/>
+<line x1="-200" y1="-150" x2="-125" y2="-125" stroke="#ff0000"/>
+<line x1="-150" y1="-200" x2="-125" y2="-125" stroke="#ff0000"/>
+<line x1="-125" y1="-125" x2="-50" y2="-50" stroke="#ff0000"/>
+<line x1="0" y1="0" x2="50" y2="50" stroke="#ff0000"/>
+<line x1="-100" y1="0" x2="-50" y2="50" stroke="#ff0000"/>
+<line x1="0" y1="-100" x2="50" y2="-50" stroke="#ff0000"/>
+<line x1="125.42" y1="125.28" x2="154.51442614310187" y2="200" stroke="#ff0000"/>
+<line x1="125.28" y1="125.42" x2="200" y2="154.51442614310187" stroke="#ff0000"/>
+<line x1="125.52" y1="125.52" x2="200" y2="200" stroke="#ff0000"/>
+<line x1="-50" y1="200" x2="200" y2="-50" stroke="#ff0000"/>
+<line x1="0" y1="100" x2="25" y2="125" stroke="#ff0000"/>
+<line x1="100" y1="0" x2="125" y2="25" stroke="#ff0000"/>
+<line x1="75" y1="75" x2="125.52" y2="125.52" stroke="#ff0000"/>
+<line x1="-200" y1="100" x2="100" y2="-200" stroke="#0000ff"/>
+<line x1="200" y1="-100" x2="-100" y2="200" stroke="#0000ff"/>
+<line x1="-200" y1="-200" x2="-125" y2="-125" stroke="#0000ff"/>
+<line x1="0" y1="0" x2="-50" y2="-50" stroke="#0000ff"/>
+<line x1="-200" y1="-100" x2="-100" y2="0" stroke="#0000ff"/>
+<line x1="-100" y1="-200" x2="0" y2="-100" stroke="#0000ff"/>
+<line x1="-50" y1="50" x2="0" y2="100" stroke="#0000ff"/>
+<line x1="50" y1="-50" x2="100" y2="0" stroke="#0000ff"/>
+<line x1="50" y1="150" x2="100" y2="200" stroke="#0000ff"/>
+<line x1="150" y1="50" x2="200" y2="100" stroke="#0000ff"/>
+<line x1="124.27" y1="124.12" x2="135.51553951168285" y2="200" stroke="#0000ff"/>
+<line x1="124.12" y1="124.27" x2="200" y2="135.51553951168285" stroke="#0000ff"/>
+<line x1="50" y1="50" x2="75" y2="75" stroke="#0000ff"/>
+<line x1="125" y1="25" x2="152.33" y2="52.33" stroke="#0000ff"/>
+<line x1="50" y1="150" x2="25" y2="125" stroke="#0000ff"/>
+</svg>

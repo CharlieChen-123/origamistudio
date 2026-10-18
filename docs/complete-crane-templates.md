@@ -1,5 +1,8 @@
 # Complete crane and reusable motion templates
 
+> Updated authoring workflow: see [Tutorial Studio guide](tutorial-authoring-guide.md). The notes below describe the earlier baseline; current work-surface selection and material-region pocket selection extend its restrictions.
+
+
 ## Try the lesson
 
 1. Start the workspace and open **Fold Lab**.
@@ -8,9 +11,9 @@
 4. The paper starts unmarked. Red mountain and blue valley marks appear as actions are performed. **Show full CP** overlays the original reference pattern instead.
 5. **Fit 3D view** centers and enlarges the current paper. Drag to inspect the layers.
 
-Steps 1–8 prepare the square; 9 collapses it into a preliminary square base; 10–22 prepare and perform both petal folds; 23–27 narrow the points; 28–29 inside-reverse the neck and tail; 30 folds a simple beak; 31–32 lower the wings; 33 presents the completed crane.
+Steps 1–8 prepare the square; 9 collapses it into a preliminary square base; 10–22 prepare and perform both petal folds; 23–27 narrow the points; 28–29 inside-reverse the neck and tail; 30 inside-reverses the head; 31–32 lower the wings; 33 presents the completed crane.
 
-The beak uses a simple tip overfold, rather than a second inside-reverse fold. The body stays uninflated. These are explicit choices for this crane variant.
+As of 17 October 2026, the head uses a coordinated inside reverse fold, replacing the earlier simple tip overfold. Connected body layers open with the neck. The body stays uninflated. See [Compound folds and teaching stages](compound-tutorial-guide.md) for the current motion controls and supported structures.
 
 ## Make your own lesson
 

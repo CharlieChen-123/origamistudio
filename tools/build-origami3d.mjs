@@ -1,4 +1,4 @@
-// build-origami3d.mjs — 从模板 + 上游着色器生成 ../origami-3d.html
+// build-origami3d.mjs — 从模板 + 上游着色器生成 origami3d.generated.html
 // 上游的 GPU 求解器通过 document.getElementById("<id>").text 读取 13 段 GLSL，
 // 这些 <script type="x-shader/..."> 只能内联在页面里，所以用脚本从 vendor 的 index.html 原样抽取，
 // 避免手抄 700 行 GLSL 出错。
@@ -11,10 +11,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const TEMPLATE = path.join(HERE, 'origami3d.template.html');
 const VENDOR_INDEX = path.join(ROOT, 'vendor', 'origamisimulator', 'index.html');
-const OUT = path.join(ROOT, 'origami-3d.html');
+const OUT = path.join(HERE, 'origami3d.generated.html');
 
 const template = fs.readFileSync(TEMPLATE, 'utf8');
-const vendorHtml = fs.readFileSync(VENDOR_INDEX, 'utf8');
+const vendorHtml = fs.readFileSync(VENDOR_INDEX, 'utf8').replace(/\r\n/g, '\n');
 
 const SHADER_RE = /<script id="([A-Za-z0-9_]+)" type="x-shader\/x-(?:vertex|fragment)">[\s\S]*?<\/script>/g;
 const blocks = vendorHtml.match(SHADER_RE) || [];

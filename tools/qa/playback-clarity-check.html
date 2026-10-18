@@ -1,0 +1,29 @@
+<!doctype html><meta charset="utf-8"><title>Playback and paper clarity checks</title>
+<style>body{font:14px system-ui}iframe{width:100%;height:760px;border:0}pre{white-space:pre-wrap}</style>
+<button id="run">Run playback checks</button><pre id="report">Ready</pre><iframe src="../../origami-3d.html"></iframe>
+<script type="module">
+import {airplaneLesson} from '../../simulator/src/example-lessons.js';
+const wait=ms=>new Promise(r=>setTimeout(r,ms)),assert=(ok,m)=>{if(!ok)throw Error(m);};
+document.querySelector('#run').onclick=async()=>{
+ const w=document.querySelector('iframe').contentWindow,d=w.document,$=id=>d.getElementById(id),report=document.querySelector('#report'),log=[],key='foldlab.author-draft.v1',saved=localStorage.getItem(key);
+ const change=(id,value)=>{$(id).value=value;$(id).dispatchEvent(new w.Event('change'));},check=(id,on)=>{$(id).checked=on;$(id).dispatchEvent(new w.Event('change'));},scrub=p=>{$('stepScrub').value=p;$( 'stepScrub').dispatchEvent(new w.Event('input'));},state=()=>w.StepStudio.getState();
+ async function until(fn,ms=7000){const start=performance.now();while(!fn()){if(performance.now()-start>ms)throw Error('Timed out waiting for playback');await wait(40);}}
+ try{
+  report.textContent='Running';await until(()=>w.StepStudio&&!w.importBusy,20000);
+  const lesson=airplaneLesson();lesson.actions=lesson.actions.slice(0,3).map(a=>({...a,duration:2}));w.StepStudio.load(lesson);scrub(0);
+  change('playbackSpeed','0.25');$('replayAction').click();await wait(500);scrub(state().progress*100);const slow=state().progress;
+  scrub(0);change('playbackSpeed','2');$('replayAction').click();await wait(500);scrub(state().progress*100);const fast=state().progress;
+  assert(slow>.015&&fast>slow*3,'2× materially faster than 0.25×: '+slow+' / '+fast);
+  scrub(0);change('playbackSpeed','0.25');$('replayAction').click();await wait(150);const before=state().progress;change('playbackSpeed','2');assert(Math.abs(state().progress-before)<.03,'Changing speed does not jump');await wait(200);assert(state().progress>before+.08,'Speed changes during animation');scrub(40);await wait(120);assert(Math.abs(state().progress-.4)<.001,'Pause holds frame');assert(w.StepStudio.tutorialData().actions[0].duration===2,'Viewer speed leaves authored duration intact');log.push('PASS speed ratio, live speed changes, pause and authored duration');
+  $('separatePaper').click();assert($('separatePaper').getAttribute('aria-pressed')==='true','Inspection opens');const progress=state().progress;await wait(120);assert(state().progress===progress,'Inspection pauses');$('replayAction').click();assert($('separatePaper').getAttribute('aria-pressed')==='false','Play restores normal layers');scrub(0);log.push('PASS layer inspection pauses and playback restores connected display');
+  lesson.actions.forEach(a=>a.duration=.5);lesson.actions[1].pauseAfter=true;w.StepStudio.load(lesson);check('continuousPlayback',true);await until(()=>state().position===1&&state().progress===1);await wait(150);assert(state().position===1,'Author checkpoint stops Auto next');$('nextStep').click();await until(()=>state().position===2&&state().progress===1);await wait(120);assert(state().position===2,'Last step stops');check('continuousPlayback',false);log.push('PASS continuous playback, author checkpoint and final step stop');
+  const edit=airplaneLesson();edit.actions=edit.actions.slice(0,1);w.StepStudio.load(edit);$('editSavedMotion').click();$('previewAction').click();assert(!$('previewMotionTweaks').hidden,'Quick adjustments shown');change('previewFoldAngle','62');assert(state().phase==='preview','Angle adjustment stays in preview');check('pauseAfterStep',true);$('previewChooseLayers').click();assert($('layerPicker').open,'Preview opens layer selection');$('applyPaperLayers').click();assert(state().phase==='preview','Layer change returns to preview');
+  let downloaded;const originalClick=w.HTMLAnchorElement.prototype.click;w.HTMLAnchorElement.prototype.click=function(){downloaded=fetch(this.href).then(r=>r.json());};try{$('saveLesson').click();}finally{w.HTMLAnchorElement.prototype.click=originalClick;}assert(downloaded,'Tutorial download triggered');const data=await downloaded;
+  assert(data.actions.length===1&&Math.abs(data.actions[0].angle)===62,'Save includes current edited preview');assert(data.actions[0].pauseAfter,'Checkpoint exported');assert($('saveLesson').closest('.header-actions'),'Prominent header save');assert($('tutorialSaveStatus').textContent.includes('download started'),'Save feedback');assert($('motionCue').hidden,'Preview cue hidden in author mode');log.push('PASS quick angle/layer preview, checkpoint export and Save tutorial includes preview');
+  w.StepStudio.load(airplaneLesson());scrub(100);
+  for(const [width,height] of [[390,740],[614,510],[870,668]]){const frame=document.querySelector('iframe');frame.style.width=width+'px';frame.style.height=height+'px';await wait(250);const scene=$('threeContainer').getBoundingClientRect(),player=$('lessonPlayer').getBoundingClientRect(),save=$('saveLesson').getBoundingClientRect();assert(scene.height>60&&scene.bottom<=player.top+1,'Paper is above playback controls at '+width);assert(player.left>=0&&player.right<=w.innerWidth+1,'Player fits width '+width);assert(save.left>=0&&save.right<=w.innerWidth+1,'Save fits width '+width);}
+  log.push('PASS 390, 614 and 870 px layouts: paper, player and Save fit without overlap');
+  report.textContent=log.join('\n')+'\nALL PASS';
+ }catch(e){report.textContent=log.join('\n')+'\nFAIL '+e.stack;}finally{w.StepStudio?.exit();await wait(400);if(saved===null)localStorage.removeItem(key);else localStorage.setItem(key,saved);}
+};
+</script>

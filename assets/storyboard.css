@@ -1,0 +1,353 @@
+/* Storyboard V2: real editor surfaces, a wide paper canvas and a visual sequence. */
+html[data-ui=storyboard]{--story-bg:#fbfbfa;--story-ink:#302e2a;--story-muted:#8f877c;--story-line:#e5e2de;--story-accent:#bd6c4e;--story-wash:#f2efec;--story-head:78px;--story-rail:170px;--story-right:0px;--shared-bg:#fbfbfa;--shared-surface:#fff;--shared-ink:#302e2a;--shared-muted:#8f877c;--shared-line:#e5e2de;--shared-accent:#a8644b;--shared-wash:#f2efec;--bg:#fbfbfa;--surface:#fff;--surface2:#f6f3f0;--border:#e5e2de;--ink:#302e2a;--text:#302e2a;--text-dim:#8f877c;--muted:#8f877c;--line:#e5e2de;--accent:#bd6c4e;--blue:#bd6c4e;--blue-wash:#f2efec;--radius:7px}
+html[data-ui=storyboard] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;background:var(--story-bg)!important;color:var(--story-ink)!important;letter-spacing:-.01em;-webkit-font-smoothing:antialiased}
+html[data-ui=storyboard] button{font-family:inherit;font-size:12px;border-color:var(--story-line);border-radius:4px;background:white;color:var(--story-ink);padding:9px 12px;letter-spacing:0;font-weight:450;box-shadow:none}
+html[data-ui=storyboard] button:hover{border-color:#aca9a5;background:#faf7f4;color:#4e4b48}
+html[data-ui=storyboard] button:focus-visible,html[data-ui=storyboard] a:focus-visible,html[data-ui=storyboard] summary:focus-visible{outline:2px solid #969390;outline-offset:3px}
+html[data-ui=storyboard] button:disabled{cursor:default;opacity:.45}
+html[data-ui=storyboard] button.primary,html[data-ui=storyboard] button.story-primary{background:var(--story-accent)!important;border-color:var(--story-accent)!important;color:#fff!important;font-weight:550}
+html[data-ui=storyboard] input,html[data-ui=storyboard] select,html[data-ui=storyboard] textarea{accent-color:var(--story-accent);font-family:inherit;color:var(--story-ink);border-color:var(--story-line);border-radius:4px}
+html[data-ui=storyboard] .story-header{position:fixed!important;inset:0 0 auto!important;height:var(--story-head)!important;display:flex!important;align-items:center!important;gap:27px!important;padding:0 34px!important;background:var(--story-bg)!important;border:0!important;border-bottom:1px solid #efece9!important;box-shadow:none!important;backdrop-filter:none!important;z-index:100!important}
+.story-brand{display:flex;align-items:baseline;gap:4px;text-decoration:none!important;flex-shrink:0;line-height:1}.story-brand strong{font-size:25px;font-weight:750;letter-spacing:-1.4px;color:#302e2a}.story-brand span{font-size:11px;color:#65635f;letter-spacing:-.2px}
+html[data-ui=storyboard] .story-header>.story-nav{display:flex!important;gap:23px!important;align-items:center!important;flex-shrink:0;margin-left:13px!important;padding:0!important;border:0!important;background:transparent!important;border-radius:0!important}
+html[data-ui=storyboard] .story-nav button,html[data-ui=storyboard] .story-nav a{display:inline-flex!important;font-family:inherit!important;font-size:13px!important;line-height:1.5!important;color:#65635f!important;letter-spacing:0!important;border:0!important;border-radius:0!important;background:transparent!important;padding:9px 0!important;box-shadow:none!important;white-space:nowrap;text-decoration:none;min-height:0!important}
+html[data-ui=storyboard] .story-nav [aria-current=page]{color:#40392f!important;border-bottom:1px solid #9f8c77!important}
+html[data-ui=storyboard] .story-header-actions{margin-left:auto;display:flex!important;align-items:center;gap:12px;flex-shrink:0;background:none!important;border:0!important;padding:0!important;box-shadow:none!important}
+html[data-ui=storyboard] .story-header-actions button{font-size:11px;padding:8px 12px;border-radius:4px;border:1px solid transparent;background:transparent;color:#65635f;min-height:0}
+html[data-ui=storyboard] .story-header-actions #saveLesson,html[data-ui=storyboard] .story-header-actions .exp-toggle{padding:10px 17px!important;border-radius:4px!important;background:#34312c!important;color:white!important;border:1px solid #34312c!important;box-shadow:none!important;font-size:12px!important}
+html[data-ui=storyboard] .story-header-actions #saveLesson:disabled{opacity:.45}
+.story-document{color:#65635f;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px;margin-left:9px}
+.story-file-menu{position:relative;font-size:11px;color:#65635f}.story-file-menu summary{cursor:pointer;list-style:none;padding:9px}.story-file-menu summary::-webkit-details-marker{display:none}.story-file-items{position:absolute;top:calc(100% + 7px);right:0;min-width:220px;padding:7px;background:white;border:1px solid var(--story-line);border-radius:4px;box-shadow:0 15px 40px #46301d18;display:grid;gap:2px}
+html[data-ui=storyboard] .story-file-items button,html[data-ui=storyboard] .story-file-items a{display:block;padding:10px 11px!important;border:0!important;border-radius:4px!important;background:transparent!important;text-align:left;color:#6d5e4c!important;font:12px/1.4 inherit!important;font-size:12px!important;text-decoration:none}
+html[data-ui=storyboard] .story-file-items button:hover,.story-file-items a:hover{background:#f7f4f1!important}
+#storyToast{position:fixed;z-index:250;bottom:23px;left:50%;transform:translateX(-50%);max-width:min(620px,90vw);padding:13px 18px;background:#34312c;color:white;border:0;border-radius:4px;font-size:13px;line-height:1.6;box-shadow:0 8px 30px #382b201d}
+/* Canvas and the optional working note. */
+body.storyboard-fold{--story-right:0px}body.storyboard-fold.story-inspector-open{--story-right:348px}
+html[data-ui=storyboard] #storyWorkspace{display:contents}
+html[data-ui=storyboard] #threeContainer{position:fixed!important;top:var(--story-head)!important;left:0!important;right:var(--story-right)!important;bottom:115px;border:0!important;border-radius:0!important;background:var(--story-bg)!important;box-shadow:none!important;overflow:hidden;opacity:1!important}
+html[data-ui=storyboard] #threeContainer::after{display:none!important}
+html[data-ui=storyboard] body:not(.action-mode) #threeContainer{bottom:140px!important}
+html[data-ui=storyboard] #actionCanvas{position:fixed!important;top:calc(var(--story-head) + 8px)!important;left:20px!important;right:calc(var(--story-right) + 20px)!important;bottom:calc(var(--story-rail) + 10px)!important;background:var(--story-bg)!important;border:0!important;padding:15px 20px!important;z-index:3;grid-template-rows:auto minmax(0,1fr) auto}
+html[data-ui=storyboard] #paperEditor{min-height:0!important;width:100%;height:100%}
+html[data-ui=storyboard] .editor-heading{min-height:42px;align-items:center;gap:18px}
+html[data-ui=storyboard] #canvasInstruction{font-size:14px!important;line-height:1.7;color:#666360!important;max-width:620px}
+html[data-ui=storyboard] .editor-heading label{font-size:11px;color:#65635f}
+html[data-ui=storyboard] #paperEditor [fill="#286b64"]{fill:#c66f51}
+html[data-ui=storyboard] #paperEditor [fill="#1e625c"]{fill:#a9694d}
+html[data-ui=storyboard] #paperEditor [stroke="#1e625c"]{stroke:#a9694d}
+html[data-ui=storyboard] .editor-bottom{font-size:11px;color:#65635f}
+html[data-ui=storyboard] .editor-bottom button{font-size:11px;background:#fdfaf7}
+#storyScene{position:fixed;pointer-events:none;top:calc(var(--story-head) + 46px);left:43px;width:280px;z-index:2}
+.story-scene-copy>span{font-size:9px;letter-spacing:.15em;color:#65635f}.story-scene-copy h1{font-size:30px;font-weight:450;line-height:1.2;letter-spacing:-1px;color:#3e3b38;margin:15px 0 11px;overflow-wrap:anywhere}.story-scene-copy p{font-size:13px;line-height:1.9;color:#65635f;max-height:210px;overflow:auto;pointer-events:auto}
+body.story-author #storyScene{top:calc(var(--story-head) + 25px);left:38px;width:255px}.story-author .story-scene-copy h1{font-size:22px;margin-top:10px}.story-author .story-scene-copy p{display:none}
+#storySceneTools{position:fixed;right:calc(var(--story-right) + 29px);top:calc(var(--story-head) + 22px);display:flex;gap:7px;z-index:4}
+html[data-ui=storyboard] #storySceneTools button{border:1px solid #e3e0dd;border-radius:4px;padding:7px 12px;font-size:11px;background:#fffaf5dc;color:#65635f}
+html[data-ui=storyboard] #stepStudio{position:fixed!important;display:flex!important;flex-direction:column;gap:15px!important;top:calc(var(--story-head) + 27px)!important;right:27px!important;bottom:calc(var(--story-rail) + 13px)!important;left:auto!important;width:294px!important;padding:7px 1px 20px 23px!important;border:0!important;border-left:1px solid #e0dcd9!important;background:var(--story-bg)!important;border-radius:0!important;overflow:auto!important;box-shadow:none!important;z-index:5}
+html[data-ui=storyboard] body:not(.action-mode) #stepStudio,html[data-ui=storyboard] body:not(.story-inspector-open) #stepStudio{display:none!important}
+html[data-ui=storyboard] #stepStudio label{font-size:12px;color:#65635f;line-height:1.6}
+html[data-ui=storyboard] #stepStudio input:not([type=checkbox]),html[data-ui=storyboard] #stepStudio textarea,html[data-ui=storyboard] #stepStudio select{font:13px/1.6 inherit;font-size:13px;color:#55524f;padding:9px 10px;border:1px solid #dbd8d5;background:#fffdfa;box-shadow:none;border-radius:4px}
+html[data-ui=storyboard] #stepStudio h2{font-size:24px;font-weight:450;letter-spacing:-.7px;color:#413e3b}
+html[data-ui=storyboard] #lessonTitle{font-size:13px!important;font-weight:550!important;border:0!important;border-radius:0!important;background:transparent!important;padding:0 0 9px!important;border-bottom:1px solid var(--story-line)!important;color:#65635f!important}
+html[data-ui=storyboard] .story-close-inspector{align-self:flex-end;font-size:10px!important;border:0!important;padding:0 0 5px!important;background:none!important;color:#65635f!important;min-height:0}
+html[data-ui=storyboard] #closeLesson,html[data-ui=storyboard] #newAction{display:none!important}
+html[data-ui=storyboard] .author-toolbar{padding-bottom:10px;border-color:#e0ddda;gap:7px}
+html[data-ui=storyboard] .author-toolbar button{font-size:11px!important;padding:4px 7px!important;border:0!important;background:transparent!important;color:#65635f!important}
+html[data-ui=storyboard] #draftStatus{font-size:9px;color:#65635f;max-width:135px}
+html[data-ui=storyboard] .composer-lead{font-size:13px!important;line-height:1.85!important;color:#65635f!important;margin-top:8px!important}
+html[data-ui=storyboard] #motionChooser .action-mode-buttons{display:grid;grid-template-columns:1fr;gap:8px;margin-top:16px}
+html[data-ui=storyboard] #motionChooser .action-mode-buttons button{padding:12px 13px!important;border:1px solid #dbd8d5!important;background:#fffdfa!important;border-radius:4px!important;box-shadow:none!important;display:block;text-align:left}
+html[data-ui=storyboard] #motionChooser .action-mode-buttons strong{font-size:13px;font-weight:550;color:#625f5b}
+html[data-ui=storyboard] #motionChooser .action-mode-buttons span{font-size:11px;color:#65635f;margin-top:5px;line-height:1.7}
+html[data-ui=storyboard] #quickUnfold,html[data-ui=storyboard] #quickUnfoldPreview{background:#f6f3f0!important;border-color:#cfccc9!important;color:#65625f!important;font-size:12px;padding:11px}
+html[data-ui=storyboard] .template-picker,html[data-ui=storyboard] #recipeLibrary,html[data-ui=storyboard] #layerInspector,html[data-ui=storyboard] #pocketLayers{background:transparent!important;border:0!important;border-top:1px solid #d8d4d1!important;padding:12px 0!important;border-radius:0!important;font-size:12px}
+html[data-ui=storyboard] summary{cursor:pointer;color:#65635f}
+html[data-ui=storyboard] .more-move-list{display:grid;gap:5px;margin-top:10px}
+html[data-ui=storyboard] .more-move-list button{text-align:left;font-size:12px}
+html[data-ui=storyboard] #storyWorkflow{display:flex;gap:10px;border-bottom:1px solid #d7d4d0;padding-bottom:12px;margin-bottom:2px}
+#storyWorkflow span{font-size:9px;color:#65635f;line-height:1.6;flex:1}#storyWorkflow .current{color:#6f6c69}
+html[data-ui=storyboard] #markProgress,html[data-ui=storyboard] .mark-progress{font-size:12px;line-height:1.85;color:#65635f;background:transparent;border:0;padding:10px 0}
+html[data-ui=storyboard] #openLayerPicker{font-size:12px;background:#f3f0ed;border:1px solid #c9c5c2;color:#64615d;padding:12px;border-radius:4px}
+html[data-ui=storyboard] #actionAdvanced{background:transparent;border:0;padding:0;margin:0}
+html[data-ui=storyboard] .template-guide,html[data-ui=storyboard] .match-help{background:#fefbf8;border:1px solid #dad7d4;border-radius:4px;padding:12px;color:#6e6b68;font-size:12px;line-height:1.8}
+html[data-ui=storyboard] #previewControls{gap:12px}
+html[data-ui=storyboard] .lesson-progress{color:#65635f;font-size:9px}
+html[data-ui=storyboard] .lesson-progress span:last-child{background:#eae6e3;color:#6c6966;font-size:9px;padding:4px 7px;border-radius:4px}
+html[data-ui=storyboard] #previewTitle{font-size:22px;color:#504c49;font-weight:450;margin:5px 0}
+html[data-ui=storyboard] #previewCaption{font-size:13px;line-height:1.85;color:#65635f}
+html[data-ui=storyboard] #previewControls #copyLesson{font-size:12px;white-space:normal;line-height:1.6;background:white;color:#6d6966;border:1px solid #c6c3c0;padding:11px;margin-top:14px}
+html[data-ui=storyboard] #savedStepActions{gap:6px}
+html[data-ui=storyboard] #savedStepActions button{font-size:11px;white-space:normal;padding:8px;line-height:1.6}
+html[data-ui=storyboard] .saved-motion-tools{gap:6px}
+html[data-ui=storyboard] #authorReview,html[data-ui=storyboard] .saved-text-form,html[data-ui=storyboard] #previewMotionTweaks{background:#fefbf8!important;border:1px solid #d0cdca!important;border-radius:4px!important;padding:12px!important}
+html[data-ui=storyboard] #stepWording{margin:0 0 8px;font-size:12px}
+html[data-ui=storyboard] #stepWording>label{margin-top:12px}
+html[data-ui=storyboard] #saveAction,html[data-ui=storyboard] #previewAction{font-size:13px!important;padding:12px!important;border-radius:4px!important;background:#b7794d!important;border-color:#b7794d!important}
+html[data-ui=storyboard] #editAction{font-size:12px;padding:10px;border-radius:4px}
+html[data-ui=storyboard] #pocketMotionSettings,html[data-ui=storyboard] #stageTeaching{background:#f6f3f0;border-color:#d0cdca;border-radius:4px;font-size:12px}
+html[data-ui=storyboard] #pocketMotionSettings label,html[data-ui=storyboard] #stageTeaching summary{color:#716e6b}
+html[data-ui=storyboard] #pocketMotionHint,html[data-ui=storyboard] #stageTeaching>p{color:#65635f;font-size:11px;line-height:1.8}
+html[data-ui=storyboard] #stepStudio .model-limit{color:#65635f;font-size:10px;border-color:#dddad7}
+html[data-ui=storyboard] #stepStudio .model-limit p{color:#65635f;font-size:11px;line-height:1.8}
+body.story-viewing #lessonTitle,body.story-viewing .author-toolbar,body.story-viewing #recipeLibrary,body.story-viewing #lessonMenu,body.story-viewing #savedStepActions,body.story-viewing #savedTextForm,body.story-viewing #editAction{display:none!important}
+/* The filmstrip stays outside the inspector and uses actual saved-step paper. */
+html[data-ui=storyboard] #lessonTimeline{position:fixed!important;left:34px!important;right:34px!important;bottom:13px!important;top:auto!important;height:148px!important;background:var(--story-bg)!important;border:0!important;border-top:1px solid #dfdcd9!important;border-radius:0!important;box-shadow:none!important;padding:17px 3px 0!important;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:20px minmax(0,1fr)!important;gap:10px!important;z-index:8}
+html[data-ui=storyboard] body:not(.action-mode) #lessonTimeline{display:none!important}
+html[data-ui=storyboard] #lessonTimeline .timeline-heading{display:flex;align-items:center;gap:13px;font-size:9px;letter-spacing:.13em;color:#65635f;grid-column:1;grid-row:1;width:100%;min-width:0}
+html[data-ui=storyboard] #timelineCount{font-size:10px;color:#65635f}
+html[data-ui=storyboard] #storyAddStep{margin-left:auto;background:transparent!important;border:0!important;padding:3px 8px!important;font-size:11px;color:#65635f;letter-spacing:0;white-space:nowrap}
+html[data-ui=storyboard] #actionList{display:flex!important;gap:13px!important;align-items:stretch;overflow-x:auto!important;overflow-y:hidden!important;max-height:none!important;grid-row:2;grid-column:1;padding-bottom:7px;scrollbar-color:#c9c6c3 transparent;scrollbar-width:thin}
+html[data-ui=storyboard] #actionList .lesson-step-wrap{position:relative;flex:0 0 188px;min-width:0}
+html[data-ui=storyboard] #actionList .lesson-step{height:100%!important;width:100%;display:grid!important;grid-template-columns:76px minmax(0,1fr)!important;gap:8px;align-items:center;white-space:normal!important;overflow:hidden!important;border:1px solid #dbd8d4!important;border-radius:4px!important;background:#f9f6f2!important;padding:8px 10px!important;text-align:left;color:#65635f;font-size:11px!important;line-height:1.5}
+html[data-ui=storyboard] #actionList .lesson-step.current{border-color:#918e8b!important;background:#fffcf9!important;box-shadow:0 2px 9px #9a622c0b}
+html[data-ui=storyboard] .story-step-preview{grid-column:1;grid-row:1/3;width:76px;height:65px;object-fit:contain;background:transparent;min-width:0;align-self:center}
+html[data-ui=storyboard] #actionList .lesson-step>span:first-of-type{grid-column:2;grid-row:1;display:block;width:auto;height:auto;min-width:0;border:0;background:transparent!important;color:#65635f!important;border-radius:0;font-size:9px;align-self:end;padding:0}
+html[data-ui=storyboard] #actionList .lesson-step>span:last-of-type{grid-column:2;grid-row:2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;overflow:hidden;min-width:0;align-self:start;line-height:1.5;font-size:11px;color:#65635f}
+html[data-ui=storyboard] #actionList .lesson-step small{display:none}
+html[data-ui=storyboard] .lesson-step-delete{display:none!important}
+html[data-ui=storyboard] .story-step-more{position:absolute;right:4px;top:3px;border:0!important;background:#faf7f4!important;color:#65635f!important;padding:2px 5px!important;font-size:8px!important;border-radius:4px;opacity:0}
+html[data-ui=storyboard] .lesson-step-wrap:hover .story-step-more,html[data-ui=storyboard] .lesson-step-wrap:focus-within .story-step-more{opacity:1}
+html[data-ui=storyboard] #lessonTimeline.empty{height:68px!important}
+html[data-ui=storyboard] body:has(#lessonTimeline.empty){--story-rail:90px}
+html[data-ui=storyboard] #stepNotice{bottom:calc(100% + 15px);font-size:12px;background:#fefbf8;color:#65635f;border-color:#c2bfbc;box-shadow:none}
+html[data-ui=storyboard] #stepContextMenu{border-color:#cfccc9;box-shadow:0 10px 30px #7b54251c;z-index:150}
+html[data-ui=storyboard] #stepContextMenu button{color:#666360;font-size:12px}
+html[data-ui=storyboard] #stepContextMenu button:hover{background:#efece9}
+html[data-ui=storyboard] #lessonPlayer{position:fixed!important;left:34px!important;right:calc(var(--story-right) + 34px)!important;bottom:calc(var(--story-rail) + 10px)!important;top:auto!important;background:#fffdf9f5!important;border:1px solid #dddad7!important;border-radius:4px!important;box-shadow:none!important;padding:11px 14px!important;gap:10px;z-index:7;flex-wrap:wrap}
+html[data-ui=storyboard] #lessonPlayer button{font-size:11px;padding:7px 10px;border-radius:4px;color:#65635f;background:transparent;border-color:#cecbc8}
+html[data-ui=storyboard] #lessonPlayer #replayAction{background:#39322b;color:#fff;border-color:#39322b;border-radius:4px;padding:8px 14px}
+html[data-ui=storyboard] #lessonPlayer input[type=range]{height:3px;accent-color:#8a8784}
+html[data-ui=storyboard] #stepPercent{color:#65635f;font-size:10px}
+html[data-ui=storyboard] #playbackOptions{border-color:#e3e0dd;padding-top:8px;gap:13px}
+html[data-ui=storyboard] #playbackOptions label{font-size:10px;color:#65635f}
+html[data-ui=storyboard] #playbackOptions select{font-size:10px;padding:3px;background:transparent;border:0;color:#65635f}
+html[data-ui=storyboard] #playbackOptions button{font-size:10px;border:0;padding:4px 0}
+html[data-ui=storyboard] #motionStages{border-color:#d7d4d1;margin-top:2px;padding-top:8px}
+html[data-ui=storyboard] #motionStages button{font-size:10px;border:1px solid #dddad7;padding:8px 7px;background:#fefbf8;color:#65635f;border-radius:4px}
+html[data-ui=storyboard] #motionStages button[aria-current=step]{background:#ebe8e5;border-color:#aca9a6;color:#676461}
+html[data-ui=storyboard] #motionCue{top:18px;font-size:10px;background:#fffaf0df;color:#65635f;border-color:#d9d6d3;border-radius:4px;padding:7px 12px}
+/* Pattern drawer and normal solver controls. */
+html[data-ui=storyboard] #panel{position:fixed!important;top:calc(var(--story-head) + 17px)!important;left:25px!important;right:auto!important;bottom:145px!important;width:300px!important;border:1px solid #d8d5d2!important;border-radius:4px!important;box-shadow:0 12px 45px #6d491824!important;background:#fffdfa!important;padding:18px!important;gap:15px!important;z-index:12;display:none!important;overflow:auto}
+html[data-ui=storyboard] .story-patterns-open #panel{display:flex!important}
+html[data-ui=storyboard] .story-panel-close{align-self:flex-end;font-size:10px;border:0;background:none;color:#65635f;padding:1px 0}
+html[data-ui=storyboard] .panel-title{font-size:9px;color:#65635f;letter-spacing:.12em;border-color:#d7d4d1}
+html[data-ui=storyboard] .import-button{font-size:12px;background:#eae7e4;color:#6c6966;border:1px solid #b7b4b1;border-radius:4px;padding:12px}
+html[data-ui=storyboard] #modelGrid{background:transparent;max-height:290px;flex:none;border-color:#dad7d4}
+html[data-ui=storyboard] .model-btn{font-size:12px;color:#65635f;border-color:#dedbd8;padding:10px;background:transparent}
+html[data-ui=storyboard] .model-btn.active{background:#efece9;color:#63605d}
+html[data-ui=storyboard] #cpBox{height:175px;border:1px solid #d0cdca;border-radius:4px;background:#fffdfa}
+html[data-ui=storyboard] .hint,html[data-ui=storyboard] .workspace-details{font-size:11px;color:#65635f;line-height:1.8}
+html[data-ui=storyboard] #modelName{font-size:13px;color:#666360;margin:0}
+html[data-ui=storyboard] #bar{position:fixed!important;left:34px!important;right:34px!important;bottom:25px!important;border:0!important;border-top:1px solid #d4d1ce!important;border-radius:0!important;box-shadow:none!important;background:var(--story-bg)!important;padding:22px 5px 5px!important;min-height:0!important;gap:20px;z-index:7;backdrop-filter:none}
+html[data-ui=storyboard] body.action-mode #bar{display:none!important}
+html[data-ui=storyboard] #simulationControls{flex:1}
+html[data-ui=storyboard] #simulationControls label{font-size:10px;color:#65635f;letter-spacing:.12em}
+html[data-ui=storyboard] #foldPct{color:#65635f!important;font-size:13px!important}
+html[data-ui=storyboard] #simulationButtons{display:flex;gap:8px}
+html[data-ui=storyboard] #simulationButtons button{font-size:11px;padding:9px 12px;border-radius:4px;background:transparent;border-color:#bebbb8;color:#65635f}
+html[data-ui=storyboard] #simulationButtons #btnPlay{background:#373431;color:white;border-color:#373431}
+html[data-ui=storyboard] #status{display:none!important}
+html[data-ui=storyboard] #viewTools{position:fixed;top:auto;bottom:140px;right:28px;z-index:4;display:flex;gap:7px}
+html[data-ui=storyboard] body.action-mode #viewTools{display:none!important}
+html[data-ui=storyboard] #viewTools button{font-size:10px;border-radius:4px;background:#fbf8f5;border-color:#cdcac6;color:#65635f;padding:7px 12px}
+html[data-ui=storyboard] #tutorialSaveStatus{top:calc(var(--story-head) + 12px);right:25px;background:#faf7f3;color:#6f6c68;border-color:#c1bebb;font-size:12px;box-shadow:0 6px 24px #7d581e12}
+/* Learning is a normal page in V2, so top-level navigation stays reachable. */
+html[data-ui=storyboard] .story-library-page{position:fixed;inset:var(--story-head) 0 0;width:100%;max-width:none;height:calc(100dvh - var(--story-head));max-height:none;margin:0;padding:35px 48px;border:0;border-radius:0;background:var(--story-bg);box-shadow:none;z-index:30;overflow:auto;color:#3c3936}
+html[data-ui=storyboard] .story-library-page .dialog-heading .flow-eyebrow{font-size:9px;color:#65635f;letter-spacing:.13em}
+html[data-ui=storyboard] .story-library-page .dialog-heading h2{font-size:38px;font-weight:450;letter-spacing:-1.5px;color:#3e3a37;margin:12px 0}
+html[data-ui=storyboard] .story-library-page .dialog-heading button{border:0;background:transparent;color:#65635f;font-size:11px}
+html[data-ui=storyboard] .story-library-page .dialog-intro{font-size:14px;color:#65635f;margin:8px 0 32px}
+html[data-ui=storyboard] #tutorialLibrary .lesson-library{gap:24px}
+html[data-ui=storyboard] #tutorialLibrary .study-button{padding:0!important;border:1px solid #d6d3d0!important;border-radius:4px!important;background:#fffcf9!important;gap:11px!important;box-shadow:none!important;overflow:hidden}
+html[data-ui=storyboard] #tutorialLibrary .study-button:hover{border-color:#93908d!important;background:white!important}
+html[data-ui=storyboard] .lesson-preview-pair{background:#e2dfdc;border-bottom:1px solid #d5d2cf}
+html[data-ui=storyboard] .lesson-preview-image,html[data-ui=storyboard] .lesson-preview-image:last-child{background:#f6f3f0;padding:15px 8px 10px}
+html[data-ui=storyboard] .lesson-preview-image img{height:170px;width:100%;object-fit:contain}
+html[data-ui=storyboard] .lesson-preview-image:last-child img{filter:none}
+html[data-ui=storyboard] #tutorialLibrary .lesson-preview-image>span{color:#65635f;font-size:9px}
+html[data-ui=storyboard] #tutorialLibrary .study-button .lesson-number{font-size:9px;color:#65635f;margin:9px 20px 0}
+html[data-ui=storyboard] #tutorialLibrary .study-button>strong{font-size:25px;font-weight:450;letter-spacing:-.7px;color:#4e4b48;margin:0 20px}
+html[data-ui=storyboard] #tutorialLibrary .study-button>span:last-child{font-size:12px;color:#65635f;margin:0 20px 23px;line-height:1.8}
+html[data-ui=storyboard] .fold-practice-library{margin-top:34px;border-color:#cfccc9}
+html[data-ui=storyboard] .fold-practice-library summary{font-size:16px;color:#716e6b;font-weight:450}
+html[data-ui=storyboard] .fold-practice-library>p{color:#65635f;font-size:12px}
+html[data-ui=storyboard] .practice-card{border-color:#d0cdca!important;background:#fffcf9!important;padding:16px!important;gap:9px!important;border-radius:4px!important}
+html[data-ui=storyboard] .practice-card img{background:#f7f4f1;height:140px}
+html[data-ui=storyboard] .practice-card strong{font-size:16px;color:#6e6b68;font-weight:450}
+html[data-ui=storyboard] .practice-card span{font-size:12px;color:#65635f}
+/* Start choices are concrete and preserve access to the existing draft. */
+.story-dialog{width:min(730px,94vw);max-height:90dvh;border:1px solid #d7d3d0;border-radius:4px;padding:28px;background:#fffcf9;color:#474441;overflow:auto;box-shadow:0 20px 90px #5a3b1a25}
+.story-dialog::backdrop{background:#40352944;backdrop-filter:blur(5px)}
+.story-dialog-head{display:flex;justify-content:space-between;align-items:center;font-size:9px;letter-spacing:.12em;color:#65635f}
+html[data-ui=storyboard] .story-dialog-head button{font-size:11px;border:0;background:none;color:#65635f}
+.story-dialog h2{font-size:31px;font-weight:450;letter-spacing:-.8px;margin:22px 0 10px}
+.story-dialog>p{font-size:13px;line-height:1.8;color:#65635f;margin:0 0 22px}
+.story-start-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+html[data-ui=storyboard] .story-start-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:17px;background:#fffcf9;border:1px solid #d5d2cf;border-radius:4px;white-space:normal;min-height:156px}
+html[data-ui=storyboard] .story-start-card:hover{border-color:#94918e;background:#fcf9f6}
+.story-start-card strong{font-size:14px;font-weight:500;color:#65625f;margin:12px 0 6px}.story-start-card>span{font-size:11px;color:#65635f;line-height:1.7}
+.story-start-illustration{width:35px;height:35px;border:1px solid #94918e;background:#faf7f3;transform:rotate(-6deg);position:relative}
+.story-start-illustration.rectangle{width:29px;height:39px;transform:rotate(4deg)}
+.story-start-illustration.pattern{background:linear-gradient(45deg,transparent 49%,#9a9794 49%,#9a9794 51%,transparent 51%),linear-gradient(-45deg,transparent 49%,#b8c1cf 49%,#b8c1cf 51%,transparent 51%),#fcf9f6}
+.story-start-illustration.draft:after,.story-start-illustration.copy:after{content:'';position:absolute;inset:7px -7px -7px 7px;border:1px solid #c1bebb;background:#fbf7f4;z-index:-1}
+.story-dialog .story-start-footnote{font-size:11px;color:#65635f;margin:22px 0 0}
+/* Designer: the same workspace, with drawing controls in a quiet right rail. */
+html[data-ui=storyboard][data-page=design] body{padding-top:var(--story-head);height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+html[data-ui=storyboard] .story-designer-export{padding:0!important;border:0!important;background:transparent!important;border-radius:0!important;display:flex;gap:8px!important}
+html[data-ui=storyboard] .story-designer-export .exp-btn{background:transparent!important;border:0!important;font-size:11px!important;color:#65635f!important;padding:8px 9px!important}
+html[data-ui=storyboard] .story-designer-export .help-btn{color:#65635f!important;background:none!important;border:0!important;font-size:11px!important;padding:8px}
+html[data-ui=storyboard] .story-patterns-button{font-size:11px;background:transparent;border:0;color:#65635f;padding:8px 4px}
+html[data-ui=storyboard] .storyboard-design .app{display:flex!important;flex:1;min-height:0;background:var(--story-bg)!important}
+html[data-ui=storyboard] .storyboard-design .app>aside{order:1!important;width:280px!important;flex:0 0 280px!important;border:0!important;border-left:1px solid var(--story-line)!important;background:var(--story-bg)!important;box-shadow:none!important;overflow:auto}
+html[data-ui=storyboard] .storyboard-design .sb-inner{padding:24px 21px!important;gap:11px!important}
+html[data-ui=storyboard] .storyboard-design .canvas-wrap{order:0!important;flex:1;min-width:0;background:var(--story-bg)!important}
+html[data-ui=storyboard] .storyboard-design:not(.story-design-tools) .app>aside{display:none!important}
+.story-designer-intro{position:absolute;left:35px;top:30px;pointer-events:none;color:#65635f}.story-designer-intro>span{font-size:8px;letter-spacing:.14em}.story-designer-intro h1{font-size:26px;font-weight:450;letter-spacing:-.7px;margin:9px 0 0}
+html[data-ui=storyboard] .storyboard-design .panel{border:0!important;border-top:1px solid #d7d4d1!important;border-radius:0!important;padding:17px 0!important;background:none!important;box-shadow:none!important}
+html[data-ui=storyboard] .storyboard-design .ptitle{font-size:10px!important;color:#65635f!important;letter-spacing:.1em!important;line-height:1.4;margin:0 0 15px!important}
+html[data-ui=storyboard] .storyboard-design .ptitle:before{display:none!important}
+html[data-ui=storyboard] .storyboard-design .lt-btn{font-size:12px!important;background:#fffcf9!important;border:1px solid #d2cfcc!important;color:#65635f!important;border-radius:4px!important;padding:10px!important;font-weight:450!important}
+html[data-ui=storyboard] .storyboard-design .lt-btn.valley-active{background:#f3f5f8!important;color:#65635f!important;border-color:#b4c3d1!important}
+html[data-ui=storyboard] .storyboard-design .lt-btn.mountain-active{background:#f6f3f0!important;color:#65635f!important;border-color:#b5b2af!important}
+html[data-ui=storyboard] .storyboard-design .lt-btn.crease-active{background:#f3f0ec!important;border-color:#bcb9b5!important;color:#65635f!important}
+html[data-ui=storyboard] .storyboard-design .slabel{font-size:12px!important;color:#65635f!important}
+html[data-ui=storyboard] .storyboard-design select{font-size:12px!important;background:#fffcf9!important;color:#65635f!important;border-color:#c7c4c1!important;padding:8px!important}
+html[data-ui=storyboard] .storyboard-design .float-toolbar{position:absolute!important;top:auto!important;bottom:35px!important;left:50%!important;transform:translateX(-50%)!important;border:1px solid #d1cecb!important;border-radius:4px!important;background:#fffdf8f5!important;box-shadow:0 4px 20px #8e622b0a!important;padding:7px 10px!important;gap:4px!important;max-width:calc(100% - 30px);flex-wrap:wrap;justify-content:center}
+html[data-ui=storyboard] .storyboard-design .float-toolbar button{font-size:11px!important;border:0!important;background:transparent!important;color:#65635f!important;border-radius:4px!important;padding:8px 9px!important;white-space:nowrap}
+html[data-ui=storyboard] .storyboard-design .float-toolbar button.active{background:#e9e6e3!important;color:#6a6764!important}
+html[data-ui=storyboard] .storyboard-design .zoom-ctrl{bottom:100px;right:20px;background:#fbf8f5;border-color:#c7c4c1;border-radius:4px;padding:3px}
+html[data-ui=storyboard] .storyboard-design .zoom-ctrl button{font-size:9px;width:auto;padding:5px 8px;color:#65635f}
+html[data-ui=storyboard] .storyboard-design .status-bar{font-size:10px;color:#65635f;background:transparent;border:0;bottom:11px;left:24px}
+html[data-ui=storyboard] .storyboard-design .constraint-fab{background:transparent!important;border:1px solid #cecbc7!important;box-shadow:none!important;border-radius:4px!important}
+html[data-ui=storyboard] .storyboard-design .cfab-header{background:#f3f0ed!important;padding:10px!important}
+html[data-ui=storyboard] .storyboard-design .cfab-label{font-size:11px!important;color:#65635f!important}
+html[data-ui=storyboard] .storyboard-design .cs-btn{font-size:11px!important;background:#fcf9f6!important;color:#65635f!important;border-color:#c4c1be!important}
+html[data-ui=storyboard] .storyboard-design .cs-btn.active{background:#e2dfdc!important;border-color:#999693!important;color:#686562!important}
+html[data-ui=storyboard] .storyboard-design .constraint-hint{background:#f8f5f2!important;border-color:#d2cfcc!important;color:#65635f!important;font-size:11px!important}
+html[data-ui=storyboard] .storyboard-design .pro-actions{top:auto;bottom:35px;border-color:#c5c2bf;border-radius:4px;background:#fcf9f6;box-shadow:0 8px 25px #8c612524}
+html[data-ui=storyboard] .storyboard-design .pro-actions button{font-size:11px;color:#65635f;border-color:#c0bdb9;background:#fffcf9}
+html[data-ui=storyboard] #storyDesignTools{color:#65635f;font-size:11px!important}
+html[data-ui=storyboard] .brand-icon,html[data-ui=storyboard] .story-header svg,html[data-ui=storyboard] .cfab-icon,html[data-ui=storyboard] .cfab-chevron,html[data-ui=storyboard] .presets-btn>svg,html[data-ui=storyboard] .ptitle svg{display:none!important}
+/* Compact laptop: retain a usable paper area and readable controls. */
+@media(max-width:1200px){html[data-ui=storyboard]{--story-head:74px}html[data-ui=storyboard] .story-header{padding:0 24px!important;gap:20px!important}html[data-ui=storyboard] .story-header>.story-nav{gap:16px!important;margin-left:0!important}.story-document{display:none}html[data-ui=storyboard] .story-header-actions{gap:8px}body.storyboard-fold.story-inspector-open{--story-right:312px}html[data-ui=storyboard] #stepStudio{width:265px!important;right:24px!important;padding-left:20px!important}.story-scene-copy h1{font-size:27px}#storyScene{left:32px;width:245px}.story-scene-copy p{font-size:12px}html[data-ui=storyboard] .lesson-preview-image img{height:145px}html[data-ui=storyboard] .storyboard-design .app>aside{width:250px!important;flex-basis:250px!important}html[data-ui=storyboard] .storyboard-design .sb-inner{padding:20px 17px!important}.story-designer-intro{left:27px;top:24px}.story-designer-intro h1{font-size:23px}}
+@media(max-width:950px) and (min-width:701px){html[data-ui=storyboard]{--story-head:112px;--story-rail:150px}html[data-ui=storyboard] .story-header{display:flex!important;flex-wrap:wrap!important;align-content:center;gap:9px 20px!important;padding:11px 22px!important}.story-brand strong{font-size:23px}html[data-ui=storyboard] .story-header>.story-nav{order:3;flex-basis:100%;justify-content:center;gap:29px!important}html[data-ui=storyboard] .story-nav a,html[data-ui=storyboard] .story-nav button{font-size:11px!important;padding:4px 0!important}html[data-ui=storyboard] .story-header-actions{margin-left:auto;gap:8px}html[data-ui=storyboard] .story-header-actions button{font-size:10px;padding:6px 8px}html[data-ui=storyboard] .story-header-actions #saveLesson{font-size:11px!important;padding:8px 12px!important}body.storyboard-fold.story-inspector-open{--story-right:280px}html[data-ui=storyboard] #stepStudio{width:245px!important;right:17px!important;padding-left:16px!important;top:calc(var(--story-head) + 18px)!important}html[data-ui=storyboard] #lessonTimeline{height:130px!important;left:23px!important;right:23px!important;padding-top:11px!important}html[data-ui=storyboard] #actionList .lesson-step-wrap{flex-basis:160px}html[data-ui=storyboard] #actionList .lesson-step{grid-template-columns:62px minmax(0,1fr)!important;padding:6px 8px!important}.story-step-preview{width:62px!important;height:52px!important}html[data-ui=storyboard] #lessonPlayer{left:22px!important;right:calc(var(--story-right) + 22px)!important;padding:9px 10px!important;gap:7px}html[data-ui=storyboard] #lessonPlayer button{font-size:10px;padding:6px 8px}html[data-ui=storyboard] #playbackOptions{gap:9px}html[data-ui=storyboard] #playbackOptions label,html[data-ui=storyboard] #playbackOptions button,html[data-ui=storyboard] #playbackOptions select{font-size:9px}.story-scene-copy h1{font-size:23px}#storyScene{left:26px;top:calc(var(--story-head) + 30px);width:210px}.story-scene-copy p{font-size:11px;max-height:160px}html[data-ui=storyboard] #bar{left:23px!important;right:23px!important;gap:12px;flex-wrap:wrap}html[data-ui=storyboard] #simulationButtons button{font-size:10px;padding:7px 9px}html[data-ui=storyboard] #simulationControls{flex-basis:100%}html[data-ui=storyboard] .story-library-page{padding:28px}html[data-ui=storyboard] #tutorialLibrary .lesson-library{gap:13px}html[data-ui=storyboard] .lesson-preview-image img{height:110px}html[data-ui=storyboard] #tutorialLibrary .study-button>strong{font-size:20px;margin:0 13px}html[data-ui=storyboard] #tutorialLibrary .study-button .lesson-number{margin:8px 13px 0}html[data-ui=storyboard] #tutorialLibrary .study-button>span:last-child{margin:0 13px 16px;font-size:11px}html[data-ui=storyboard] .storyboard-design .app>aside{width:225px!important;flex-basis:225px!important}html[data-ui=storyboard] .storyboard-design .sb-inner{padding:17px 13px!important}.story-designer-intro h1{font-size:20px}.story-designer-intro{left:23px;top:20px}}
+/* On a phone, keep the paper first and let the page scroll naturally. */
+@media(max-width:700px){html[data-ui=storyboard]{height:auto!important;min-height:100%;overflow:auto!important;--story-head:114px;--story-right:0px;--story-rail:0px}html[data-ui=storyboard] body.storyboard-fold{height:auto!important;min-height:100dvh;overflow:auto!important;display:flex!important;flex-direction:column!important;padding-top:var(--story-head)}html[data-ui=storyboard] .story-header{flex-wrap:wrap!important;align-content:center;gap:10px 12px!important;padding:10px 17px!important;height:var(--story-head)!important}.story-brand strong{font-size:24px}.story-brand span{font-size:10px}html[data-ui=storyboard] .story-header>.story-nav{order:3;flex-basis:100%;justify-content:space-between;margin-left:0!important;gap:10px!important}html[data-ui=storyboard] .story-nav a,html[data-ui=storyboard] .story-nav button{font-size:11px!important;padding:4px 0!important}html[data-ui=storyboard] .story-header-actions{gap:6px}html[data-ui=storyboard] .story-header-actions button{font-size:9px;padding:5px!important;border:0}html[data-ui=storyboard] .story-header-actions #saveLesson{font-size:10px!important;padding:8px 11px!important}#storyWatchMode{display:none!important}#storySettings{font-size:9px!important;max-width:66px;white-space:normal;line-height:1.5}.story-file-menu summary{font-size:10px;padding:5px}.story-file-items{right:-30px;min-width:215px}.story-document{display:none}.story-patterns-button{display:none}html[data-ui=storyboard] #storyWorkspace{display:flex;flex-direction:column;min-height:0;flex:1}
+html[data-ui=storyboard] #threeContainer,html[data-ui=storyboard] body:not(.action-mode) #threeContainer{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;order:1;width:100%;height:47dvh!important;min-height:280px;border:0!important;margin:0!important}
+html[data-ui=storyboard] body.story-define #threeContainer{display:none!important}
+html[data-ui=storyboard] #actionCanvas{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;order:1;height:49dvh!important;min-height:330px;width:100%;padding:16px 17px 10px!important}
+html[data-ui=storyboard] .editor-heading{gap:10px;align-items:flex-start;font-size:11px}html[data-ui=storyboard] #canvasInstruction{font-size:12px!important;line-height:1.7}html[data-ui=storyboard] .editor-heading label{font-size:9px;white-space:normal;max-width:72px}html[data-ui=storyboard] .editor-bottom>span{display:none}html[data-ui=storyboard] .editor-bottom{display:flex!important;justify-content:center}html[data-ui=storyboard] .editor-bottom button{font-size:9px;padding:6px 9px}
+html[data-ui=storyboard] #storyScene{position:relative!important;order:3;top:auto!important;left:auto!important;right:auto!important;width:auto!important;margin:17px 22px 0;pointer-events:auto}.story-scene-copy>span{font-size:9px}.story-scene-copy h1{font-size:26px;margin:9px 0}.story-scene-copy p{font-size:13px;line-height:1.85;max-height:none;margin-bottom:10px}body.story-author #storyScene{margin-top:13px}.story-author .story-scene-copy h1{font-size:23px}
+#storySceneTools{position:relative;order:0;right:auto;top:auto;padding:13px 17px 0;justify-content:flex-end;min-height:42px}html[data-ui=storyboard] #storySceneTools button{font-size:10px;padding:6px 10px}
+html[data-ui=storyboard] #lessonPlayer{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;order:2;margin:0 14px;width:calc(100% - 28px);padding:10px!important;gap:7px;border-radius:4px!important;flex-wrap:wrap}
+html[data-ui=storyboard] #lessonPlayer button{font-size:10px;padding:6px 8px}html[data-ui=storyboard] #lessonPlayer #replayAction{font-size:10px;padding:8px 10px}html[data-ui=storyboard] #stepPercent{font-size:9px;width:29px}html[data-ui=storyboard] #playbackOptions{gap:11px;flex-wrap:wrap}html[data-ui=storyboard] #playbackOptions label,html[data-ui=storyboard] #playbackOptions button,html[data-ui=storyboard] #playbackOptions select{font-size:10px}html[data-ui=storyboard] #motionStages button{font-size:9px;padding:8px 5px;line-height:1.6}
+html[data-ui=storyboard] #stepStudio{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;order:4;width:auto!important;margin:20px 20px 10px;padding:17px 0 12px!important;border:0!important;border-top:1px solid #cac7c4!important;max-height:none;overflow:visible!important;background:transparent!important;gap:14px!important}
+html[data-ui=storyboard] .story-close-inspector{font-size:10px!important}html[data-ui=storyboard] #stepStudio input:not([type=checkbox]),html[data-ui=storyboard] #stepStudio textarea,html[data-ui=storyboard] #stepStudio select{font-size:14px}html[data-ui=storyboard] #stepStudio label{font-size:12px}html[data-ui=storyboard] #storyWorkflow span{font-size:10px}html[data-ui=storyboard] #previewTitle{font-size:24px}html[data-ui=storyboard] #previewCaption{font-size:13px}html[data-ui=storyboard] #draftStatus{font-size:10px;max-width:none}
+html[data-ui=storyboard] #lessonTimeline,html[data-ui=storyboard] #lessonTimeline.empty{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;order:5;width:auto!important;margin:20px 17px 22px;height:149px!important;padding:15px 0 0!important;flex:none;min-width:0}
+html[data-ui=storyboard] #lessonTimeline.empty{height:70px!important}html[data-ui=storyboard] #lessonTimeline .timeline-heading{font-size:8px;gap:8px}html[data-ui=storyboard] #timelineCount{font-size:9px}html[data-ui=storyboard] #storyAddStep{font-size:10px;padding:4px 0!important}html[data-ui=storyboard] #actionList{gap:10px!important;padding-bottom:7px}html[data-ui=storyboard] #actionList .lesson-step-wrap{flex-basis:153px}html[data-ui=storyboard] #actionList .lesson-step{grid-template-columns:60px minmax(0,1fr)!important;padding:7px!important;font-size:10px!important}.story-step-preview{width:60px!important;height:54px!important}html[data-ui=storyboard] #actionList .lesson-step>span:last-of-type{font-size:10px}.story-step-more{opacity:1!important;font-size:8px!important}html[data-ui=storyboard] #stepNotice{position:relative;left:auto;bottom:auto;grid-column:1;grid-row:auto;margin:7px 0 0;font-size:11px;max-width:none}
+html[data-ui=storyboard] #bar{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;order:2;margin:0 17px 15px;width:calc(100% - 34px);padding:15px 0 8px!important;display:flex;flex-wrap:wrap;gap:14px}html[data-ui=storyboard] #simulationControls{flex-basis:100%;gap:8px}html[data-ui=storyboard] #simulationControls label{font-size:9px}html[data-ui=storyboard] #simulationControls>span{font-size:9px!important}html[data-ui=storyboard] #simulationButtons{flex-wrap:wrap;gap:6px}html[data-ui=storyboard] #simulationButtons button{font-size:10px;padding:8px 10px}
+html[data-ui=storyboard] #viewTools{top:calc(var(--story-head) + 19px);right:20px;bottom:auto}html[data-ui=storyboard] #viewTools button{font-size:9px;padding:6px 9px}html[data-ui=storyboard] #motionCue{font-size:9px;max-width:90%;line-height:1.5;top:7px}
+html[data-ui=storyboard] #panel{position:fixed!important;inset:calc(var(--story-head) + 8px) 14px 20px!important;width:auto!important;z-index:105;padding:17px!important;gap:14px!important;border-radius:4px!important}html[data-ui=storyboard] #modelGrid{max-height:35dvh}html[data-ui=storyboard] .story-patterns-open #storyPatternBackdrop{display:block!important;position:fixed;inset:var(--story-head) 0 0;background:#4b361b33;z-index:104}html[data-ui=storyboard] #tutorialSaveStatus{top:calc(var(--story-head) + 7px);left:17px;right:17px;max-width:none;font-size:12px;padding:11px 13px;z-index:200}
+html[data-ui=storyboard] .story-library-page{top:var(--story-head);height:calc(100dvh - var(--story-head));padding:25px 20px}html[data-ui=storyboard] .story-library-page .dialog-heading h2{font-size:30px}html[data-ui=storyboard] .story-library-page .dialog-heading{gap:12px}html[data-ui=storyboard] .story-library-page .dialog-heading button{font-size:10px;max-width:82px;white-space:normal;line-height:1.7}html[data-ui=storyboard] .story-library-page .dialog-intro{font-size:12px;line-height:1.85;margin-bottom:23px}html[data-ui=storyboard] #tutorialLibrary .lesson-library{grid-template-columns:1fr;gap:20px}html[data-ui=storyboard] .lesson-preview-image img{height:145px}html[data-ui=storyboard] #tutorialLibrary .study-button>strong{font-size:25px}html[data-ui=storyboard] #tutorialLibrary .study-button>span:last-child{font-size:12px}.story-start-grid{grid-template-columns:1fr 1fr;gap:10px}.story-dialog{padding:21px;max-height:90dvh}.story-dialog h2{font-size:28px}.story-dialog>p{font-size:12px}html[data-ui=storyboard] .story-start-card{padding:13px;min-height:165px}.story-start-card strong{font-size:13px}.story-start-card>span{font-size:10px}.story-start-illustration{width:28px;height:28px}.story-dialog .story-start-footnote{font-size:10px;line-height:1.8}
+html[data-ui=storyboard][data-page=design] body{height:100dvh;min-height:0;padding-top:var(--story-head);overflow:hidden!important}html[data-ui=storyboard] .storyboard-design .app{height:auto;min-height:0}html[data-ui=storyboard] .storyboard-design .app>aside{position:fixed;right:12px;top:calc(var(--story-head) + 12px);bottom:15px;left:auto;width:255px!important;max-width:calc(100vw - 24px);border:1px solid #cecbc8!important;background:#fefbf8!important;border-radius:4px;z-index:60;box-shadow:0 10px 40px #6c45122a!important}html[data-ui=storyboard] .storyboard-design .sb-inner{padding:18px!important}html[data-ui=storyboard] .storyboard-design .canvas-wrap{width:100%}.story-designer-intro{left:20px;top:23px}.story-designer-intro h1{font-size:22px}.story-designer-intro>span{font-size:8px}html[data-ui=storyboard] .storyboard-design .float-toolbar{bottom:31px!important;max-width:calc(100% - 28px);width:max-content;padding:5px 7px!important;gap:2px!important}html[data-ui=storyboard] .storyboard-design .float-toolbar button{font-size:9px!important;padding:7px!important}html[data-ui=storyboard] .storyboard-design .zoom-ctrl{bottom:112px;right:15px}html[data-ui=storyboard] .storyboard-design .status-bar{font-size:9px;left:19px;right:10px;bottom:8px}.story-designer-export .help-btn{display:none!important}html[data-ui=storyboard] .story-designer-export .exp-btn{font-size:9px!important;padding:5px!important}html[data-ui=storyboard] .story-header-actions .exp-toggle{font-size:10px!important;padding:8px 12px!important}html[data-ui=storyboard] #storyDesignTools{font-size:9px!important;padding:5px!important;max-width:49px;white-space:normal}.story-designer-export .exp-btn>svg{display:none}html[data-ui=storyboard] .story-designer-export .exp-btn{max-width:61px;white-space:normal;line-height:1.5}.story-designer-export .exp-toggle .arrow{display:none}html[data-ui=storyboard] .storyboard-design .pro-actions{bottom:31px;top:auto;max-width:calc(100% - 24px);flex-wrap:wrap}html[data-ui=storyboard] .storyboard-design .pro-actions button{font-size:9px;padding:6px 7px}
+}
+@media(prefers-reduced-motion:reduce){html[data-ui=storyboard] *{scroll-behavior:auto!important;transition:none!important}}
+
+html[data-ui=storyboard] #storyTransport{display:flex;align-items:center;gap:6px;flex-shrink:0}html[data-ui=storyboard] #storyTransport button{font-size:10px;padding:7px 10px}html[data-ui=storyboard] #stepNavigation:empty{display:none!important}
+@media(max-width:700px){html[data-ui=storyboard] #storyTransport{gap:4px}html[data-ui=storyboard] #storyTransport button{font-size:9px;padding:6px 7px}html[data-ui=storyboard] #storyTransport #replayAction{font-size:9px;padding:7px 9px}}
+
+html[data-ui=storyboard] body.story-library #storyWorkspace,html[data-ui=storyboard] body.story-library #viewTools{visibility:hidden!important}html[data-ui=storyboard] .storyboard-design .cs-icon{display:none!important}
+
+html[data-ui=storyboard] .storyboard-design .tg-btn.on{background:#f1eee9!important;color:#65635f!important;border-color:#dcd3c5!important}html[data-ui=storyboard] .storyboard-design .tg-btn{font-size:11px;padding:9px;border-color:#e3ddd3;color:#65635f;border-radius:4px}
+
+html[data-ui=storyboard] #storyMotionOptions{border-top:1px solid var(--story-line);padding-top:13px;font-size:12px;color:#65635f;margin-top:2px}html[data-ui=storyboard] #storyMotionOptions>summary{font-size:12px;color:#65635f}html[data-ui=storyboard] #storyMotionOptions>div,html[data-ui=storyboard] #storyMotionOptions>details,html[data-ui=storyboard] #storyMotionOptions>button{margin-top:13px}html[data-ui=storyboard] .story-author.story-preview #previewControls>.lesson-preview-head,html[data-ui=storyboard] .story-author.story-preview #previewTitle,html[data-ui=storyboard] .story-author.story-preview #previewCaption{display:none!important}html[data-ui=storyboard] #storyCommit{position:sticky;bottom:-20px;margin:0 -1px 0 -8px;padding:16px 0 2px 8px;background:linear-gradient(transparent,#fbfbfa 12px);z-index:8;display:grid;gap:7px;flex-shrink:0}html[data-ui=storyboard] #storyCommit button{width:100%}html[data-ui=storyboard] #storyCommit #editAction{border:0;background:transparent;font-size:11px;padding:5px}html[data-ui=storyboard] .story-author #authorReview{background:transparent!important;border:0!important;padding:0!important}html[data-ui=storyboard] #stepWording{display:grid;gap:10px}html[data-ui=storyboard] #stepWording summary{font-size:12px;margin-bottom:4px;color:#65635f}
+@media(max-width:700px){html[data-ui=storyboard] #storyCommit{position:static;margin:0;padding:12px 0 0}html[data-ui=storyboard] #storyCommit #editAction{font-size:12px}}
+
+html[data-ui=storyboard] .story-scene-copy p{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}html[data-ui=storyboard] #storyReadInstructions{pointer-events:auto;background:transparent;border:0;border-bottom:1px solid #c7b59a;border-radius:0;padding:4px 0;color:#65635f;font-size:11px;margin-top:8px}html[data-ui=storyboard] .story-author .story-scene-copy p{display:none}
+
+/* The inspector is a single-column form, never a horizontally scrolled canvas. */
+html[data-ui=storyboard] #stepStudio{overflow-x:hidden!important;overflow-y:auto!important;scrollbar-gutter:stable}
+html[data-ui=storyboard] #stepStudio *,html[data-ui=storyboard] #stepStudio *::before,html[data-ui=storyboard] #stepStudio *::after{box-sizing:border-box;min-width:0;max-width:100%}
+html[data-ui=storyboard] #stepStudio>*{flex-shrink:0}
+html[data-ui=storyboard] #stepStudio :is(button,summary,label,p,strong,span){white-space:normal;overflow-wrap:anywhere}
+html[data-ui=storyboard] #stepStudio :is(#defineControls,#previewControls,#motionChooser,#markControls,.action-mode-buttons,.more-move-list){width:100%;grid-template-columns:minmax(0,1fr)!important}
+html[data-ui=storyboard] #motionChooser .action-mode-buttons :is(strong,span){display:block;width:100%}
+html[data-ui=storyboard] #stepStudio :is(input:not([type=checkbox]):not([type=radio]),textarea,select){width:100%}
+html[data-ui=storyboard] #stepStudio :is(.author-toolbar,.minor-actions,.blank-paper-options,.composer-selected){flex-wrap:wrap}
+html[data-ui=storyboard] #stepStudio .saved-motion-tools{grid-template-columns:repeat(2,minmax(0,1fr))}
+html[data-ui=storyboard] #stepStudio :is(.action-options,.recipe-range,.stage-time-edit) label{min-width:0}
+/* Neutral interaction states replace the previous green theme. */
+html[data-ui=storyboard] :is(.flow-eyebrow,.lesson-heading,#moreMoves summary,#recipeLibrary summary,#layerInspector summary,#pocketLayers summary,#selectedActionName,.composer-selected,.quiet-button,#changeAction,#cancelTemplate,.work-surface,.model-limit,.model-limit p,.stage-note,.stage-instruction,#motionStages button,.sink-depth-control output){color:var(--story-ink)!important}
+html[data-ui=storyboard] :is(#moreMoves,.more-move-list button,.draft-recovery,.template-guide,.match-help,.work-surface select,#motionStages button,.exploded-stage,.exploded-layer-choice,.layer-card,.pocket-card,#tutorialSaveStatus){background:#f6f6f5!important;border-color:#d8d8d5!important;color:#555550!important;box-shadow:none!important}
+html[data-ui=storyboard] :is(#moreMoves summary,.more-move-list button,#changeAction,#cancelTemplate,#confirmStepReview,#saveStepView,#restoreStepView){color:#555550!important}
+html[data-ui=storyboard] :is(button[aria-pressed=true],#motionStages button[aria-current=step],.exploded-layer-choice:has(input:checked),.layer-card:has(input:checked)){background:#e9e9e6!important;color:#30302e!important;border-color:#999994!important;box-shadow:none!important}
+html[data-ui=storyboard] :is(.studio-dialog,.story-dialog) :is(input,select,textarea){accent-color:#64645f;color:#41413d;border-color:#d6d6d2}
+html[data-ui=storyboard] :is(input[type=checkbox],input[type=radio],input[type=range]){accent-color:#64645f!important}
+html[data-ui=storyboard] :is(.exploded-stage small,.exploded-stage label,.stage-note,.stage-instruction,#previewMotionTweaks label,.lesson-heading button,.model-limit p,#playbackOptions label,#playbackOptions select){color:#65635f!important}
+html[data-ui=storyboard] :is(.studio-dialog,.story-dialog) button.primary{background:#343430!important;border-color:#343430!important;color:white!important}
+html[data-ui=storyboard] :is(button,input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea,.story-file-menu,.studio-dialog,.story-dialog){border-radius:4px!important}
+html[data-ui=storyboard] .storyboard-design :is(.float-toolbar,.zoom-ctrl,.pro-actions){border-radius:4px!important;box-shadow:none!important}
+html[data-ui=storyboard] .storyboard-design .float-toolbar button{border-radius:3px!important}
+html[data-ui=storyboard] :is(#motionCue,.camera-note,.story-start-footnote,.story-designer-intro){display:none!important}
+html[data-ui=storyboard] #storyStart .story-dialog-head>div{display:none}
+html[data-ui=storyboard] #stepStudio .composer-lead{display:none}
+html[data-ui=storyboard] :is(#layerCards,#pocketCards){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+html[data-ui=storyboard] #stepStudio :is(summary,p,small,.flow-eyebrow,.lesson-heading){color:#65635f!important}
+html[data-ui=storyboard] #stepStudio :is(#stageTeaching,#pocketMotionSettings){background:#f6f6f5!important;border-color:#d8d8d5!important;border-radius:4px!important}
+html[data-ui=storyboard] :is(#stageTeaching summary,#pocketMotionSettings label,#pocketMotionHint,.stage-teaching-row strong){color:#555550!important}
+html[data-ui=storyboard] .studio-dialog :is(.dialog-heading,.dialog-intro,.dialog-footer){color:#65635f!important}
+html[data-ui=storyboard] .story-dialog-head{justify-content:flex-end}
+html[data-ui=storyboard]{--text2:#777773;--text3:#92928d;--accent:#575752;--accent-soft:#efefec;--accent-light:#efefec;--green:#575752;--green-light:#efefec}
+html[data-ui=storyboard] :is(.credit-dialog,.pg-modal,.pg-card,.pg-preview){border-radius:4px!important;box-shadow:none!important}
+html[data-ui=storyboard] :is(.pg-filters button,.pg-filter,.level-btn,.pg-tab,.pg-difficulty){border-radius:4px!important;background:#f5f5f3!important;color:#6c6c67!important;border-color:#d6d6d2!important}
+html[data-ui=storyboard] :is(.pg-filters button.active,.pg-filter.active,.level-btn.active,.pg-tab.active){background:#e7e7e3!important;color:#353532!important;border-color:#999994!important}
+html[data-ui=storyboard] input{color:#555550!important}
+html[data-ui=storyboard] #stepStudio button:hover,html[data-ui=storyboard] .studio-dialog button:hover{background:#eeeeeb!important;border-color:#a3a39e!important;color:#333330!important}
+html[data-ui=storyboard] :is(.pg-meta,.pg-desc,.credit-intro,.credit-row p){color:#65635f!important}
+html[data-ui=storyboard] :is(.toast,.line-context-menu,.exp-menu,.pg-modal,.credit-dialog){border-radius:4px!important}
+html[data-ui=storyboard] #stepStudio :is(.lesson-heading,.story-close-inspector,#lastStepContext){display:none!important}
+html[data-ui=storyboard] #storyWorkflow{display:none!important}
+html[data-ui=storyboard] :is(.last-step-context,.stage-teaching-row,#motionStages,.dialog-footer){border-color:#d8d8d5!important}
+html[data-ui=storyboard] #stepStudio :is(button,input,select,textarea){border-color:#d6d6d2!important}
+html[data-ui=storyboard] #stepStudio :is(#saveAction,#previewAction){background:#343430!important;border-color:#343430!important;color:#fff!important}
+html[data-ui=storyboard] #stepStudio *{border-color:#d6d6d2!important}
+/* Compound stage instructions are teaching content, unlike the generic badge. */
+html[data-ui=storyboard] body:has(#motionStages:not([hidden])) #motionCue{display:block!important;border:0;border-radius:0;background:#fbfbfae8;color:#666660;max-width:calc(100% - 32px);font-size:12px;line-height:1.6}
+/* Interaction pass: readable controls, docked zoom and a centered start dialog. */
+html[data-ui=storyboard]{--story-ink:#302e2a;--story-muted:#65635f;--shared-muted:#65635f;--text-dim:#65635f;--muted:#65635f;--text2:#55534e;--text3:#65635f}
+html[data-ui=storyboard] .story-header>.story-nav :is(a,button){font-weight:400!important;color:#65635f!important}
+html[data-ui=storyboard] .story-header>.story-nav [aria-current=page]{color:#302e2a!important}
+html[data-ui=storyboard] :is(.story-document,.story-brand span,.story-file-menu,.story-header-actions button){color:#65635f}
+html[data-ui=storyboard] button{font-size:13px;line-height:1.45;font-weight:400}
+html[data-ui=storyboard] button:disabled{opacity:.6}
+html[data-ui=storyboard] :is(.story-file-items button,.story-file-items a,#stepStudio label,#stepStudio summary,#stepStudio p,#draftStatus,.story-start-card>span,.story-scene-copy p){color:#5f5d57!important}
+html[data-ui=storyboard] #storyStart{position:fixed;inset:0;margin:auto!important;width:min(610px,calc(100vw - 40px));height:fit-content;max-height:calc(100dvh - 48px);padding:24px;background:#fff;box-sizing:border-box}
+html[data-ui=storyboard] #storyStart h2{font-size:27px;margin:4px 0 22px;color:#302e2a}
+html[data-ui=storyboard] #storyStart .story-start-card{min-height:132px;background:#fff;padding:16px}
+html[data-ui=storyboard] #storyStart .story-start-card strong{font-size:14px;color:#35332f}
+html[data-ui=storyboard] #storyStart .story-start-card>span{font-size:12px;line-height:1.5}
+html[data-ui=storyboard] :is(.story-dialog,.studio-dialog,.credit-dialog)::backdrop{backdrop-filter:none;background:#24221f30}
+html[data-ui=storyboard] .storyboard-design .story-designer-footer{position:absolute;left:20px;right:20px;bottom:32px;display:flex;align-items:flex-end;justify-content:center;gap:16px;pointer-events:none;z-index:20}
+html[data-ui=storyboard] .storyboard-design .story-designer-footer>*{pointer-events:auto}
+html[data-ui=storyboard] .storyboard-design .story-designer-footer .float-toolbar{position:static!important;transform:none!important;margin-left:auto;max-width:calc(100% - 128px);flex-shrink:1;flex-wrap:wrap}
+html[data-ui=storyboard] .storyboard-design .story-designer-footer .zoom-ctrl{position:static!important;display:flex;align-items:center;margin-left:auto;flex-shrink:0;height:36px;padding:0;background:#fff}
+html[data-ui=storyboard] .storyboard-design .status-bar{left:20px!important;right:20px!important;bottom:8px!important;transform:none!important;text-align:left;padding:0!important;white-space:normal!important;max-width:calc(100% - 40px);font-size:12px!important;line-height:1.4;backdrop-filter:none!important;color:#5f5d57!important}
+html[data-ui=storyboard] .story-zoom-button{display:inline-flex!important;align-items:center;justify-content:center;min-width:34px!important;width:34px!important;height:34px!important;padding:6px!important;color:#45433f!important;background:#fff;flex:none}
+html[data-ui=storyboard] .story-zoom-button svg{display:block!important;width:19px!important;height:19px!important;flex:none}
+html[data-ui=storyboard] .story-view-zoom{display:inline-flex;align-items:center;gap:3px}
+html[data-ui=storyboard] #viewTools{align-items:center}
+html[data-ui=storyboard] #lessonPlayer>.story-view-zoom{display:flex;align-items:center;gap:3px}
+html[data-ui=storyboard] #stepStudio .story-next-primary,html[data-ui=storyboard] #storyTransport .story-next-primary{background:#343430!important;border-color:#343430!important;color:white!important;font-size:13px!important;padding:10px 12px!important}
+html[data-ui=storyboard] #storyCommit #editAction.story-next-primary{padding:12px!important;font-size:13px!important}
+html[data-ui=storyboard] #storyCommit #quickUnfoldPreview{background:#fff!important;border-color:#b8b6b0!important;color:#484640!important}
+html[data-ui=storyboard] #storyCommit{gap:8px}
+html[data-ui=storyboard] .storyboard-design .constraint-grid .cs-icon{display:inline-flex!important;align-items:center;justify-content:center;min-width:20px;width:20px;font-size:17px;font-weight:500;color:#484640!important}
+html[data-ui=storyboard] .storyboard-design .constraint-grid .cs-icon svg{display:block!important;width:18px;height:16px}
+html[data-ui=storyboard] .storyboard-design .constraint-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+html[data-ui=storyboard] .storyboard-design .cs-btn{display:flex!important;align-items:center;gap:7px!important;min-width:0;min-height:36px;line-height:1.3;font-size:12px!important;padding:8px!important;color:#504e48!important}
+html[data-ui=storyboard] .storyboard-design .cfab-header{cursor:pointer;color:#4e4c46}
+html[data-ui=storyboard] .storyboard-design .cfab-body{transition:none!important}
+html[data-ui=storyboard] .storyboard-design .constraint-hint{color:#5f5d57!important}
+@media(max-width:700px){html[data-ui=storyboard] #storyStart{width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:18px}html[data-ui=storyboard] .storyboard-design .story-designer-footer{left:12px;right:12px;bottom:42px;gap:8px}html[data-ui=storyboard] .storyboard-design .story-designer-footer .float-toolbar{max-width:calc(100% - 112px);padding:4px!important}html[data-ui=storyboard] .storyboard-design .story-designer-footer .zoom-ctrl{min-width:104px}html[data-ui=storyboard] .storyboard-design .status-bar{left:14px!important;right:14px!important;bottom:7px!important;max-width:calc(100% - 28px);font-size:11px!important}html[data-ui=storyboard] .story-zoom-button{min-width:30px!important;width:30px!important;height:32px!important}html[data-ui=storyboard] #storyCommit{position:static}html[data-ui=storyboard] #storyTransport .story-next-primary{font-size:11px!important;padding:8px!important}}
+html[data-ui=storyboard] #playbackOptions .story-view-zoom{margin-left:auto;gap:3px}
+html[data-ui=storyboard] :is(button,a,summary):focus-visible{outline-color:#65635f}
+html[data-ui=storyboard] ::placeholder{color:#6b6963;opacity:1}

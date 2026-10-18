@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>Pan, accessible layers and visual lessons</title>
+<style>body{font:14px system-ui}iframe{width:100%;height:760px;border:0}pre{white-space:pre-wrap}</style>
+<button id="run">Run view and layer checks</button><pre id="report">Ready</pre><iframe src="../../origami-3d.html"></iframe>
+<script type="module">
+import {airplaneLesson} from '../../simulator/src/example-lessons.js';
+const wait=ms=>new Promise(r=>setTimeout(r,ms)),assert=(ok,msg)=>{if(!ok)throw Error(msg);};
+document.querySelector('#run').onclick=async()=>{
+const w=document.querySelector('iframe').contentWindow,d=w.document,$=id=>d.getElementById(id),report=document.querySelector('#report'),log=[],key='foldlab.author-draft.v1',saved=localStorage.getItem(key);
+try{report.textContent='Running';for(let i=0;i<200&&(!w.StepStudio||w.importBusy);i++)await wait(100);assert(w.StepStudio,'Studio ready');
+ $('browseTutorials').click();const images=[...$('tutorialLibrary').querySelectorAll('.lesson-preview-pair img')];await Promise.all(images.map(img=>img.decode()));assert(images.length===6&&images.every(i=>i.naturalWidth>0),'Six real preview images loaded');$('airplaneLesson').click();assert(w.StepStudio.getState().steps===9,'Visual card opens its lesson');log.push('PASS six CP/model previews and card navigation');
+ const view=w.G.friendlyView,canvas=$('threeContainer').querySelector('canvas'),original=canvas.setPointerCapture;canvas.setPointerCapture=()=>{};
+ try{const drag=(extras={})=>{canvas.dispatchEvent(new w.PointerEvent('pointerdown',{clientX:150,clientY:160,button:0,pointerId:99,...extras}));canvas.dispatchEvent(new w.PointerEvent('pointermove',{clientX:185,clientY:178,pointerId:99,...extras}));canvas.dispatchEvent(new w.PointerEvent('pointerup',{pointerId:99}));};
+ for(const [label,extra]of [['shift',{shiftKey:true}],['right',{button:2}],['middle',{button:1}]]){const before=view.capture();drag(extra);const after=view.capture();assert(JSON.stringify(before.target)!==JSON.stringify(after.target),label+' pans');assert(before.yaw===after.yaw&&before.pitch===after.pitch&&before.zoom===after.zoom,label+' preserves orientation/zoom');view.frame(before);}
+ $('panTutorialView').click();const before=view.capture();drag();const after=view.capture();assert(before.yaw===after.yaw&&JSON.stringify(before.target)!==JSON.stringify(after.target),'Pan button handles normal drag');assert($('panTutorialView').getAttribute('aria-pressed')==='true','Pan mode visible');$('panTutorialView').click();drag();assert(view.capture().yaw!==after.yaw,'Normal drag orbits again');
+ }finally{canvas.setPointerCapture=original;}log.push('PASS Shift/right/middle pan, Pan toggle and orbit restore');
+ const lesson=airplaneLesson();w.StepStudio.load(lesson);d.querySelectorAll('.lesson-step')[7].click();$('editSavedMotion').click();$('openLayerPicker').click();let choices=$('explodedLayerList').querySelectorAll('button');choices[0].click();assert($('explodedLayerList').querySelectorAll('input:checked').length===2,'Choosing wing includes closed packet / tucked nose');choices[2].click();assert($('explodedLayerList').querySelectorAll('input:checked').length===4,'Buried wing includes covering paper');choices[0].click();$('applyPaperLayers').click();$('previewAction').click();assert(w.StepStudio.getState().phase==='preview','Protected preview succeeds');$('saveAction').click();const data=w.StepStudio.tutorialData();assert(data.actions[7].enforceLayerAccess===true&&data.actions[7].seeds.length===2,'Access rule and group selection saved');log.push('PASS required layers auto-select, preview and saved rule');
+ d.querySelectorAll('.lesson-step')[7].click();const before=w.G.friendlyView.capture();w.G.friendlyView.frame({...before,target:before.target.map(x=>x+.1)});$('saveStepView').click();const expected=w.G.friendlyView.capture();$('restoreStepView').click();assert(JSON.stringify(w.G.friendlyView.capture())===JSON.stringify(expected),'Panned recommended view survives capture/restore');log.push('PASS panned recommended camera');
+ report.textContent=log.join('\n')+'\nALL PASS';
+}catch(e){report.textContent=log.join('\n')+'\nFAIL '+e.stack;}finally{w.StepStudio?.exit();await wait(400);if(saved===null)localStorage.removeItem(key);else localStorage.setItem(key,saved);}
+};
+</script>

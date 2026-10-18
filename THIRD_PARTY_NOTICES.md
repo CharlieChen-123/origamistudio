@@ -1,5 +1,11 @@
 # Third-Party Code and Example Credits
 
+## Project creator's Bird and new tutorial data
+
+The **Bird** preset is an original design supplied by the project creator. No personal author name is listed. The exact supplied SVG is retained at `cp_examples/originals/bird-original.svg`; `bird.svg` clips four crease endpoints to the square paper boundary. Bird is not an upstream OrigamiSimulator artwork.
+
+The Dart Airplane and Blintz Box action data and wording in `simulator/src/example-lessons.js` were authored for this project. No external tutorial diagrams or text are redistributed. General teaching references and the box variation's scope are documented in `docs/tutorial-authoring-guide.md`.
+
 ## OrigamiSimulator
 
 - Author: **Amanda Ghassaei**. The upstream project also credits Sasaki Kosuke, Erik Demaine, and other contributors.
@@ -12,6 +18,8 @@
 `origami-3d.html` uses the upstream GPU dynamic solver and SVG planarization code. Its shader blocks are generated from the upstream page. The import compatibility layer, designer handoff, and Fold Lab interface live in `assets/`.
 
 Local changes remove the upstream Google Analytics script, retain a no-op analytics function required by upstream code, and add optional load callbacks plus temporary SVG cleanup in `js/pattern.js`. The geometry and GPU solver algorithms are not rewritten.
+
+The local `js/threeView.js` calls the legacy Trackball controller's update only while it is enabled. This prevents it from overriding the paper-oriented camera's pan target and framing each render frame.
 
 ## Example patterns
 

@@ -144,7 +144,9 @@ function initThreeView(globals) {
             _render();
             return;
         }
-        controls.update();
+        // TrackballControls.update() ignores its enabled flag and still calls
+        // lookAt(target). Let the paper-oriented camera own the view when off.
+        if (controls.enabled) controls.update();
         _render();
     }
 

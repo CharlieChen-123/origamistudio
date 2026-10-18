@@ -49,3 +49,20 @@ cp_examples/mit/*.tar.gz
 # Local portfolio concepts and unrelated reference imagery are not website assets.
 docs/portfolio-*.png
 ancient-astronomy-cutouts-jianyi-jixianyi.png
+
+# Storyboard application build and regression tools
+!tools/designer.template.html
+!tools/build-storyboard.mjs
+!tools/check-storyboard-build.mjs
+!tools/generate-lesson-previews.mjs
+!tools/test-designer-snap.mjs
+
+# Local studies, validation captures and build scratch
+.codex-build/
+portfolio/
+docs/design-v2/
+docs/validation/*
+screenshots/credits-*-local.png
+screenshots/credits-presets-live.png
+screenshots/portfolio-cover-v1.png
+!docs/validation/*.md

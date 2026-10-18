@@ -3,6 +3,16 @@
   'use strict';
   window.ORIGAMI_PRESETS = [
   {
+    "id": "originalBird",
+    "name": "Bird",
+    "url": "cp_examples/originals/bird.svg",
+    "paper": "square",
+    "difficulty": 2,
+    "desc": "Original bird crease pattern",
+    "credit": "Original design supplied by the project creator. Author name not listed.",
+    "source": "cp_examples/originals/bird-original.svg"
+  },
+  {
     "id": "squareBase",
     "name": "Square Base",
     "url": "cp_examples/mit/models/squareBase.svg",
@@ -204,5 +214,5 @@
     "credit": "Design: Robert J. Lang; source credited to TreeMaker by OrigamiSimulator",
     "source": "https://github.com/amandaghassaei/OrigamiSimulator/blob/7855983a613c879c171b2b1557f8cd102d2640cf/assets/Origami/langKnlDragon.svg"
   }
-];
+].sort((a,b)=>a.difficulty-b.difficulty);
 }());
